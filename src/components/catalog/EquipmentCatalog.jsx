@@ -15,21 +15,13 @@ const CatalogCardItem = ({ item, isAlreadyInJob, currentJob, isEditMode, onAdd, 
       e.stopPropagation();
       setContextMenu({ type: 'CATALOG_ITEM', target: item });
     },
-    () => {
-      if (isEditMode) {
-        onEdit(item);
-      } else if (item.isBundle) {
-        onOpenBundle(item);
-      } else {
-        onAdd(item);
-      }
-    }
+    null
   );
 
   return (
     <div
       {...longPressProps}
-      className={`bg-card-bg rounded-2xl overflow-hidden border transition-all flex flex-col group shadow-md relative cursor-pointer select-none ${
+      className={`bg-card-bg rounded-2xl overflow-hidden border transition-all flex flex-col group shadow-md relative select-none ${
         isEditMode
           ? 'border-amber-500/80 ring-1 ring-amber-500/40 bg-amber-950/10'
           : 'border-outline-variant hover:border-outline'

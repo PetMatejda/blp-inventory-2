@@ -19,15 +19,21 @@ const KEYS = {
   CURRENT_USER_ROLE: 'blp_user_role_v2',
 };
 
+// Debounce helper to prevent rapid double cloud pushes
+let syncTimeout = null;
+
 export const storageService = {
   syncToCloud() {
-    firebaseDb.pushPayload({
-      jobs: this.getJobs(),
-      jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
-      catalog: this.getCatalog(),
-      consumables: this.getConsumables(),
-      auditLogs: this.getAuditLogs(),
-    });
+    if (syncTimeout) clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => {
+      firebaseDb.pushPayload({
+        jobs: this.getJobs(),
+        jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
+        catalog: this.getCatalog(),
+        consumables: this.getConsumables(),
+        auditLogs: this.getAuditLogs(),
+      });
+    }, 150);
   },
 
   async syncToCloudManual() {
@@ -109,7 +115,6 @@ export const storageService = {
     const cleanItems = this.consolidateItems(rawItems);
     localStorage.setItem(KEYS.JOB_ITEMS, JSON.stringify(cleanItems));
 
-    // Push initial payload to Cloud Firestore
     this.syncToCloud();
   },
 
@@ -202,7 +207,6 @@ export const storageService = {
     };
     logs.unshift(newLog);
     localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(logs));
-    this.syncToCloud();
     return newLog;
   },
 
@@ -212,9 +216,9 @@ export const storageService = {
     if (index === -1) return null;
 
     jobs[index].status = 'ARCHIVED';
+    this.addAuditLog(user, jobId, 'Ukončení zakázky', `Zakázka ${jobs[index].name} byla dokončena a uzamčena do archivu.`, 'update');
     this.saveJobs(jobs);
 
-    this.addAuditLog(user, jobId, 'Ukončení zakázky', `Zakázka ${jobs[index].name} byla dokončena a uzamčena do archivu.`, 'update');
     return jobs[index];
   },
 
@@ -224,9 +228,9 @@ export const storageService = {
     if (index === -1) return null;
 
     jobs[index].status = 'ACTIVE';
+    this.addAuditLog(user, jobId, 'Obnovení zakázky', `Zakázka ${jobs[index].name} byla vrátila zpět do aktivního stavu.`, 'update');
     this.saveJobs(jobs);
 
-    this.addAuditLog(user, jobId, 'Obnovení zakázky', `Zakázka ${jobs[index].name} byla vrátila zpět do aktivního stavu.`, 'update');
     return jobs[index];
   },
 
@@ -236,9 +240,9 @@ export const storageService = {
     if (index === -1) return null;
 
     jobs[index] = { ...jobs[index], ...jobData };
+    this.addAuditLog(user, jobId, 'Úprava zakázky', `Upraveny údaje zakázky ${jobs[index].name} (Rigging: ${jobData.riggingDate}, Derigging: ${jobData.deriggingDate})`, 'update');
     this.saveJobs(jobs);
 
-    this.addAuditLog(user, jobId, 'Úprava zakázky', `Upraveny údaje zakázky ${jobs[index].name} (Rigging: ${jobData.riggingDate}, Derigging: ${jobData.deriggingDate})`, 'update');
     return jobs[index];
   },
 
@@ -260,7 +264,6 @@ export const storageService = {
     };
 
     jobs.unshift(newJob);
-    this.saveJobs(jobs);
 
     const sourceItems = this.getJobItems(sourceJobId);
     const allJobItems = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
@@ -278,9 +281,6 @@ export const storageService = {
       allJobItems.push(copiedItem);
     });
 
-    this.saveJobItems(allJobItems);
-    this.setCurrentJobId(newJob.id);
-
     this.addAuditLog(
       user,
       newJob.id,
@@ -288,6 +288,10 @@ export const storageService = {
       `Vytvořena nová zakázka ${newJob.name} na základě vzoru ${sourceJob.name} (${sourceItems.length} zkopírovaných položek)`,
       'add'
     );
+
+    this.saveJobs(jobs);
+    this.saveJobItems(allJobItems);
+    this.setCurrentJobId(newJob.id);
 
     return newJob;
   },
@@ -300,7 +304,7 @@ export const storageService = {
       category: itemData.category || 'Lights',
       weight: itemData.weight || '10 lbs',
       power: itemData.power || 'N/A',
-      image: itemData.image || 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80',
+      image: itemData.image || '',
       serialPrefix: itemData.serialPrefix || 'EQP',
       availableCount: parseInt(itemData.availableCount) || 10,
       isBundle: !!itemData.isBundle,
@@ -308,9 +312,9 @@ export const storageService = {
     };
 
     catalog.unshift(newItem);
+    this.addAuditLog(user, '', 'Katalog Přidání', `Vytvořena nová položka v katalogu: ${newItem.name}`, 'add');
     this.saveCatalog(catalog);
 
-    this.addAuditLog(user, '', 'Katalog Přidání', `Vytvořena nová položka v katalogu: ${newItem.name}`, 'add');
     return newItem;
   },
 
@@ -320,9 +324,9 @@ export const storageService = {
     if (index === -1) return null;
 
     catalog[index] = { ...catalog[index], ...itemData };
+    this.addAuditLog(user, '', 'Katalog Úprava', `Upravena položka katalogu: ${catalog[index].name}`, 'update');
     this.saveCatalog(catalog);
 
-    this.addAuditLog(user, '', 'Katalog Úprava', `Upravena položka katalogu: ${catalog[index].name}`, 'update');
     return catalog[index];
   },
 
@@ -332,9 +336,9 @@ export const storageService = {
     if (!itemToDelete) return null;
 
     const filtered = catalog.filter(c => c.id !== catalogId);
+    this.addAuditLog(user, '', 'Katalog Mazání', `Smazána položka z katalogu: ${itemToDelete.name}`, 'update');
     this.saveCatalog(filtered);
 
-    this.addAuditLog(user, '', 'Katalog Mazání', `Smazána položka z katalogu: ${itemToDelete.name}`, 'update');
     return itemToDelete;
   },
 
@@ -344,8 +348,6 @@ export const storageService = {
     if (!itemToDelete) return null;
 
     const filtered = allItems.filter(i => i.id !== itemId);
-    this.saveJobItems(filtered);
-
     this.addAuditLog(
       user,
       itemToDelete.jobId,
@@ -353,6 +355,7 @@ export const storageService = {
       `${itemToDelete.name} (${itemToDelete.quantityRequested} ks) odebrán ze zakázky`,
       'update'
     );
+    this.saveJobItems(filtered);
 
     return itemToDelete;
   },
@@ -391,7 +394,6 @@ export const storageService = {
     }
 
     allItems[index] = item;
-    this.saveJobItems(allItems);
 
     const statusText = mode === 'DERIGGING' ? 'PACKED' : item.status;
     this.addAuditLog(
@@ -401,6 +403,7 @@ export const storageService = {
       `${item.name}: ${newQty}/${reqQty} ks, stav ${oldStatus} -> ${statusText}`,
       'loaded'
     );
+    this.saveJobItems(allItems);
 
     return item;
   },
@@ -415,7 +418,6 @@ export const storageService = {
     item.status = mode === 'DERIGGING' ? 'PACKED' : 'LOADED';
 
     allItems[index] = item;
-    this.saveJobItems(allItems);
 
     this.addAuditLog(
       user,
@@ -424,6 +426,7 @@ export const storageService = {
       `${item.name} naložen/sbalen v plném počtu (${item.quantityLoaded}/${item.quantityRequested} ks)`,
       'loaded'
     );
+    this.saveJobItems(allItems);
 
     return item;
   },
@@ -438,7 +441,6 @@ export const storageService = {
     item.status = 'PENDING';
 
     allItems[index] = item;
-    this.saveJobItems(allItems);
 
     this.addAuditLog(
       user,
@@ -447,6 +449,7 @@ export const storageService = {
       `${item.name} zrušena nakládka, stav vrácen na K naložení (0/${item.quantityRequested} ks)`,
       'loaded'
     );
+    this.saveJobItems(allItems);
 
     return item;
   },
@@ -474,7 +477,6 @@ export const storageService = {
 
     item.status = newStatus;
     allItems[index] = item;
-    this.saveJobItems(allItems);
 
     this.addAuditLog(
       user,
@@ -483,6 +485,7 @@ export const storageService = {
       `${item.name} Přepnuto na ${newStatus} (${item.quantityLoaded}/${item.quantityRequested} ks)`,
       newStatus === 'DAMAGED' ? 'damage' : 'loaded'
     );
+    this.saveJobItems(allItems);
 
     return item;
   },
@@ -501,7 +504,6 @@ export const storageService = {
     }
 
     allItems[index] = item;
-    this.saveJobItems(allItems);
 
     this.addAuditLog(
       user,
@@ -510,6 +512,7 @@ export const storageService = {
       `${item.name} označen jako ${severity} DAMAGED. Poznamka: ${notes}`,
       'damage'
     );
+    this.saveJobItems(allItems);
 
     return item;
   },
@@ -524,7 +527,6 @@ export const storageService = {
 
     if (existingIndex !== -1) {
       allItems[existingIndex].quantityRequested += parseInt(quantity) || 1;
-      this.saveJobItems(allItems);
       this.addAuditLog(
         user,
         jobId,
@@ -532,6 +534,7 @@ export const storageService = {
         `${allItems[existingIndex].name} navýšen požadavek na ${allItems[existingIndex].quantityRequested} ks`,
         'add'
       );
+      this.saveJobItems(allItems);
       return allItems[existingIndex];
     }
 
@@ -552,8 +555,6 @@ export const storageService = {
     };
 
     allItems.push(newItem);
-    this.saveJobItems(allItems);
-
     this.addAuditLog(
       user,
       jobId,
@@ -561,6 +562,7 @@ export const storageService = {
       `Vloženo nestandardní zařízení: ${newItem.name} (${newItem.quantityRequested} ks)`,
       'add'
     );
+    this.saveJobItems(allItems);
 
     return newItem;
   },
@@ -608,7 +610,6 @@ export const storageService = {
         }
       });
 
-      this.saveJobItems(allItems);
       this.addAuditLog(
         user,
         jobId,
@@ -616,6 +617,7 @@ export const storageService = {
         `Ze setu ${catalogItem.name} vloženy samostatné položky: ${addedSummary.join(', ')}`,
         'add'
       );
+      this.saveJobItems(allItems);
     } else {
       const existingIdx = allItems.findIndex(
         i => i.jobId === jobId && (i.catalogId === catalogItem.id || i.name.toLowerCase().trim() === catalogItem.name.toLowerCase().trim())
@@ -623,7 +625,6 @@ export const storageService = {
 
       if (existingIdx !== -1) {
         allItems[existingIdx].quantityRequested += 1;
-        this.saveJobItems(allItems);
         this.addAuditLog(
           user,
           jobId,
@@ -631,6 +632,7 @@ export const storageService = {
           `${catalogItem.name} navýšen počet požadovaných kusů na ${allItems[existingIdx].quantityRequested} ks`,
           'add'
         );
+        this.saveJobItems(allItems);
       } else {
         const newItem = {
           id: `ji-cat-${Date.now()}`,
@@ -649,8 +651,6 @@ export const storageService = {
           photoUrls: catalogItem.image ? [catalogItem.image] : [],
         };
         allItems.push(newItem);
-        this.saveJobItems(allItems);
-
         this.addAuditLog(
           user,
           jobId,
@@ -658,6 +658,7 @@ export const storageService = {
           `${catalogItem.name} vloženo do zakázky (1 ks)`,
           'add'
         );
+        this.saveJobItems(allItems);
       }
     }
   },
@@ -694,8 +695,6 @@ export const storageService = {
     const newMode = currentMode === 'LOADING' ? 'DERIGGING' : 'LOADING';
     jobs[index].mode = newMode;
 
-    this.saveJobs(jobs);
-
     this.addAuditLog(
       user,
       jobId,
@@ -703,6 +702,7 @@ export const storageService = {
       `Režim zakázky přepnut na: ${newMode === 'DERIGGING' ? 'DERIGGING (Vracení z placu)' : 'NAKLÁDKA (Ze skladu)'}`,
       'update'
     );
+    this.saveJobs(jobs);
 
     return jobs[index];
   },
@@ -722,9 +722,6 @@ export const storageService = {
     };
 
     jobs.unshift(newJob);
-    this.saveJobs(jobs);
-    this.setCurrentJobId(newJob.id);
-
     this.addAuditLog(
       user,
       newJob.id,
@@ -732,6 +729,8 @@ export const storageService = {
       `Založena nová zakázka: ${newJob.name} (${newJob.client})`,
       'add'
     );
+    this.saveJobs(jobs);
+    this.setCurrentJobId(newJob.id);
 
     return newJob;
   }
