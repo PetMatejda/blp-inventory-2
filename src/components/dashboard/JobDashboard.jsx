@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { useLongPress } from '../../hooks/useLongPress';
-import { Plus, FolderOpen, Calendar, User, FileText, AlertTriangle, CheckCircle, Lock, Unlock, Copy, Edit2, Archive, MoreVertical, Shield } from 'lucide-react';
+import { Plus, FolderOpen, Calendar, User, FileText, AlertTriangle, CheckCircle, Lock, Unlock, Copy, Edit2, Archive, MoreVertical, Shield, Package, Truck } from 'lucide-react';
 
-const JobCardItem = ({ job, isSelected, storageService }) => {
-  const { setCurrentJobId, setActiveTab, setEditingJob, setTemplateJob, setIsProtocolModalOpen, finishJob, reactivateJob, setContextMenu, isAdmin } = useInventory();
+const JobCardItem = ({ job, isSelected }) => {
+  const { jobItems, setCurrentJobId, setActiveTab, setEditingJob, setTemplateJob, setIsProtocolModalOpen, finishJob, reactivateJob, setContextMenu, isAdmin } = useInventory();
 
-  const items = storageService ? storageService.getJobItems(job.id) : [];
+  // Reactive job items state
+  const items = jobItems.filter(i => i.jobId === job.id);
   const totalReq = items.reduce((sum, i) => sum + i.quantityRequested, 0);
-  const totalLoaded = items.reduce((sum, i) => sum + i.quantityLoaded, 0);
+  const loadedCount = items.filter(i => i.status === 'LOADED').reduce((sum, i) => sum + i.quantityLoaded, 0);
+  const packedCount = items.filter(i => i.status === 'PACKED').reduce((sum, i) => sum + i.quantityLoaded, 0);
   const damagedCount = items.filter(i => i.status === 'DAMAGED').length;
-  const progress = totalReq > 0 ? Math.round((totalLoaded / totalReq) * 100) : 0;
   const isArchived = job.status === 'ARCHIVED';
+  const isModeDerigging = job.mode === 'DERIGGING';
+
+  // Mode aware progress calculation
+  const currentDoneCount = isModeDerigging ? packedCount : loadedCount;
+  const progress = totalReq > 0 ? Math.round((currentDoneCount / totalReq) * 100) : 0;
 
   // Attach tap & long press
   const longPressProps = useLongPress(
@@ -35,16 +41,21 @@ const JobCardItem = ({ job, isSelected, storageService }) => {
       <div className="p-5 flex flex-col gap-4">
         <div className="flex justify-between items-start">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h2 className="text-xl font-bold text-on-surface">{job.name}</h2>
               {isArchived && (
-                <span className="px-2 py-0.5 bg-surface-container-highest text-outline font-mono text-[11px] rounded border border-outline-variant flex items-center gap-1">
+                <span className="px-2 py-0.5 bg-surface-container-highest text-outline font-mono text-[11px] font-bold rounded border border-outline-variant flex items-center gap-1">
                   <Lock className="w-3 h-3" /> Ukončeno
                 </span>
               )}
-              {!isArchived && job.mode === 'DERIGGING' && (
-                <span className="px-2 py-0.5 bg-tertiary-container text-on-tertiary-container font-mono text-[11px] rounded border border-tertiary/40">
-                  DERIGGING
+              {!isArchived && isModeDerigging && (
+                <span className="px-2.5 py-0.5 bg-cyan-950 text-cyan-300 font-mono text-[11px] font-bold rounded border border-cyan-500/50 flex items-center gap-1">
+                  <Truck className="w-3 h-3 text-cyan-400" /> REŽIM DERIGGING
+                </span>
+              )}
+              {!isArchived && !isModeDerigging && (
+                <span className="px-2.5 py-0.5 bg-emerald-950 text-emerald-300 font-mono text-[11px] font-bold rounded border border-emerald-500/50 flex items-center gap-1">
+                  <Package className="w-3 h-3 text-emerald-400" /> REŽIM NAKLÁDKA
                 </span>
               )}
             </div>
@@ -88,17 +99,24 @@ const JobCardItem = ({ job, isSelected, storageService }) => {
           </div>
         </div>
 
-        {/* Progress section */}
-        <div className="flex flex-col gap-1.5 mt-2">
-          <div className="flex justify-between text-xs font-mono text-outline">
-            <span className="uppercase">Průběh nakládky</span>
+        {/* Mode Aware Progress Section */}
+        <div className="flex flex-col gap-1.5 mt-2 bg-surface-container p-3 rounded-xl border border-outline-variant">
+          <div className="flex justify-between items-center text-xs font-mono">
+            <span className={`font-bold flex items-center gap-1.5 ${isModeDerigging ? 'text-cyan-400' : 'text-emerald-400'}`}>
+              {isModeDerigging ? <Truck className="w-3.5 h-3.5" /> : <Package className="w-3.5 h-3.5" />}
+              {isModeDerigging ? 'PRŮBĚH DERIGGINGU (SBALENO K ODVOZU)' : 'PRŮBĚH NAKLÁDKY (NA PLACE)'}
+            </span>
             <span className="text-on-surface font-bold">
-              {totalLoaded} / {totalReq} ks ({progress} %)
+              {currentDoneCount} / {totalReq} ks ({progress} %)
             </span>
           </div>
-          <div className="w-full h-2.5 bg-surface-container-high rounded-full overflow-hidden border border-outline-variant">
+
+          {/* High-Contrast Progress Bar */}
+          <div className="w-full h-3 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant p-0.5">
             <div
-              className="h-full bg-secondary transition-all duration-300 rounded-full"
+              className={`h-full transition-all duration-300 rounded-full ${
+                isModeDerigging ? 'bg-cyan-400 shadow-sm shadow-cyan-400/50' : 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
+              }`}
               style={{ width: `${progress}%` }}
             ></div>
           </div>
@@ -189,7 +207,7 @@ const JobCardItem = ({ job, isSelected, storageService }) => {
 };
 
 export const JobDashboard = () => {
-  const { jobs, currentJobId, setIsNewJobModalOpen, storageService, isAdmin } = useInventory();
+  const { jobs, currentJobId, setIsNewJobModalOpen, isAdmin } = useInventory();
   const [filterState, setFilterState] = useState('ACTIVE');
 
   const filteredJobs = jobs.filter(j => j.status === filterState);
@@ -255,7 +273,6 @@ export const JobDashboard = () => {
               key={job.id}
               job={job}
               isSelected={job.id === currentJobId}
-              storageService={storageService}
             />
           ))
         )}
