@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { storageService } from '../services/storageService';
 import { cloudSyncService } from '../services/cloudSyncService';
+import { cloudBackend } from '../services/cloudBackend';
 
 const InventoryContext = createContext();
 
@@ -58,6 +59,11 @@ export const InventoryProvider = ({ children }) => {
   useEffect(() => {
     refreshData();
 
+    // Subscribe to multi-device real-time cloud updates
+    const unsubscribeCloud = cloudBackend.subscribe(() => {
+      refreshData();
+    });
+
     const handleOnline = () => {
       setIsOffline(false);
       cloudSyncService.syncPendingChanges().then(res => {
@@ -78,6 +84,7 @@ export const InventoryProvider = ({ children }) => {
     });
 
     return () => {
+      unsubscribeCloud();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };

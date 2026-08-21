@@ -6,6 +6,7 @@ import {
   INITIAL_AUDIT_LOGS,
   INITIAL_CATALOG
 } from '../mockData/initialData';
+import { cloudBackend } from './cloudBackend';
 
 const KEYS = {
   JOBS: 'blp_jobs_v2',
@@ -19,6 +20,16 @@ const KEYS = {
 };
 
 export const storageService = {
+  syncToCloud() {
+    cloudBackend.pushState({
+      jobs: this.getJobs(),
+      jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
+      catalog: this.getCatalog(),
+      consumables: this.getConsumables(),
+      auditLogs: this.getAuditLogs(),
+    });
+  },
+
   consolidateItems(items) {
     const map = new Map();
     const consolidated = [];
@@ -104,6 +115,7 @@ export const storageService = {
     localStorage.setItem(KEYS.CATALOG, JSON.stringify(INITIAL_CATALOG));
     localStorage.setItem(KEYS.CURRENT_JOB_ID, 'job-101');
     localStorage.setItem(KEYS.CURRENT_USER_ROLE, 'Lead Gaffer');
+    this.syncToCloud();
   },
 
   getJobs() {
@@ -156,15 +168,18 @@ export const storageService = {
 
   saveJobs(jobs) {
     localStorage.setItem(KEYS.JOBS, JSON.stringify(jobs));
+    this.syncToCloud();
   },
 
   saveJobItems(allJobItems) {
     const consolidated = this.consolidateItems(allJobItems);
     localStorage.setItem(KEYS.JOB_ITEMS, JSON.stringify(consolidated));
+    this.syncToCloud();
   },
 
   saveCatalog(catalog) {
     localStorage.setItem(KEYS.CATALOG, JSON.stringify(catalog));
+    this.syncToCloud();
   },
 
   addAuditLog(user, jobId, action, detail, type = 'update') {
@@ -180,6 +195,7 @@ export const storageService = {
     };
     logs.unshift(newLog);
     localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(logs));
+    this.syncToCloud();
     return newLog;
   },
 
@@ -542,7 +558,6 @@ export const storageService = {
     return newItem;
   },
 
-  // Inserts Set components as independent individual items into the job
   addCatalogItemToJob(jobId, catalogItem, vehicleId, user) {
     const allItems = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
     const catalogList = this.getCatalog();
@@ -554,7 +569,6 @@ export const storageService = {
         const subName = sub.name;
         const subQty = sub.qty || 1;
 
-        // Check if an item with this name already exists in the job
         const existingIdx = allItems.findIndex(
           i => i.jobId === jobId && i.name.toLowerCase().trim() === subName.toLowerCase().trim()
         );
@@ -563,7 +577,6 @@ export const storageService = {
           allItems[existingIdx].quantityRequested += subQty;
           addedSummary.push(`${subName} (+${subQty} ks)`);
         } else {
-          // Look up corresponding item details from master catalog if it exists
           const catalogMatch = catalogList.find(c => c.name.toLowerCase().trim() === subName.toLowerCase().trim());
 
           const subItem = {
@@ -597,7 +610,6 @@ export const storageService = {
         'add'
       );
     } else {
-      // Normal single item addition
       const existingIdx = allItems.findIndex(
         i => i.jobId === jobId && (i.catalogId === catalogItem.id || i.name.toLowerCase().trim() === catalogItem.name.toLowerCase().trim())
       );
@@ -661,6 +673,7 @@ export const storageService = {
       `${consumables[index].name} stav změněn na ${labels[newState]}`,
       'bracha'
     );
+    this.syncToCloud();
 
     return consumables[index];
   },
