@@ -3,9 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-on-surface antialiased font-sans;
     -webkit-tap-highlight-color: transparent;
+    /* Safe area insets for iPhone notch & home bar */
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
@@ -103,5 +108,35 @@ html.light ::-webkit-scrollbar-thumb {
 
 /* Giga stepper touch targets */
 .giga-btn {
-  @apply active:scale-95 transition-transform duration-75 select-none;
+  @apply active:scale-90 transition-transform duration-75 select-none;
+}
+
+/* FAB Floating Action Button */
+.fab {
+  @apply fixed z-50 bottom-20 right-4 w-14 h-14 rounded-2xl shadow-2xl 
+         flex items-center justify-center 
+         transition-all duration-200 active:scale-90;
+  box-shadow: 0 4px 20px rgba(78, 222, 163, 0.4);
+  /* Account for iOS safe area */
+  bottom: calc(4rem + env(safe-area-inset-bottom) + 0.5rem);
+}
+
+/* Bottom nav safe area padding */
+.bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Status pill colors */
+.status-loaded { background-color: #10b981; }
+.status-packed { background-color: #06b6d4; }
+.status-damaged { background-color: #ef4444; }
+.status-pending { background-color: #475569; }
+
+/* Pulse animation for sync */
+@keyframes sync-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.sync-pulsing {
+  animation: sync-pulse 1.2s ease-in-out infinite;
 }

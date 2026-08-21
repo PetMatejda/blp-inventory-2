@@ -3,22 +3,74 @@ import { useInventory } from '../../context/InventoryContext';
 import { useLongPress } from '../../hooks/useLongPress';
 import { getCategoryMeta } from '../../utils/categoryIcons';
 import { ItemThumbnail } from '../common/ItemThumbnail';
-import { Plus, Minus, CheckCircle, Package, AlertTriangle, RefreshCw, Check, Trash2, MoreVertical, RotateCcw, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import {
+  Plus, Minus, CheckCircle, Package, AlertTriangle,
+  RefreshCw, Trash2, MoreVertical, ChevronDown, ChevronUp, Layers
+} from 'lucide-react';
+
+// Status accent bar color
+const STATUS_COLORS = {
+  LOADED: '#10b981',
+  PACKED: '#06b6d4',
+  DAMAGED: '#ef4444',
+  PENDING: '#475569',
+};
+
+// Status badge component
+const StatusBadge = ({ status, damageSeverity }) => {
+  switch (status) {
+    case 'LOADED':
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-900/60 text-emerald-300 border border-emerald-700/60 text-[11px] font-bold font-mono">
+          <CheckCircle className="w-3 h-3" /> Na place
+        </span>
+      );
+    case 'PACKED':
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-900/60 text-cyan-300 border border-cyan-700/60 text-[11px] font-bold font-mono">
+          <Package className="w-3 h-3" /> K odvozu
+        </span>
+      );
+    case 'DAMAGED':
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-error-container/40 text-error border border-error/50 text-[11px] font-bold font-mono">
+          <AlertTriangle className="w-3 h-3" /> {damageSeverity || 'ZÁVADA'}
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-variant text-on-surface-variant border border-outline-variant text-[11px] font-mono">
+          K naložení
+        </span>
+      );
+  }
+};
 
 export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
-  const { updateItemQuantity, setItemLoadedOrPacked, setItemPending, toggleItemStatus, setDamageReportItem, deleteJobItem, currentJob, setContextMenu } = useInventory();
+  const {
+    updateItemQuantity,
+    setItemLoadedOrPacked,
+    setItemPending,
+    toggleItemStatus,
+    setDamageReportItem,
+    deleteJobItem,
+    currentJob,
+    setContextMenu,
+  } = useInventory();
+
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [showBundleItems, setShowBundleItems] = useState(false);
   const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const isHorizRef = useRef(false);
 
   const isModeDerigging = currentJob?.mode === 'DERIGGING';
-
-  // Category Icon Metadata
   const catMeta = getCategoryMeta(item.category);
   const CatIcon = catMeta.icon;
+  const photoUrl = item.photoUrls?.[0] || item.image || '';
 
-  // Long press handler for Context Menu
+  // Long press for context menu
   const longPressProps = useLongPress(
     (e) => {
       e.stopPropagation();
@@ -29,9 +81,12 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
     }
   );
 
-  // Mouse / Touch swipe handlers with long-press cancellation
+  // Touch handlers — distinguish horizontal swipe from vertical scroll
   const handleTouchStart = (e) => {
-    startXRef.current = e.touches ? e.touches[0].clientX : e.clientX;
+    const touch = e.touches?.[0] || e;
+    startXRef.current = touch.clientX;
+    startYRef.current = touch.clientY;
+    isHorizRef.current = false;
     setIsDragging(true);
     longPressProps.onMouseDown(e);
   };
@@ -39,107 +94,80 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
   const handleTouchMove = (e) => {
     longPressProps.onMouseMove(e);
     if (!isDragging) return;
-    const currentX = e.touches ? e.touches[0].clientX : e.clientX;
-    const diff = currentX - startXRef.current;
 
-    if (Math.abs(diff) > 8) {
-      longPressProps.cancelLongPress();
+    const touch = e.touches?.[0] || e;
+    const dx = touch.clientX - startXRef.current;
+    const dy = touch.clientY - startYRef.current;
+
+    // Determine gesture direction on first significant move
+    if (!isHorizRef.current && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+    if (!isHorizRef.current) {
+      isHorizRef.current = Math.abs(dx) > Math.abs(dy);
     }
 
-    setDragOffset(Math.max(-140, Math.min(140, diff)));
+    if (!isHorizRef.current) {
+      // Vertical scroll — don't interfere
+      setDragOffset(0);
+      return;
+    }
+
+    // Horizontal swipe
+    if (Math.abs(dx) > 8) longPressProps.cancelLongPress();
+    setDragOffset(Math.max(-130, Math.min(130, dx)));
   };
 
   const handleTouchEnd = (e) => {
     if (!isDragging) return;
     setIsDragging(false);
 
-    // Effortless swipe threshold: 40px
-    if (dragOffset > 40) {
-      setItemLoadedOrPacked(item.id);
-    } else if (dragOffset < -40) {
-      setItemPending(item.id);
+    if (Math.abs(dragOffset) > 40) {
+      if (dragOffset > 40) {
+        setItemLoadedOrPacked(item.id);
+      } else {
+        setItemPending(item.id);
+      }
     } else {
       longPressProps.onMouseUp(e);
     }
 
     setDragOffset(0);
+    isHorizRef.current = false;
   };
 
   const handleDelete = (e) => {
     e.stopPropagation();
-    if (window.confirm(`Opravdu chcete odebrat položku "${item.name}" ze zakázky?`)) {
+    if (window.confirm(`Odebrat „${item.name}" ze zakázky?`)) {
       deleteJobItem(item.id);
     }
   };
 
-  const getStatusBadge = () => {
-    switch (item.status) {
-      case 'LOADED':
-        return (
-          <span className="bg-secondary text-on-secondary-container px-2.5 py-1 rounded font-mono text-[11px] font-bold flex items-center gap-1 shrink-0 shadow-sm border border-secondary/50">
-            <CheckCircle className="w-3.5 h-3.5" /> Na place / Naloženo
-          </span>
-        );
-      case 'PACKED':
-        return (
-          <span className="bg-tertiary-container text-on-tertiary-container px-2.5 py-1 rounded font-mono text-[11px] font-bold flex items-center gap-1 shrink-0 shadow-sm border border-tertiary/50">
-            <Package className="w-3.5 h-3.5" /> Sbaleno k odvozu
-          </span>
-        );
-      case 'DAMAGED':
-        return (
-          <span className="bg-error-container text-on-error-container border border-error px-2.5 py-1 rounded font-mono text-[11px] font-bold flex items-center gap-1 shrink-0 shadow-sm">
-            <AlertTriangle className="w-3.5 h-3.5" /> Poškozeno ({item.damageSeverity || 'ZÁVADA'})
-          </span>
-        );
-      default:
-        return (
-          <span className="bg-surface-container-highest text-on-surface-variant px-2.5 py-1 rounded font-mono text-[11px] font-bold flex items-center gap-1 shrink-0 border border-outline-variant">
-            K naložení
-          </span>
-        );
-    }
-  };
-
-  // Dedicated Left Accent Bar Color (Guaranteed dynamic color updates)
-  const getStatusAccentColor = () => {
-    switch (item.status) {
-      case 'LOADED':
-        return '#10b981'; // Emerald Green
-      case 'PACKED':
-        return '#06b6d4'; // Cyan Blue
-      case 'DAMAGED':
-        return '#ef4444'; // Bright Red
-      default:
-        return '#475569'; // Slate Gray for Pending
-    }
-  };
-
-  const photoUrl = item.photoUrls?.[0] || item.image || '';
-
   return (
-    <div className="swipe-card-container bg-surface-container rounded-xl overflow-hidden shadow-sm relative group select-none touch-pan-y">
-      {/* Background action reveal layers - Mode Aware */}
-      <div className="absolute inset-0 flex justify-between z-0 pointer-events-none font-bold text-xs">
+    <div className="swipe-card-container bg-surface-container rounded-2xl overflow-hidden shadow-sm relative select-none">
+
+      {/* Background swipe hints */}
+      <div className="absolute inset-0 flex z-0 pointer-events-none">
+        {/* Left reveal: Load / Pack */}
         <div
-          className={`w-1/2 flex items-center justify-start pl-4 gap-1.5 ${
-            isModeDerigging ? 'bg-tertiary-container text-on-tertiary-container' : 'bg-secondary-container text-on-secondary-container'
+          className={`w-1/2 flex items-center justify-start pl-5 gap-2 text-xs font-bold ${
+            isModeDerigging
+              ? 'bg-cyan-900/80 text-cyan-300'
+              : 'bg-emerald-900/80 text-emerald-300'
           }`}
         >
-          <Check className="w-5 h-5" />
-          <span>{isModeDerigging ? '✓ SBALENO' : '✓ NALOŽIT'}</span>
+          <CheckCircle className="w-5 h-5" />
+          {isModeDerigging ? 'SBALENO' : 'NALOŽENO'}
         </div>
-
-        <div className="bg-surface-variant text-on-surface-variant w-1/2 flex items-center justify-end pr-4 gap-1.5 border-l border-outline-variant">
-          <span>{isModeDerigging ? '↩ VRÁTIT NA PLACE' : '↩ K NALOŽENÍ'}</span>
-          <RotateCcw className="w-4 h-4" />
+        {/* Right reveal: Pending */}
+        <div className="w-1/2 flex items-center justify-end pr-5 gap-2 bg-surface-variant/80 text-on-surface-variant text-xs font-bold">
+          {isModeDerigging ? 'VRÁTIT NA PLACE' : 'K NALOŽENÍ'}
+          <RefreshCw className="w-4 h-4" />
         </div>
       </div>
 
-      {/* Swipeable content layer */}
+      {/* Swipeable card */}
       <div
-        className={`swipe-content flex border border-outline-variant rounded-xl relative z-10 transition-transform cursor-pointer bg-card-bg overflow-hidden ${
-          isDragging ? 'transition-none' : 'duration-200'
+        className={`flex relative z-10 bg-card-bg rounded-2xl overflow-hidden ${
+          isDragging ? '' : 'transition-transform duration-200'
         }`}
         style={{ transform: `translateX(${dragOffset}px)` }}
         onTouchStart={handleTouchStart}
@@ -150,170 +178,140 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
         onMouseUp={handleTouchEnd}
         onMouseLeave={handleTouchEnd}
       >
-        {/* Dedicated Left Dynamic Status Color Stripe */}
+        {/* Status accent stripe — left edge */}
         <div
-          className="w-3 shrink-0 transition-colors duration-300 self-stretch"
-          style={{ backgroundColor: getStatusAccentColor() }}
-          title={`Stav: ${item.status}`}
+          className="w-1.5 shrink-0 self-stretch transition-colors duration-300"
+          style={{ backgroundColor: STATUS_COLORS[item.status] || STATUS_COLORS.PENDING }}
         />
 
-        <div className="flex-1 p-3.5 sm:p-4 flex flex-col justify-between min-w-0">
-          <div>
-            {/* Row 1: Category Icon + Item Title Name (100% Width & Unobstructed) */}
-            <div className="flex items-center gap-2 mb-2 w-full">
-              <span
-                className={`p-1.5 rounded-lg border flex items-center justify-center shrink-0 shadow-xs ${catMeta.color}`}
-                title={`Kategorie: ${catMeta.label}`}
-              >
-                <CatIcon className="w-4 h-4" />
-              </span>
+        {/* Main card body */}
+        <div className="flex-1 p-3 flex flex-col gap-2 min-w-0">
 
-              <h3
-                className="font-bold text-base text-on-surface leading-tight break-words flex-1"
-                title={item.name}
-              >
+          {/* Row 1: Category icon + Item name + actions */}
+          <div className="flex items-start gap-2">
+            {/* Category badge */}
+            <span
+              className={`mt-0.5 p-1.5 rounded-lg border flex items-center justify-center shrink-0 ${catMeta.color}`}
+              title={catMeta.label}
+            >
+              <CatIcon className="w-4 h-4" />
+            </span>
+
+            {/* Name + status */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-sm text-on-surface leading-tight break-words">
                 {item.name}
               </h3>
-            </div>
-
-            {/* Row 2: Status Badge + Action Buttons (Dedicated row, never overwriting title) */}
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-outline-variant/40 pb-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                {getStatusBadge()}
-
-                {item.isBundle && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowBundleItems(!showBundleItems);
-                    }}
-                    className="bg-primary-container text-on-primary-container px-2 py-0.5 rounded font-mono text-[11px] font-bold border border-primary/40 flex items-center gap-1 hover:opacity-90 transition-opacity"
-                  >
-                    <Layers className="w-3.5 h-3.5" /> SET ({item.bundleItems?.length || 0} dílů)
-                    {showBundleItems ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
-                  </button>
-                )}
-
+              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                <StatusBadge status={item.status} damageSeverity={item.damageSeverity} />
                 {item.bundleTag && (
-                  <span className="bg-primary-container/30 text-on-primary-container px-2 py-0.5 rounded text-[11px] font-mono border border-primary/30 flex items-center gap-1">
-                    <Package className="w-3 h-3" /> {item.bundleTag}
+                  <span className="text-[10px] font-mono text-outline">
+                    <Package className="w-2.5 h-2.5 inline mr-0.5" />{item.bundleTag}
                   </span>
                 )}
-
                 {item.serialNumber && (
-                  <span className="text-[11px] font-mono text-outline">
-                    SN: {item.serialNumber}
-                  </span>
+                  <span className="text-[10px] font-mono text-outline">SN: {item.serialNumber}</span>
                 )}
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex items-center gap-1 shrink-0 ml-auto">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDamageReportItem(item);
-                  }}
-                  className="p-1 text-outline hover:text-error hover:bg-error-container/30 border border-transparent hover:border-error/40 rounded-lg transition-colors"
-                  title="Rychlé Hlášení Závady / Poškození"
-                >
-                  <AlertTriangle className="w-4 h-4 text-error" />
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setContextMenu({ type: 'PACKING_ITEM', target: { ...item, onOpenPhoto } });
-                  }}
-                  className="p-1 text-outline hover:text-on-surface rounded-lg"
-                  title="Kontextové menu položky"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-
-                <button
-                  onClick={handleDelete}
-                  className="p-1 text-outline hover:text-error hover:bg-error-container/20 rounded-lg transition-colors"
-                  title="Odebrat ze zakázky"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
-            {/* Expandable Set Contents list */}
-            {item.isBundle && showBundleItems && item.bundleItems && (
-              <div className="bg-surface-container/80 border border-primary/30 rounded-xl p-2.5 mb-3 text-xs flex flex-col gap-1.5 animate-in fade-in duration-150">
-                <span className="font-mono text-[10px] font-bold text-primary uppercase block">OBSAH BALÍČKU / SETU:</span>
-                {item.bundleItems.map((sub, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-on-surface-variant font-mono text-[11px]">
-                    <span>• {sub.name}</span>
-                    <span className="font-bold text-primary">{sub.qty * item.quantityRequested} ks</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Damage Notes section if damaged */}
-            {item.status === 'DAMAGED' && (
-              <div className="bg-error-container/20 border border-error/30 rounded-lg p-2.5 mb-3 text-xs text-on-error-container flex justify-between items-center gap-2">
-                <div>
-                  <strong className="block text-error">Popis poškození:</strong>
-                  <span>{item.damageNotes || 'Bez popisu poruchy'}</span>
-                </div>
+            {/* Actions: damage + context menu */}
+            <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+              {item.isBundle && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleItemStatus(item.id);
-                  }}
-                  className="px-2.5 py-1 bg-surface-variant text-on-surface rounded text-xs font-semibold hover:bg-surface-bright flex items-center gap-1 shrink-0 border border-outline-variant"
+                  onClick={(e) => { e.stopPropagation(); setShowBundleItems(!showBundleItems); }}
+                  className="p-1.5 rounded-lg text-primary hover:bg-primary-container/20 transition-colors active:scale-90"
+                  title="Obsah setu"
                 >
-                  <RefreshCw className="w-3 h-3 text-secondary" /> Opraveno
+                  <Layers className="w-4 h-4" />
                 </button>
-              </div>
-            )}
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); setDamageReportItem(item); }}
+                className="p-1.5 rounded-lg text-outline hover:text-error hover:bg-error-container/20 transition-colors active:scale-90"
+                title="Hlásit závadu"
+              >
+                <AlertTriangle className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContextMenu({ type: 'PACKING_ITEM', target: { ...item, onOpenPhoto } });
+                }}
+                className="p-1.5 rounded-lg text-outline hover:text-on-surface transition-colors active:scale-90"
+                title="Více možností"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Giga-Stepper Controls */}
-          <div className="flex items-center gap-3 bg-surface-container p-1.5 rounded-xl border border-outline-variant mt-1">
+          {/* Damage notes if damaged */}
+          {item.status === 'DAMAGED' && item.damageNotes && (
+            <div className="bg-error-container/20 border border-error/30 rounded-xl p-2 flex justify-between items-start gap-2 text-xs">
+              <div>
+                <strong className="text-error block">Popis poškození:</strong>
+                <span className="text-on-error-container">{item.damageNotes}</span>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleItemStatus(item.id); }}
+                className="px-2 py-1 bg-surface-variant text-on-surface rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 border border-outline-variant active:scale-95"
+              >
+                <RefreshCw className="w-3 h-3 text-secondary" /> Opraveno
+              </button>
+            </div>
+          )}
+
+          {/* Set contents */}
+          {item.isBundle && showBundleItems && item.bundleItems && (
+            <div className="bg-surface-container-high border border-primary/20 rounded-xl p-2 text-xs flex flex-col gap-1">
+              <span className="font-mono text-[10px] font-bold text-primary uppercase">OBSAH SETU:</span>
+              {item.bundleItems.map((sub, idx) => (
+                <div key={idx} className="flex justify-between text-on-surface-variant font-mono text-[11px]">
+                  <span>• {sub.name}</span>
+                  <span className="font-bold text-primary">{sub.qty * item.quantityRequested} ks</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Stepper row */}
+          <div className="flex items-center gap-2 bg-surface-container rounded-xl border border-outline-variant p-1">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                updateItemQuantity(item.id, -1);
-              }}
+              onClick={(e) => { e.stopPropagation(); updateItemQuantity(item.id, -1); }}
               disabled={item.quantityLoaded <= 0}
-              className="giga-btn w-11 h-11 flex items-center justify-center bg-surface-variant text-on-surface rounded-lg border border-outline-variant hover:bg-surface-bright disabled:opacity-30 disabled:pointer-events-none"
-              title="Odečíst (-1)"
+              className="w-12 h-12 flex items-center justify-center bg-surface-variant rounded-lg border border-outline-variant disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-transform"
+              title="Odečíst"
             >
-              <Minus className="w-6 h-6 stroke-[2.5]" />
+              <Minus className="w-5 h-5 stroke-[2.5]" />
             </button>
 
-            <div className="flex-1 text-center font-mono font-bold text-xl text-primary tracking-tight">
-              {item.quantityLoaded}
-              <span className="text-on-surface-variant text-sm font-normal"> / {item.quantityRequested} {item.isBundle ? 'setů' : 'ks'}</span>
+            <div className="flex-1 text-center">
+              <span className="font-mono font-bold text-2xl text-primary leading-none">
+                {item.quantityLoaded}
+              </span>
+              <span className="font-mono text-sm text-on-surface-variant">
+                /{item.quantityRequested} {item.isBundle ? 'setů' : 'ks'}
+              </span>
             </div>
 
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                updateItemQuantity(item.id, 1);
-              }}
-              className="giga-btn w-11 h-11 flex items-center justify-center bg-surface-variant text-on-surface rounded-lg border border-outline-variant hover:bg-surface-bright"
-              title="Přičíst (+1)"
+              onClick={(e) => { e.stopPropagation(); updateItemQuantity(item.id, 1); }}
+              className="w-12 h-12 flex items-center justify-center bg-surface-variant rounded-lg border border-outline-variant active:scale-90 transition-transform"
+              title="Přičíst"
             >
-              <Plus className="w-6 h-6 stroke-[2.5]" />
+              <Plus className="w-5 h-5 stroke-[2.5]" />
             </button>
           </div>
         </div>
 
-        {/* Thumbnail Preview with automatic Category Icon fallback */}
-        <div className="w-28 min-h-[140px] bg-surface-container-lowest hidden xs:flex items-center justify-center p-2 border-l border-outline-variant/40 shrink-0 cursor-pointer group-hover:bg-surface-container-high transition-colors relative">
+        {/* Thumbnail — always shown, 80px wide */}
+        <div className="w-20 bg-surface-container-lowest flex items-center justify-center p-1.5 border-l border-outline-variant/40 shrink-0">
           <ItemThumbnail
             src={photoUrl}
             name={item.name}
             category={item.category}
-            className="w-full h-full"
+            className="w-full h-full rounded-xl"
             onClick={(e) => {
               e.stopPropagation();
               if (onOpenPhoto) onOpenPhoto(item);

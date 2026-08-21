@@ -7,13 +7,19 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      screens: {
+        'xs': '400px',
+      },
       colors: {
         background: '#10131a',
         'card-bg': '#1E293B',
         'surface-container': '#1d2027',
+        'surface-container-low': '#181b22',
         'surface-container-high': '#272a31',
         'surface-container-highest': '#32353c',
+        'surface-container-lowest': '#12151c',
         'surface-variant': '#32353c',
+        'surface-bright': '#383d4a',
         primary: '#adc6ff',
         'primary-container': '#004395',
         'on-primary-container': '#d8e2ff',
