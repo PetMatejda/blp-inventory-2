@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { storageService } from '../services/storageService';
 import { cloudSyncService } from '../services/cloudSyncService';
-import { cloudBackend } from '../services/cloudBackend';
-import { authService } from '../services/authService';
+import { firebaseDb } from '../services/firebaseDb';
+import { firebaseAuth } from '../services/firebaseAuth';
 
 const InventoryContext = createContext();
 
@@ -14,7 +14,7 @@ export const InventoryProvider = ({ children }) => {
   const [consumables, setConsumables] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [catalog, setCatalog] = useState([]);
-  const [currentUser, setCurrentUserState] = useState(authService.getCurrentUser());
+  const [currentUser, setCurrentUserState] = useState(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [themeMode, setThemeMode] = useState('dark');
 
@@ -60,25 +60,36 @@ export const InventoryProvider = ({ children }) => {
   useEffect(() => {
     refreshData();
 
-    // Subscribe to multi-device real-time cloud updates
-    const unsubscribeCloud = cloudBackend.subscribe(() => {
+    // 1. Subscribe to Realtime Firebase Firestore Cloud Database
+    const unsubscribeCloud = firebaseDb.subscribeToCloud(() => {
       refreshData();
     });
 
-    const handleAuthChanged = (e) => {
-      if (e.detail) {
-        setCurrentUserState(e.detail);
-        storageService.setUserRole(e.detail.role);
+    // 2. Subscribe to Real Firebase Auth State Changes (Google OAuth & Email Auth)
+    const unsubscribeAuth = firebaseAuth.onAuthChange((user) => {
+      if (user) {
+        setCurrentUserState(user);
+        storageService.setUserRole(user.role);
+      } else {
+        // Default Gaffer profile if unauthenticated
+        const defaultAdmin = {
+          id: 'usr-default',
+          name: 'Petr M. (Gaffer)',
+          email: 'petr@blp.cz',
+          role: 'ADMIN',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80',
+          provider: 'guest',
+        };
+        setCurrentUserState(defaultAdmin);
+        storageService.setUserRole('ADMIN');
       }
-    };
-
-    window.addEventListener('blp_auth_changed', handleAuthChanged);
+    });
 
     const handleOnline = () => {
       setIsOffline(false);
       cloudSyncService.syncPendingChanges().then(res => {
         if (res.synced > 0) {
-          setSyncNotice(`Synchronizováno ${res.synced} offline změn s cloudem.`);
+          setSyncNotice(`Synchronizováno ${res.synced} offline změn s Firebase cloudem.`);
           setTimeout(() => setSyncNotice(null), 3500);
         }
       });
@@ -88,14 +99,9 @@ export const InventoryProvider = ({ children }) => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    cloudSyncService.initAutoSync((syncedCount) => {
-      setSyncNotice(`Automaticky synchronizováno ${syncedCount} položek.`);
-      setTimeout(() => setSyncNotice(null), 3500);
-    });
-
     return () => {
       unsubscribeCloud();
-      window.removeEventListener('blp_auth_changed', handleAuthChanged);
+      unsubscribeAuth();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -113,13 +119,14 @@ export const InventoryProvider = ({ children }) => {
   }, [themeMode]);
 
   const setCurrentUser = (user) => {
-    authService.setCurrentUser(user);
     setCurrentUserState(user);
-    storageService.setUserRole(user.role);
+    if (user) {
+      storageService.setUserRole(user.role);
+    }
   };
 
   const isAdmin = () => currentUser?.role === 'ADMIN';
-  const canEditPacking = () => true; // Both ADMIN and USER can work in Packing!
+  const canEditPacking = () => true;
 
   const userRole = currentUser?.role || 'USER';
 
@@ -135,9 +142,8 @@ export const InventoryProvider = ({ children }) => {
   const updateItemQuantity = (itemId, delta) => {
     if (currentJob?.status === 'ARCHIVED') return;
     const mode = currentJob?.mode || 'LOADING';
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.updateItemQuantity(itemId, delta, actorName, mode);
-    cloudSyncService.enqueue('UPDATE_QTY', { itemId, delta, mode });
     setJobItems(storageService.getJobItems(currentJobId));
     setAuditLogs(storageService.getAuditLogs());
   };
@@ -154,9 +160,8 @@ export const InventoryProvider = ({ children }) => {
   const setItemLoadedOrPacked = (itemId) => {
     if (currentJob?.status === 'ARCHIVED') return;
     const mode = currentJob?.mode || 'LOADING';
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.setItemLoadedOrPacked(itemId, actorName, mode);
-    cloudSyncService.enqueue('SET_LOADED_PACKED', { itemId, mode });
     setJobItems(storageService.getJobItems(currentJobId));
     setAuditLogs(storageService.getAuditLogs());
   };
@@ -164,9 +169,8 @@ export const InventoryProvider = ({ children }) => {
   const setItemPending = (itemId) => {
     if (currentJob?.status === 'ARCHIVED') return;
     const mode = currentJob?.mode || 'LOADING';
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.setItemPending(itemId, actorName, mode);
-    cloudSyncService.enqueue('SET_PENDING', { itemId, mode });
     setJobItems(storageService.getJobItems(currentJobId));
     setAuditLogs(storageService.getAuditLogs());
   };
@@ -174,27 +178,24 @@ export const InventoryProvider = ({ children }) => {
   const toggleItemStatus = (itemId) => {
     if (currentJob?.status === 'ARCHIVED') return;
     const mode = currentJob?.mode || 'LOADING';
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.toggleItemStatus(itemId, actorName, mode);
-    cloudSyncService.enqueue('TOGGLE_STATUS', { itemId, mode });
     setJobItems(storageService.getJobItems(currentJobId));
     setAuditLogs(storageService.getAuditLogs());
   };
 
   const deleteJobItem = (itemId) => {
     if (currentJob?.status === 'ARCHIVED') return;
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.deleteJobItem(itemId, actorName);
-    cloudSyncService.enqueue('DELETE_JOB_ITEM', { itemId });
     setJobItems(storageService.getJobItems(currentJobId));
     setAuditLogs(storageService.getAuditLogs());
   };
 
   const reportItemDamage = (itemId, severity, notes, photoUrl) => {
     if (currentJob?.status === 'ARCHIVED') return;
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.reportItemDamage(itemId, severity, notes, photoUrl, actorName);
-    cloudSyncService.enqueue('REPORT_DAMAGE', { itemId, severity, notes });
     setJobItems(storageService.getJobItems(currentJobId));
     setAuditLogs(storageService.getAuditLogs());
     setDamageReportItem(null);
@@ -202,9 +203,8 @@ export const InventoryProvider = ({ children }) => {
 
   const addAdHocItem = (name, category, quantity) => {
     if (!currentJobId || currentJob?.status === 'ARCHIVED') return;
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.addAdHocItem(currentJobId, name, category, 'v1', quantity, actorName);
-    cloudSyncService.enqueue('ADD_ADHOC', { currentJobId, name, category, quantity });
     setJobItems(storageService.getJobItems(currentJobId));
     setAuditLogs(storageService.getAuditLogs());
     setIsAdHocModalOpen(false);
@@ -212,9 +212,8 @@ export const InventoryProvider = ({ children }) => {
 
   const addCatalogItemToJob = (catalogItem) => {
     if (!currentJobId || currentJob?.status === 'ARCHIVED') return;
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.addCatalogItemToJob(currentJobId, catalogItem, 'v1', actorName);
-    cloudSyncService.enqueue('ADD_CATALOG_TO_JOB', { currentJobId, catalogId: catalogItem.id });
     setJobItems(storageService.getJobItems(currentJobId));
     setAuditLogs(storageService.getAuditLogs());
   };
@@ -227,7 +226,6 @@ export const InventoryProvider = ({ children }) => {
     }
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.finishJob(jobId, actorName);
-    cloudSyncService.enqueue('FINISH_JOB', { jobId });
     setJobs(storageService.getJobs());
     setAuditLogs(storageService.getAuditLogs());
   };
@@ -239,7 +237,6 @@ export const InventoryProvider = ({ children }) => {
     }
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.reactivateJob(jobId, actorName);
-    cloudSyncService.enqueue('REACTIVATE_JOB', { jobId });
     setJobs(storageService.getJobs());
     setAuditLogs(storageService.getAuditLogs());
   };
@@ -251,7 +248,6 @@ export const InventoryProvider = ({ children }) => {
     }
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.updateJob(jobId, jobData, actorName);
-    cloudSyncService.enqueue('UPDATE_JOB', { jobId, jobData });
     setJobs(storageService.getJobs());
     setAuditLogs(storageService.getAuditLogs());
     setEditingJob(null);
@@ -264,7 +260,6 @@ export const InventoryProvider = ({ children }) => {
     }
     const actorName = `${currentUser.name} (${currentUser.role})`;
     const newJob = storageService.duplicateJobAsTemplate(sourceJobId, newJobData, actorName);
-    cloudSyncService.enqueue('DUPLICATE_JOB_TEMPLATE', { sourceJobId, newJobData });
     setJobs(storageService.getJobs());
     setCurrentJobId(newJob.id);
     setAuditLogs(storageService.getAuditLogs());
@@ -279,7 +274,6 @@ export const InventoryProvider = ({ children }) => {
     }
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.createCatalogItem(itemData, actorName);
-    cloudSyncService.enqueue('CREATE_CATALOG_ITEM', { itemData });
     setCatalog(storageService.getCatalog());
     setAuditLogs(storageService.getAuditLogs());
   };
@@ -291,7 +285,6 @@ export const InventoryProvider = ({ children }) => {
     }
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.updateCatalogItem(catalogId, itemData, actorName);
-    cloudSyncService.enqueue('UPDATE_CATALOG_ITEM', { catalogId, itemData });
     setCatalog(storageService.getCatalog());
     setAuditLogs(storageService.getAuditLogs());
   };
@@ -303,24 +296,21 @@ export const InventoryProvider = ({ children }) => {
     }
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.deleteCatalogItem(catalogId, actorName);
-    cloudSyncService.enqueue('DELETE_CATALOG_ITEM', { catalogId });
     setCatalog(storageService.getCatalog());
     setAuditLogs(storageService.getAuditLogs());
   };
 
   const updateConsumableState = (consumableId, newState) => {
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.updateConsumableState(consumableId, newState, actorName);
-    cloudSyncService.enqueue('UPDATE_CONSUMABLE', { consumableId, newState });
     setConsumables(storageService.getConsumables());
     setAuditLogs(storageService.getAuditLogs());
   };
 
   const toggleJobMode = () => {
     if (!currentJobId || currentJob?.status === 'ARCHIVED') return;
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.toggleJobMode(currentJobId, actorName);
-    cloudSyncService.enqueue('TOGGLE_JOB_MODE', { currentJobId });
     setJobs(storageService.getJobs());
     setAuditLogs(storageService.getAuditLogs());
   };
@@ -332,7 +322,6 @@ export const InventoryProvider = ({ children }) => {
     }
     const actorName = `${currentUser.name} (${currentUser.role})`;
     const newJob = storageService.createJob(jobData, actorName);
-    cloudSyncService.enqueue('CREATE_JOB', { jobData });
     setJobs(storageService.getJobs());
     setCurrentJobId(newJob.id);
     setAuditLogs(storageService.getAuditLogs());

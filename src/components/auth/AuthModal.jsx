@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { authService } from '../../services/authService';
+import { firebaseAuth } from '../../services/firebaseAuth';
 import { ShieldCheck, X, LogIn, UserPlus, Shield, User, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const AuthModal = ({ isOpen, onClose }) => {
@@ -19,13 +19,16 @@ export const AuthModal = ({ isOpen, onClose }) => {
 
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const result = authService.loginWithEmail(loginEmail, loginPassword);
+    setLoading(true);
+    const result = await firebaseAuth.loginWithEmail(loginEmail, loginPassword);
+    setLoading(false);
     if (result.success) {
       setCurrentUser(result.user);
       setSuccessMsg(`Přihlášen uživatel ${result.user.name} (${result.user.role})`);
@@ -38,13 +41,15 @@ export const AuthModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const result = authService.registerWithEmail(regName, regEmail, regPassword, regRole);
+    setLoading(true);
+    const result = await firebaseAuth.registerWithEmail(regName, regEmail, regPassword, regRole);
+    setLoading(false);
     if (result.success) {
       setCurrentUser(result.user);
-      setSuccessMsg(`Účet ${result.user.name} úspěšně vytvořen!`);
+      setSuccessMsg(`Účet ${result.user.name} úspěšně vytvořen ve Firebase!`);
       setTimeout(() => {
         setSuccessMsg('');
         onClose();
@@ -54,23 +59,29 @@ export const AuthModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setError('');
-    const result = authService.loginWithGoogle();
+    setLoading(true);
+    const result = await firebaseAuth.loginWithGoogle();
+    setLoading(false);
     if (result.success) {
       setCurrentUser(result.user);
-      setSuccessMsg(`Přihlášeno přes Google: ${result.user.name}`);
+      setSuccessMsg(`Přihláseno přes Google: ${result.user.name}`);
       setTimeout(() => {
         setSuccessMsg('');
         onClose();
       }, 1000);
+    } else {
+      setError(result.error || 'Nepodařilo se přihlásit přes Google.');
     }
   };
 
-  const handleQuickSwitch = (email, password) => {
+  const handleQuickSwitch = async (email, password) => {
     setLoginEmail(email);
     setLoginPassword(password);
-    const result = authService.loginWithEmail(email, password);
+    setLoading(true);
+    const result = await firebaseAuth.loginWithEmail(email, password);
+    setLoading(false);
     if (result.success) {
       setCurrentUser(result.user);
       onClose();
@@ -84,7 +95,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
         <div className="flex justify-between items-start border-b border-outline-variant pb-3">
           <div>
             <span className="text-xs font-mono font-bold text-primary uppercase flex items-center gap-1">
-              <ShieldCheck className="w-4 h-4" /> UŽIVATELSKÝ PŘÍSTUP & ROLE
+              <ShieldCheck className="w-4 h-4" /> FIREBASE AUTH & ROLE
             </span>
             <h2 className="text-xl font-bold text-on-surface mt-0.5">Přihlášení / Registrace</h2>
           </div>
@@ -132,8 +143,9 @@ export const AuthModal = ({ isOpen, onClose }) => {
         {/* Google Login Fast Button */}
         <button
           type="button"
+          disabled={loading}
           onClick={handleGoogleLogin}
-          className="w-full py-2.5 bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold rounded-xl text-xs border border-outline-variant flex items-center justify-center gap-2 transition-all shadow-xs active:scale-98"
+          className="w-full py-2.5 bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold rounded-xl text-xs border border-outline-variant flex items-center justify-center gap-2 transition-all shadow-xs active:scale-98 disabled:opacity-50"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -141,7 +153,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
           </svg>
-          Přihlásit se účtem Google
+          {loading ? 'Ověřuji v Google OAuth...' : 'Přihlásit se skutečným Google Účtem'}
         </button>
 
         <div className="relative flex items-center justify-center my-1">
@@ -177,9 +189,10 @@ export const AuthModal = ({ isOpen, onClose }) => {
 
             <button
               type="submit"
-              className="w-full py-3 bg-primary text-on-primary-container font-bold rounded-xl text-sm shadow hover:opacity-95 transition-all mt-1"
+              disabled={loading}
+              className="w-full py-3 bg-primary text-on-primary-container font-bold rounded-xl text-sm shadow hover:opacity-95 transition-all mt-1 disabled:opacity-50"
             >
-              Přihlásit se
+              {loading ? 'Přihlašování v cloudu...' : 'Přihlásit se do Firebase'}
             </button>
           </form>
         )}
@@ -210,10 +223,11 @@ export const AuthModal = ({ isOpen, onClose }) => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-outline mb-1">Heslo:</label>
+              <label className="block text-xs font-semibold text-outline mb-1">Heslo (min. 6 znaků):</label>
               <input
                 type="password"
                 required
+                minLength={6}
                 value={regPassword}
                 onChange={(e) => setRegPassword(e.target.value)}
                 placeholder="••••••••"
@@ -234,9 +248,10 @@ export const AuthModal = ({ isOpen, onClose }) => {
 
             <button
               type="submit"
-              className="w-full py-3 bg-primary text-on-primary-container font-bold rounded-xl text-sm shadow hover:opacity-95 transition-all mt-1"
+              disabled={loading}
+              className="w-full py-3 bg-primary text-on-primary-container font-bold rounded-xl text-sm shadow hover:opacity-95 transition-all mt-1 disabled:opacity-50"
             >
-              Vytvořit Účet & Přihlásit
+              {loading ? 'Registruji ve Firebase...' : 'Vytvořit Skutečný Účet'}
             </button>
           </form>
         )}
@@ -244,7 +259,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
         {/* Quick Test Accounts Switcher */}
         <div className="bg-surface-container/60 border border-outline-variant/60 rounded-xl p-3 mt-1">
           <span className="block text-[10px] font-mono font-bold text-outline uppercase mb-2">
-            ⚡ Rychlé testování 2 úrovní rolí:
+            ⚡ Rychlé přihlášení do předpřipravených účtů:
           </span>
           <div className="grid grid-cols-2 gap-2">
             <button

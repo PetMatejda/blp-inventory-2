@@ -6,7 +6,7 @@ import {
   INITIAL_AUDIT_LOGS,
   INITIAL_CATALOG
 } from '../mockData/initialData';
-import { cloudBackend } from './cloudBackend';
+import { firebaseDb } from './firebaseDb';
 
 const KEYS = {
   JOBS: 'blp_jobs_v2',
@@ -21,7 +21,7 @@ const KEYS = {
 
 export const storageService = {
   syncToCloud() {
-    cloudBackend.pushState({
+    firebaseDb.pushPayload({
       jobs: this.getJobs(),
       jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
       catalog: this.getCatalog(),
