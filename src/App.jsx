@@ -23,7 +23,9 @@ import { ContextMenuModal } from './components/modals/ContextMenuModal';
 import { AuthModal } from './components/auth/AuthModal';
 
 const ModalLayer = () => {
-  const { isAuthModalOpen, setIsAuthModalOpen } = useInventory();
+  const { isAuthModalOpen, setIsAuthModalOpen, currentUser } = useInventory();
+  const showAuthModal = isAuthModalOpen || !currentUser;
+
   return (
     <>
       <NewJobModal />
@@ -37,7 +39,13 @@ const ModalLayer = () => {
       <EditJobModal />
       <DuplicateJobModal />
       <ContextMenuModal />
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <AuthModal
+        isOpen={showAuthModal}
+        isForceAuth={!currentUser}
+        onClose={() => {
+          if (currentUser) setIsAuthModalOpen(false);
+        }}
+      />
     </>
   );
 };
