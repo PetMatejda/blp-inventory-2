@@ -12,8 +12,6 @@ import {
   getDoc,
 } from './firebase';
 
-const USER_ROLE_KEY = 'blp_user_role_v2';
-
 export const firebaseAuth = {
   /**
    * Real Google OAuth Login
@@ -28,11 +26,16 @@ export const firebaseAuth = {
       const snap = await getDoc(userRef);
 
       let role = 'USER';
+      const cleanEmail = (user.email || '').toLowerCase();
+
+      // Check if Admin email (petmatejda@gmail.com or blp/gaffer admins)
+      if (cleanEmail === 'petmatejda@gmail.com' || cleanEmail.includes('petr') || cleanEmail.includes('gaffer') || cleanEmail.includes('admin')) {
+        role = 'ADMIN';
+      }
+
       if (snap.exists()) {
-        role = snap.data().role || 'USER';
+        role = snap.data().role || role;
       } else {
-        // Default Petr M. or gaffer emails to ADMIN, others to USER
-        role = user.email && (user.email.includes('petr') || user.email.includes('gaffer') || user.email.includes('blp')) ? 'ADMIN' : 'USER';
         await setDoc(userRef, {
           uid: user.uid,
           name: user.displayName || user.email.split('@')[0],
@@ -71,11 +74,11 @@ export const firebaseAuth = {
       const userRef = doc(db, 'users', user.uid);
       const snap = await getDoc(userRef);
 
-      let role = 'USER';
+      let role = (user.email && user.email.toLowerCase() === 'petmatejda@gmail.com') ? 'ADMIN' : 'USER';
       let name = user.email.split('@')[0];
 
       if (snap.exists()) {
-        role = snap.data().role || 'USER';
+        role = snap.data().role || role;
         name = snap.data().name || name;
       }
 
@@ -108,7 +111,7 @@ export const firebaseAuth = {
         id: user.uid,
         name: name,
         email: user.email,
-        role: role,
+        role: (email.toLowerCase() === 'petmatejda@gmail.com') ? 'ADMIN' : role,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
         provider: 'email',
       };
@@ -118,7 +121,7 @@ export const firebaseAuth = {
         uid: user.uid,
         name: name,
         email: user.email,
-        role: role,
+        role: userObj.role,
         avatar: userObj.avatar,
         createdAt: new Date().toISOString(),
       });
@@ -152,7 +155,8 @@ export const firebaseAuth = {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
-        const role = snap.exists() ? snap.data().role : 'USER';
+        const defaultRole = (firebaseUser.email && firebaseUser.email.toLowerCase() === 'petmatejda@gmail.com') ? 'ADMIN' : 'USER';
+        const role = snap.exists() ? snap.data().role : defaultRole;
         const name = snap.exists() ? snap.data().name : firebaseUser.displayName || firebaseUser.email.split('@')[0];
 
         const userObj = {
