@@ -71,17 +71,8 @@ export const InventoryProvider = ({ children }) => {
         setCurrentUserState(user);
         storageService.setUserRole(user.role);
       } else {
-        // Default Gaffer profile if unauthenticated
-        const defaultAdmin = {
-          id: 'usr-default',
-          name: 'Petr M. (Gaffer)',
-          email: 'petr@blp.cz',
-          role: 'ADMIN',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80',
-          provider: 'guest',
-        };
-        setCurrentUserState(defaultAdmin);
-        storageService.setUserRole('ADMIN');
+        setCurrentUserState(null);
+        setIsAuthModalOpen(true);
       }
     });
 
