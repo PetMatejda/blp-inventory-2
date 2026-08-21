@@ -1,11 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Settings, X, Moon, Sun, Wifi, WifiOff, RotateCcw, ShieldCheck } from 'lucide-react';
+import { Settings, X, Moon, Sun, Wifi, WifiOff, RotateCcw, ShieldCheck, CloudUpload, CheckCircle2, AlertCircle } from 'lucide-react';
+import { storageService } from '../../services/storageService';
 
 export const SettingsModal = () => {
   const { isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode, isOffline, setIsOffline, resetDemoData } = useInventory();
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   if (!isSettingsModalOpen) return null;
+
+  const handleManualCloudPush = async () => {
+    setLoading(true);
+    setSyncStatus(null);
+    const res = await storageService.syncToCloudManual();
+    setLoading(false);
+    if (res.success) {
+      setSyncStatus({ type: 'success', text: 'Kolekce inventory_store/blp_main_store byla úspěšně zapsána do Firebase!' });
+    } else {
+      setSyncStatus({ type: 'error', text: `Chyba zápisu: ${res.error || 'Zkontrolujte přihlášení a pravidla'}` });
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -23,6 +38,33 @@ export const SettingsModal = () => {
             className="text-outline hover:text-on-surface p-1 rounded-full hover:bg-surface-variant transition-colors"
           >
             <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Sync Status Toast */}
+        {syncStatus && (
+          <div
+            className={`p-3 rounded-xl font-bold text-xs flex items-center gap-2 border ${
+              syncStatus.type === 'success'
+                ? 'bg-secondary-container text-on-secondary-container border-secondary shadow'
+                : 'bg-error-container/30 text-error border-error/40'
+            }`}
+          >
+            {syncStatus.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+            <span>{syncStatus.text}</span>
+          </div>
+        )}
+
+        {/* Cloud Sync Manual Action */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-mono text-outline uppercase font-bold">Cloud Databáze Firebase</label>
+          <button
+            onClick={handleManualCloudPush}
+            disabled={loading}
+            className="w-full py-3 px-4 bg-primary text-on-primary-container font-mono font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md hover:opacity-95 disabled:opacity-50"
+          >
+            <CloudUpload className="w-4 h-4" />
+            {loading ? 'Nahrávám do Firebase...' : '🔥 Nahrát Všechna Data do Firebase Databáze'}
           </button>
         </div>
 
@@ -93,7 +135,7 @@ export const SettingsModal = () => {
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-secondary" /> BLP INVENTORY Engine
           </span>
-          <span className="font-bold text-on-surface">v2.0.0 (Offline-First)</span>
+          <span className="font-bold text-on-surface">v2.0.0 (Firebase Cloud)</span>
         </div>
 
         <button
