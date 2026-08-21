@@ -140,7 +140,7 @@ export const PackingList = () => {
         {/* Job summary strip — collapses on scroll */}
         <div
           ref={jobHeaderRef}
-          className={`bg-background/95 backdrop-blur-md border-b border-outline-variant transition-all duration-200 ${
+          className={`bg-surface-container backdrop-blur-md border-b border-outline-variant transition-all duration-200 ${
             jobHeaderCollapsed ? 'py-1.5 px-4' : 'px-4 pt-3 pb-2'
           }`}
         >
@@ -157,7 +157,7 @@ export const PackingList = () => {
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${
                     isModeDerigging
-                      ? 'bg-cyan-950 text-cyan-300'
+                      ? 'bg-blue-500/20 text-blue-500 dark:bg-blue-400/15 dark:text-blue-400'
                       : 'bg-secondary-container/30 text-secondary'
                   }`}
                 >
@@ -247,7 +247,7 @@ export const PackingList = () => {
                     onClick={() => !isModeDerigging && toggleJobMode()}
                     className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                       isModeDerigging
-                        ? 'bg-cyan-900 text-cyan-300 shadow border border-cyan-700'
+                        ? 'bg-blue-500/20 border border-blue-500/40 text-blue-600 dark:bg-blue-400/15 dark:text-blue-400 dark:border-blue-400/30 shadow'
                         : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
@@ -260,7 +260,7 @@ export const PackingList = () => {
               {/* Progress bar */}
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-center text-[11px] font-mono">
-                  <span className={isModeDerigging ? 'text-cyan-400' : 'text-secondary'}>
+                  <span className={isModeDerigging ? 'text-blue-600 dark:text-blue-400' : 'text-secondary'}>
                     {isModeDerigging ? '📦 Sbaleno k odvozu' : '✅ Na place / Naloženo'}
                   </span>
                   <span className="text-on-surface font-bold">{doneCount}/{totalCount} ks · {progress}%</span>
@@ -268,7 +268,7 @@ export const PackingList = () => {
                 <div className="w-full h-2.5 bg-surface-container-highest rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
-                      isModeDerigging ? 'bg-cyan-400' : 'bg-secondary'
+                      isModeDerigging ? 'bg-blue-500 dark:bg-blue-400' : 'bg-secondary'
                     }`}
                     style={{ width: `${progress}%` }}
                   />
@@ -284,7 +284,7 @@ export const PackingList = () => {
         </div>
 
         {/* Search bar + Scanner — always visible below job strip */}
-        <div className="bg-background/95 backdrop-blur-md border-b border-outline-variant px-3 py-2 flex items-center gap-2">
+        <div className="bg-surface-container backdrop-blur-md border-b border-outline-variant px-3 py-2 flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
             <input
@@ -314,7 +314,7 @@ export const PackingList = () => {
         </div>
 
         {/* Status filter pills — horizontal scroll */}
-        <div className="bg-background/95 backdrop-blur-md px-3 py-2 border-b border-outline-variant/50">
+        <div className="bg-surface-container backdrop-blur-md px-3 py-2 border-b border-outline-variant/50">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {statusFilters.map((f) => {
               const isActive = selectedStatusFilter === f.id;

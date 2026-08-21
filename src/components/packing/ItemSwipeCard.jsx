@@ -16,18 +16,18 @@ const STATUS_COLORS = {
   PENDING: '#475569',
 };
 
-// Status badge component
+// Status badge component — uses theme-aware colors that work in both light and dark mode
 const StatusBadge = ({ status, damageSeverity }) => {
   switch (status) {
     case 'LOADED':
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-900/60 text-emerald-300 border border-emerald-700/60 text-[11px] font-bold font-mono">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-700 border border-emerald-500/40 dark:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-700/60 text-[11px] font-bold font-mono">
           <CheckCircle className="w-3 h-3" /> Na place
         </span>
       );
     case 'PACKED':
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-900/60 text-cyan-300 border border-cyan-700/60 text-[11px] font-bold font-mono">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500/15 text-blue-700 border border-blue-500/40 dark:bg-cyan-900/60 dark:text-cyan-300 dark:border-cyan-700/60 text-[11px] font-bold font-mono">
           <Package className="w-3 h-3" /> K odvozu
         </span>
       );
@@ -146,12 +146,12 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
 
       {/* Background swipe hints */}
       <div className="absolute inset-0 flex z-0 pointer-events-none">
-        {/* Left reveal: Load / Pack */}
+        {/* Left reveal: Load / Pack — green/blue theme-aware */}
         <div
           className={`w-1/2 flex items-center justify-start pl-5 gap-2 text-xs font-bold ${
             isModeDerigging
-              ? 'bg-cyan-900/80 text-cyan-300'
-              : 'bg-emerald-900/80 text-emerald-300'
+              ? 'bg-blue-500/25 text-blue-700 dark:bg-blue-900/80 dark:text-blue-300'
+              : 'bg-emerald-500/25 text-emerald-700 dark:bg-emerald-900/80 dark:text-emerald-300'
           }`}
         >
           <CheckCircle className="w-5 h-5" />
