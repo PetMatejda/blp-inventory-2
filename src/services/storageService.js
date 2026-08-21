@@ -64,6 +64,8 @@ export const storageService = {
   },
 
   init() {
+    let initialized = false;
+
     if (!localStorage.getItem(KEYS.JOBS)) {
       const migratedJobs = INITIAL_JOBS.map(j => ({
         ...j,
@@ -71,22 +73,28 @@ export const storageService = {
         deriggingDate: j.deriggingDate || j.date || new Date().toISOString().split('T')[0],
       }));
       localStorage.setItem(KEYS.JOBS, JSON.stringify(migratedJobs));
+      initialized = true;
     }
     if (!localStorage.getItem(KEYS.JOB_ITEMS)) {
       const consolidatedInitial = this.consolidateItems(INITIAL_JOB_ITEMS);
       localStorage.setItem(KEYS.JOB_ITEMS, JSON.stringify(consolidatedInitial));
+      initialized = true;
     }
     if (!localStorage.getItem(KEYS.VEHICLES)) {
       localStorage.setItem(KEYS.VEHICLES, JSON.stringify(INITIAL_VEHICLES));
+      initialized = true;
     }
     if (!localStorage.getItem(KEYS.CONSUMABLES)) {
       localStorage.setItem(KEYS.CONSUMABLES, JSON.stringify(INITIAL_CONSUMABLES));
+      initialized = true;
     }
     if (!localStorage.getItem(KEYS.AUDIT_LOGS)) {
       localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(INITIAL_AUDIT_LOGS));
+      initialized = true;
     }
     if (!localStorage.getItem(KEYS.CATALOG)) {
       localStorage.setItem(KEYS.CATALOG, JSON.stringify(INITIAL_CATALOG));
+      initialized = true;
     }
     if (!localStorage.getItem(KEYS.CURRENT_JOB_ID)) {
       localStorage.setItem(KEYS.CURRENT_JOB_ID, 'job-101');
@@ -98,6 +106,9 @@ export const storageService = {
     const rawItems = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
     const cleanItems = this.consolidateItems(rawItems);
     localStorage.setItem(KEYS.JOB_ITEMS, JSON.stringify(cleanItems));
+
+    // Automatically push initial payload to Firebase Cloud if initialized or missing in cloud
+    this.syncToCloud();
   },
 
   resetDemoData() {
@@ -119,34 +130,28 @@ export const storageService = {
   },
 
   getJobs() {
-    this.init();
     return JSON.parse(localStorage.getItem(KEYS.JOBS) || '[]');
   },
 
   getJobItems(jobId) {
-    this.init();
     const items = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
     const consolidated = this.consolidateItems(items);
     return jobId ? consolidated.filter(item => item.jobId === jobId) : consolidated;
   },
 
   getVehicles() {
-    this.init();
     return JSON.parse(localStorage.getItem(KEYS.VEHICLES) || '[]');
   },
 
   getConsumables() {
-    this.init();
     return JSON.parse(localStorage.getItem(KEYS.CONSUMABLES) || '[]');
   },
 
   getAuditLogs() {
-    this.init();
     return JSON.parse(localStorage.getItem(KEYS.AUDIT_LOGS) || '[]');
   },
 
   getCatalog() {
-    this.init();
     return JSON.parse(localStorage.getItem(KEYS.CATALOG) || '[]');
   },
 
