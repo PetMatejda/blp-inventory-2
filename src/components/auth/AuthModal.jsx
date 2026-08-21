@@ -63,15 +63,20 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
     setError('');
     setLoading(true);
     const result = await firebaseAuth.loginWithGoogle();
-    setLoading(false);
     if (result.success) {
+      setLoading(false);
       setCurrentUser(result.user);
       setSuccessMsg(`Přihlášeno přes Google: ${result.user.name}`);
       setTimeout(() => {
         setSuccessMsg('');
         if (onClose) onClose();
       }, 800);
+    } else if (result.pending) {
+      // Mobile redirect flow — page will reload after Google auth
+      setSuccessMsg('Přesměrovávám na Google přihlášení...');
+      // Keep loading=true (page will navigate away)
     } else {
+      setLoading(false);
       setError(result.error || 'Nepodařilo se přihlásit přes Google.');
     }
   };

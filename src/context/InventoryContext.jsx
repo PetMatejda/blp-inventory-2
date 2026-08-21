@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { storageService } from '../services/storageService';
 import { cloudSyncService } from '../services/cloudSyncService';
 import { firebaseDb } from '../services/firebaseDb';
@@ -46,7 +46,7 @@ export const InventoryProvider = ({ children }) => {
   const [contextMenu, setContextMenu] = useState(null);
 
   // Read local cache into React state (WITHOUT triggering cloud push loop)
-  const refreshDataFromLocal = () => {
+  const refreshDataFromLocal = useCallback(() => {
     setJobs(storageService.getJobs());
     const savedJobId = storageService.getCurrentJobId();
     setCurrentJobIdState(savedJobId);
@@ -55,7 +55,7 @@ export const InventoryProvider = ({ children }) => {
     setConsumables(storageService.getConsumables());
     setAuditLogs(storageService.getAuditLogs());
     setCatalog(storageService.getCatalog());
-  };
+  }, []);
 
   useEffect(() => {
     // Initial local cache setup on app startup
@@ -63,6 +63,7 @@ export const InventoryProvider = ({ children }) => {
     refreshDataFromLocal();
 
     // 1. Subscribe to Realtime Firebase Firestore Cloud Database
+    // Only fires for REMOTE changes from other devices (echo prevention in firebaseDb.js)
     const unsubscribeCloud = firebaseDb.subscribeToCloud(() => {
       setSyncStatus('synced');
       refreshDataFromLocal();
@@ -79,7 +80,7 @@ export const InventoryProvider = ({ children }) => {
       }
     });
 
-    // 3. Auto-pull fresh cloud data when switching tabs or returning to app
+    // 3. Auto-pull fresh cloud data when switching back to the app
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         firebaseDb.pullFromCloud().then(res => {
@@ -119,7 +120,7 @@ export const InventoryProvider = ({ children }) => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [refreshDataFromLocal]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -153,6 +154,13 @@ export const InventoryProvider = ({ children }) => {
 
   const currentJob = jobs.find(j => j.id === currentJobId) || jobs[0] || null;
 
+  // Helper: refresh UI and push to cloud after any mutation
+  const afterMutation = () => {
+    refreshDataFromLocal();
+    // setSyncStatus shows 'syncing' until cloud confirms
+    // storageService.syncToCloud() is debounced at 50ms
+  };
+
   // Actions with Cloud Sync queue integration
   const updateItemQuantity = (itemId, delta) => {
     if (currentJob?.status === 'ARCHIVED') return;
@@ -160,7 +168,7 @@ export const InventoryProvider = ({ children }) => {
     const mode = currentJob?.mode || 'LOADING';
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.updateItemQuantity(itemId, delta, actorName, mode);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const setItemExactQuantity = (itemId, exactQty) => {
@@ -178,7 +186,7 @@ export const InventoryProvider = ({ children }) => {
     const mode = currentJob?.mode || 'LOADING';
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.setItemLoadedOrPacked(itemId, actorName, mode);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const setItemPending = (itemId) => {
@@ -187,7 +195,7 @@ export const InventoryProvider = ({ children }) => {
     const mode = currentJob?.mode || 'LOADING';
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.setItemPending(itemId, actorName, mode);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const toggleItemStatus = (itemId) => {
@@ -196,7 +204,7 @@ export const InventoryProvider = ({ children }) => {
     const mode = currentJob?.mode || 'LOADING';
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.toggleItemStatus(itemId, actorName, mode);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const deleteJobItem = (itemId) => {
@@ -204,7 +212,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.deleteJobItem(itemId, actorName);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const reportItemDamage = (itemId, severity, notes, photoUrl) => {
@@ -212,7 +220,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.reportItemDamage(itemId, severity, notes, photoUrl, actorName);
-    refreshDataFromLocal();
+    afterMutation();
     setDamageReportItem(null);
   };
 
@@ -221,7 +229,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.addAdHocItem(currentJobId, name, category, 'v1', quantity, actorName);
-    refreshDataFromLocal();
+    afterMutation();
     setIsAdHocModalOpen(false);
   };
 
@@ -230,7 +238,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.addCatalogItemToJob(currentJobId, catalogItem, 'v1', actorName);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   // Job Status & Template Operations (Restricted to ADMIN)
@@ -242,7 +250,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.finishJob(jobId, actorName);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const reactivateJob = (jobId) => {
@@ -253,7 +261,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.reactivateJob(jobId, actorName);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const updateJob = (jobId, jobData) => {
@@ -264,7 +272,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.updateJob(jobId, jobData, actorName);
-    refreshDataFromLocal();
+    afterMutation();
     setEditingJob(null);
   };
 
@@ -276,7 +284,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = `${currentUser.name} (${currentUser.role})`;
     const newJob = storageService.duplicateJobAsTemplate(sourceJobId, newJobData, actorName);
-    refreshDataFromLocal();
+    afterMutation();
     setCurrentJobId(newJob.id);
     setTemplateJob(null);
   };
@@ -290,7 +298,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.createCatalogItem(itemData, actorName);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const updateCatalogItem = (catalogId, itemData) => {
@@ -301,7 +309,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.updateCatalogItem(catalogId, itemData, actorName);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const deleteCatalogItem = (catalogId) => {
@@ -312,14 +320,14 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = `${currentUser.name} (${currentUser.role})`;
     storageService.deleteCatalogItem(catalogId, actorName);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const updateConsumableState = (consumableId, newState) => {
     setSyncStatus('syncing');
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.updateConsumableState(consumableId, newState, actorName);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const toggleJobMode = () => {
@@ -327,7 +335,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
     storageService.toggleJobMode(currentJobId, actorName);
-    refreshDataFromLocal();
+    afterMutation();
   };
 
   const createJob = (jobData) => {
@@ -338,7 +346,7 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = `${currentUser.name} (${currentUser.role})`;
     const newJob = storageService.createJob(jobData, actorName);
-    refreshDataFromLocal();
+    afterMutation();
     setCurrentJobId(newJob.id);
     setIsNewJobModalOpen(false);
   };
