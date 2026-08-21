@@ -155,7 +155,8 @@ export const EquipmentCatalog = () => {
     setCurrentJobId,
     setActiveTab,
     setIsMasterCatalogModalOpen,
-    deleteCatalogItem
+    deleteCatalogItem,
+    isAdmin
   } = useInventory();
 
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -272,24 +273,26 @@ export const EquipmentCatalog = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsEditMode(!isEditMode)}
-          className={`p-2.5 rounded-xl border transition-all shadow-md active:scale-95 flex items-center gap-2 ${
-            isEditMode
-              ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-              : 'bg-surface-container hover:bg-surface-container-high border-outline-variant text-primary'
-          }`}
-          title={isEditMode ? 'Ukončit editační režim katalogu' : 'Vstoupit do editačního režimu katalogu'}
-        >
-          {isEditMode ? <X className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
-          <span className="hidden sm:inline font-mono text-xs font-bold">
-            {isEditMode ? 'Ukončit Editaci' : 'Editační Režim'}
-          </span>
-        </button>
+        {isAdmin() && (
+          <button
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={`p-2.5 rounded-xl border transition-all shadow-md active:scale-95 flex items-center gap-2 ${
+              isEditMode
+                ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                : 'bg-surface-container hover:bg-surface-container-high border-outline-variant text-primary'
+            }`}
+            title={isEditMode ? 'Ukončit editační režim katalogu' : 'Vstoupit do editačního režimu katalogu'}
+          >
+            {isEditMode ? <X className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
+            <span className="hidden sm:inline font-mono text-xs font-bold">
+              {isEditMode ? 'Ukončit Editaci' : 'Editační Režim (Admin)'}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Edit Mode Banner & Create CTA */}
-      {isEditMode && (
+      {isEditMode && isAdmin() && (
         <div className="bg-amber-950/20 border-2 border-amber-500/60 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-lg animate-in fade-in duration-200">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-500 text-slate-950 rounded-xl shrink-0">

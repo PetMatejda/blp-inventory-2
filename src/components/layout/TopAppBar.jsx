@@ -1,36 +1,46 @@
 import React from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Wifi, WifiOff, Settings, UserCheck } from 'lucide-react';
+import { Wifi, WifiOff, Settings, Shield, User, LogIn } from 'lucide-react';
 
 export const TopAppBar = () => {
-  const { currentJob, userRole, setIsRoleModalOpen, setIsSettingsModalOpen, isOffline } = useInventory();
+  const { currentJob, currentUser, isAdmin, setIsAuthModalOpen, setIsSettingsModalOpen, isOffline } = useInventory();
 
   return (
     <header className="sticky top-0 z-40 w-full bg-background border-b border-outline-variant px-4 h-16 flex items-center justify-between shadow-md backdrop-blur-md bg-opacity-95">
-      {/* Left branding & profile badge (opens Role Switcher) */}
+      {/* Left branding & logged in user profile */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => setIsRoleModalOpen(true)}
-          className="relative w-9 h-9 rounded-full bg-surface-container-high border border-outline flex items-center justify-center overflow-hidden hover:opacity-80 transition-opacity"
-          title="Přepnout uživatelskou roli (Role Switcher)"
+          onClick={() => setIsAuthModalOpen(true)}
+          className="relative w-9 h-9 rounded-full bg-surface-container-high border border-outline flex items-center justify-center overflow-hidden hover:opacity-80 transition-opacity shadow-xs"
+          title="Uživatelský účet & Přihlášení"
         >
           <img
-            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
-            alt="Technician avatar"
+            src={currentUser?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80'}
+            alt={currentUser?.name || 'User Avatar'}
             className="w-full h-full object-cover"
           />
         </button>
+
         <div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold tracking-widest text-primary">BLP INVENTORY</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-mono uppercase">v2.0</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase font-bold flex items-center gap-0.5 ${
+                isAdmin() ? 'bg-tertiary-container text-on-tertiary-container border border-tertiary/40' : 'bg-primary-container text-on-primary-container border border-primary/40'
+              }`}
+            >
+              {isAdmin() ? <Shield className="w-2.5 h-2.5" /> : <User className="w-2.5 h-2.5" />}
+              {currentUser?.role || 'USER'}
+            </span>
           </div>
+
           <button
-            onClick={() => setIsRoleModalOpen(true)}
-            className="text-xs text-outline flex items-center gap-1 font-medium hover:text-on-surface transition-colors"
-            title="Přepnout uživatelskou roli"
+            onClick={() => setIsAuthModalOpen(true)}
+            className="text-xs text-outline flex items-center gap-1 font-medium hover:text-on-surface transition-colors truncate max-w-[140px] sm:max-w-none"
+            title="Přihlášený uživatel (Klikněte pro profil / odhlášení)"
           >
-            <UserCheck className="w-3 h-3 text-secondary" /> {userRole}
+            <span className="font-semibold text-on-surface truncate">{currentUser?.name || 'Přihlásit se'}</span>
+            <span className="text-[10px] font-mono text-outline">({currentUser?.email})</span>
           </button>
         </div>
       </div>
@@ -43,9 +53,8 @@ export const TopAppBar = () => {
         </div>
       )}
 
-      {/* Right controls: Offline badge & Dedicated Settings button */}
+      {/* Right controls: Connection & Settings */}
       <div className="flex items-center gap-2">
-        {/* Connection simulator badge */}
         <button
           onClick={() => setIsSettingsModalOpen(true)}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium border transition-colors ${
@@ -66,7 +75,16 @@ export const TopAppBar = () => {
           )}
         </button>
 
-        {/* Dedicated Settings gear button */}
+        {/* Auth modal trigger */}
+        <button
+          onClick={() => setIsAuthModalOpen(true)}
+          className="p-2 text-primary hover:bg-surface-variant rounded-full transition-colors active:scale-95"
+          title="Účet & Přihlášení"
+        >
+          <LogIn className="w-5 h-5" />
+        </button>
+
+        {/* Settings gear */}
         <button
           onClick={() => setIsSettingsModalOpen(true)}
           className="p-2 text-primary hover:bg-surface-variant rounded-full transition-colors active:scale-95"

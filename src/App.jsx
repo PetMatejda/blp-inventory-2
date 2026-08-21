@@ -20,7 +20,27 @@ import { MasterCatalogModal } from './components/modals/MasterCatalogModal';
 import { EditJobModal } from './components/modals/EditJobModal';
 import { DuplicateJobModal } from './components/modals/DuplicateJobModal';
 import { ContextMenuModal } from './components/modals/ContextMenuModal';
-import { AuthModal } from './components/modals/AuthModal';
+import { AuthModal } from './components/auth/AuthModal';
+
+const ModalLayer = () => {
+  const { isAuthModalOpen, setIsAuthModalOpen } = useInventory();
+  return (
+    <>
+      <NewJobModal />
+      <AdHocModal />
+      <BarcodeScannerModal />
+      <DamageReportModal />
+      <ProtocolModal />
+      <RoleSwitcherModal />
+      <SettingsModal />
+      <MasterCatalogModal />
+      <EditJobModal />
+      <DuplicateJobModal />
+      <ContextMenuModal />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+    </>
+  );
+};
 
 const MainContent = () => {
   const { activeTab } = useInventory();
@@ -57,17 +77,7 @@ export function App() {
         <BottomNavBar />
 
         {/* Dialog & Modal Layer */}
-        <NewJobModal />
-        <AdHocModal />
-        <BarcodeScannerModal />
-        <DamageReportModal />
-        <ProtocolModal />
-        <RoleSwitcherModal />
-        <SettingsModal />
-        <MasterCatalogModal />
-        <EditJobModal />
-        <DuplicateJobModal />
-        <ContextMenuModal />
+        <ModalLayer />
       </div>
     </InventoryProvider>
   );

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { useLongPress } from '../../hooks/useLongPress';
-import { Plus, FolderOpen, Calendar, User, FileText, AlertTriangle, CheckCircle, Lock, Unlock, Copy, Edit2, Archive, MoreVertical } from 'lucide-react';
+import { Plus, FolderOpen, Calendar, User, FileText, AlertTriangle, CheckCircle, Lock, Unlock, Copy, Edit2, Archive, MoreVertical, Shield } from 'lucide-react';
 
 const JobCardItem = ({ job, isSelected, storageService }) => {
-  const { setCurrentJobId, setActiveTab, setEditingJob, setTemplateJob, setIsProtocolModalOpen, finishJob, reactivateJob, setContextMenu } = useInventory();
+  const { setCurrentJobId, setActiveTab, setEditingJob, setTemplateJob, setIsProtocolModalOpen, finishJob, reactivateJob, setContextMenu, isAdmin } = useInventory();
 
   const items = storageService ? storageService.getJobItems(job.id) : [];
   const totalReq = items.reduce((sum, i) => sum + i.quantityRequested, 0);
@@ -114,16 +114,18 @@ const JobCardItem = ({ job, isSelected, storageService }) => {
       {/* Card Footer Actions */}
       <div className="p-3 border-t border-outline-variant bg-surface-container flex flex-wrap gap-2 justify-between items-center">
         <div className="flex gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setTemplateJob(job);
-            }}
-            className="h-10 px-3 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-          >
-            <Copy className="w-4 h-4 text-secondary" />
-            <span>Použít jako vzor</span>
-          </button>
+          {isAdmin() && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setTemplateJob(job);
+              }}
+              className="h-10 px-3 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+            >
+              <Copy className="w-4 h-4 text-secondary" />
+              <span>Použít jako vzor</span>
+            </button>
+          )}
 
           <button
             onClick={(e) => {
@@ -139,30 +141,34 @@ const JobCardItem = ({ job, isSelected, storageService }) => {
         </div>
 
         <div className="flex gap-2">
-          {isArchived ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                reactivateJob(job.id);
-              }}
-              className="h-10 px-4 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-primary font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
-            >
-              <Unlock className="w-4 h-4 text-secondary" />
-              <span>Obnovit</span>
-            </button>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (window.confirm(`Chcete dokončit zakázku "${job.name}"?`)) {
-                  finishJob(job.id);
-                }
-              }}
-              className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:border-error/40 hover:bg-error-container/20 text-on-surface hover:text-error font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
-            >
-              <Lock className="w-4 h-4" />
-              <span>Ukončit</span>
-            </button>
+          {isAdmin() && (
+            <>
+              {isArchived ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    reactivateJob(job.id);
+                  }}
+                  className="h-10 px-4 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-primary font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                >
+                  <Unlock className="w-4 h-4 text-secondary" />
+                  <span>Obnovit</span>
+                </button>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`Chcete dokončit zakázku "${job.name}"?`)) {
+                      finishJob(job.id);
+                    }
+                  }}
+                  className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:border-error/40 hover:bg-error-container/20 text-on-surface hover:text-error font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>Ukončit</span>
+                </button>
+              )}
+            </>
           )}
 
           <button
@@ -174,7 +180,7 @@ const JobCardItem = ({ job, isSelected, storageService }) => {
             className="h-10 px-5 rounded-xl bg-secondary text-on-secondary-container hover:opacity-90 text-sm font-semibold flex items-center gap-2 justify-center transition-all active:scale-95 shadow"
           >
             <FolderOpen className="w-4 h-4" />
-            {isArchived ? 'Zobrazit' : 'Otevřít'}
+            {isArchived ? 'Zobrazit' : 'Otevřít Packaging'}
           </button>
         </div>
       </div>
@@ -183,7 +189,7 @@ const JobCardItem = ({ job, isSelected, storageService }) => {
 };
 
 export const JobDashboard = () => {
-  const { jobs, currentJobId, setIsNewJobModalOpen, storageService } = useInventory();
+  const { jobs, currentJobId, setIsNewJobModalOpen, storageService, isAdmin } = useInventory();
   const [filterState, setFilterState] = useState('ACTIVE');
 
   const filteredJobs = jobs.filter(j => j.status === filterState);
@@ -196,13 +202,20 @@ export const JobDashboard = () => {
           <h1 className="text-2xl font-bold text-on-surface tracking-tight">Správa Zakázek (Joby)</h1>
           <p className="text-sm text-outline">Operativní přehled natáčecích projektů a stavu nakládky</p>
         </div>
-        <button
-          onClick={() => setIsNewJobModalOpen(true)}
-          className="h-11 px-4 bg-primary text-on-primary-container font-semibold rounded-xl hover:bg-opacity-90 transition-all flex items-center gap-2 shadow-md active:scale-95"
-        >
-          <Plus className="w-5 h-5 text-on-primary-container" />
-          <span className="hidden sm:inline">Nová Zakázka</span>
-        </button>
+
+        {isAdmin() ? (
+          <button
+            onClick={() => setIsNewJobModalOpen(true)}
+            className="h-11 px-4 bg-primary text-on-primary-container font-semibold rounded-xl hover:bg-opacity-90 transition-all flex items-center gap-2 shadow-md active:scale-95"
+          >
+            <Plus className="w-5 h-5 text-on-primary-container" />
+            <span className="hidden sm:inline">Nová Zakázka</span>
+          </button>
+        ) : (
+          <span className="text-xs font-mono font-bold text-primary bg-primary-container/20 px-3 py-1.5 rounded-xl border border-primary/30 flex items-center gap-1">
+            <Shield className="w-3.5 h-3.5 text-primary" /> Role: UŽIVATEL (Práce v Packaging)
+          </span>
+        )}
       </div>
 
       {/* Active vs Archived Toggle */}
