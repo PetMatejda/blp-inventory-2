@@ -155,7 +155,7 @@ export const EquipmentCatalog = () => {
 
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [hideAlreadyAdded, setHideAlreadyAdded] = useState(true);
+  const [hideAlreadyAdded, setHideAlreadyAdded] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeBundleModal, setActiveBundleModal] = useState(null);
   const [addedItemSuccess, setAddedItemSuccess] = useState(null);
@@ -177,6 +177,7 @@ export const EquipmentCatalog = () => {
         return false;
       }
     }
+    // In edit mode: always show ALL items so admin can manage the full catalog
     if (!isEditMode && hideAlreadyAdded && addedCatalogIds.has(item.id)) {
       return false;
     }
@@ -269,7 +270,11 @@ export const EquipmentCatalog = () => {
 
         {isAdmin() && (
           <button
-            onClick={() => setIsEditMode(!isEditMode)}
+            onClick={() => {
+              setIsEditMode(!isEditMode);
+              // When entering edit mode, show all items
+              if (!isEditMode) setHideAlreadyAdded(false);
+            }}
             className={`p-2.5 rounded-xl border transition-all shadow-md active:scale-95 flex items-center gap-2 ${
               isEditMode
                 ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
