@@ -28,7 +28,7 @@ export const firebaseDb = {
       console.log('[FirebaseDb] Data úspěšně nahrána do cloudu Firestore:', payload);
       return { success: true };
     } catch (err) {
-      console.warn('[FirebaseDb] Firestore push warning:', err);
+      console.warn('[FirebaseDb] Firestore push warning (zkontrolujte pravidla Firestore v konzoli):', err.message);
       return { success: false, error: err.message };
     }
   },
@@ -39,7 +39,7 @@ export const firebaseDb = {
   subscribeToCloud(onUpdate) {
     try {
       const mainRef = doc(db, 'inventory_store', GLOBAL_STORE_DOC_ID);
-      const unsubscribe = onSnapshot(mainRef, (snap) => {
+      const unsubscribe = onSnapshot(mainRef, { includeMetadataChanges: false }, (snap) => {
         if (snap.exists()) {
           const data = snap.data();
           console.log('[FirebaseDb] Realtime cloud aktualizace přijata z Firestore:', data);
@@ -54,12 +54,12 @@ export const firebaseDb = {
           if (onUpdate) onUpdate(data);
         }
       }, (err) => {
-        console.warn('[FirebaseDb] Firestore listener warning:', err);
+        console.warn('[FirebaseDb] Firestore listener notice (pravidla/offline):', err.message);
       });
 
       return unsubscribe;
     } catch (err) {
-      console.warn('[FirebaseDb] Firestore subscribe error:', err);
+      console.warn('[FirebaseDb] Firestore subscribe notice:', err.message);
       return () => {};
     }
   }
