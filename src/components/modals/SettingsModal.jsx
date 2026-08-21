@@ -1,12 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Settings, X, Moon, Sun, Wifi, WifiOff, RotateCcw, ShieldCheck, CloudUpload, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Settings, X, Moon, Sun, Wifi, WifiOff, RotateCcw, ShieldCheck, CloudUpload, CheckCircle2, AlertCircle, Smartphone, Download } from 'lucide-react';
 import { storageService } from '../../services/storageService';
 
 export const SettingsModal = () => {
   const { isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode, isOffline, setIsOffline, resetDemoData } = useInventory();
   const [syncStatus, setSyncStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
+  }, []);
 
   if (!isSettingsModalOpen) return null;
 
@@ -19,6 +38,19 @@ export const SettingsModal = () => {
       setSyncStatus({ type: 'success', text: 'Kolekce inventory_store/blp_main_store byla úspěšně zapsána do Firebase!' });
     } else {
       setSyncStatus({ type: 'error', text: `Chyba zápisu: ${res.error || 'Zkontrolujte přihlášení a pravidla'}` });
+    }
+  };
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      alert('Pro instalaci aplikace na Androidu:\n1. Otevřete web v prohlížeči Chrome na mobilu\n2. Klikněte na menu 3 teček (⋮) vpravo nahoře\n3. Zvolte "Přidat na domovskou obrazovku" nebo "Nainstalovat aplikaci"');
     }
   };
 
@@ -54,6 +86,35 @@ export const SettingsModal = () => {
             <span>{syncStatus.text}</span>
           </div>
         )}
+
+        {/* Android App & PWA Download / Installation Box */}
+        <div className="bg-surface-container p-4 rounded-xl border border-secondary/40 flex flex-col gap-3 relative overflow-hidden">
+          <div className="flex items-center gap-3">
+            <img
+              src="/icon-192.png"
+              alt="BLP Film App Icon"
+              className="w-12 h-12 rounded-xl object-cover border-2 border-secondary shadow-md shrink-0"
+            />
+            <div>
+              <h3 className="font-bold text-sm text-on-surface flex items-center gap-1.5">
+                <Smartphone className="w-4 h-4 text-secondary" /> Android Mobilní Aplikace
+              </h3>
+              <p className="text-xs text-outline">Nativní PWA / APK prostředí bez lišty prohlížeče s filmovou ikonou</p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleInstallApp}
+            className="w-full py-2.5 px-4 bg-secondary text-on-secondary-container font-mono font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow hover:opacity-90"
+          >
+            <Download className="w-4 h-4" />
+            {isInstalled ? 'Aplikace je Nainstalována v Telefonu' : '📲 Nainstalovat Aplikaci na Android / Mobil'}
+          </button>
+
+          <p className="text-[11px] text-outline font-mono text-center">
+            V prohlížeči Chrome na Androidu stačí dát menu <strong>(⋮) ➔ Přidat na domovskou obrazovku</strong>.
+          </p>
+        </div>
 
         {/* Cloud Sync Manual Action */}
         <div className="flex flex-col gap-2">
@@ -135,7 +196,7 @@ export const SettingsModal = () => {
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-secondary" /> BLP INVENTORY Engine
           </span>
-          <span className="font-bold text-on-surface">v2.0.0 (Firebase Cloud)</span>
+          <span className="font-bold text-on-surface">v2.0.0 (Android PWA / APK)</span>
         </div>
 
         <button
