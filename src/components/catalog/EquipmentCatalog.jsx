@@ -1,144 +1,164 @@
 import React, { useState, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { useLongPress } from '../../hooks/useLongPress';
-import { CATEGORIES, getCategoryMeta } from '../../utils/categoryIcons';
+import { getCategoryMeta, CATEGORIES } from '../../utils/categoryIcons';
 import { ItemThumbnail } from '../common/ItemThumbnail';
-import { Search, Plus, Layers, Zap, Weight, Check, Info, FolderOpen, ArrowRight, Settings, Eye, EyeOff, MoreVertical, Edit3, Trash2, Edit2, X, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import {
+  Search, Plus, Layers, Zap, Weight, Check, Info,
+  FolderOpen, ArrowRight, Edit3, Trash2, X, ChevronLeft,
+  ChevronRight, Filter, EyeOff, Eye, Package
+} from 'lucide-react';
+import { CatalogItemDrawer } from './CatalogItemDrawer';
 
-const CatalogCardItem = ({ item, isAlreadyInJob, currentJob, isEditMode, onAdd, onOpenBundle, onEdit, onDelete }) => {
-  const { setContextMenu } = useInventory();
+// ─────────────────────────────────────────────────────────────────────
+// CATALOG CARD — compact, no "edit mode" concept
+// Admin always sees Edit/Delete actions via a small action bar at bottom
+// ─────────────────────────────────────────────────────────────────────
+const CatalogCard = ({ item, isAlreadyInJob, currentJob, onAdd, onEdit, onDelete, onOpenBundle }) => {
+  const { isAdmin } = useInventory();
   const catMeta = getCategoryMeta(item.category);
   const CatIcon = catMeta.icon;
 
-  const longPressProps = useLongPress(
-    (e) => {
-      e.stopPropagation();
-      setContextMenu({ type: 'CATALOG_ITEM', target: item });
-    },
-    null
-  );
-
   return (
-    <div
-      {...longPressProps}
-      className={`bg-card-bg rounded-2xl overflow-hidden border transition-all flex flex-col group shadow-md relative select-none ${
-        isEditMode
-          ? 'border-amber-500/80 ring-1 ring-amber-500/40 bg-amber-950/10'
-          : 'border-outline-variant hover:border-outline'
-      }`}
-    >
-      {/* Image Container */}
-      <div className="h-44 relative bg-surface-container-lowest p-4 flex items-center justify-center overflow-hidden">
+    <div className={`bg-card-bg rounded-2xl overflow-hidden border flex flex-col shadow-sm transition-all hover:shadow-md ${
+      isAlreadyInJob ? 'border-secondary/40' : 'border-outline-variant'
+    }`}>
+      {/* Image */}
+      <div className="relative h-40 bg-surface-container-lowest flex items-center justify-center overflow-hidden">
         {item.isBundle && (
-          <span className="absolute top-3 left-3 bg-primary-container text-on-primary-container px-2.5 py-1 rounded font-mono text-[11px] font-bold z-10 border border-primary/40 flex items-center gap-1">
-            <Layers className="w-3.5 h-3.5" /> BALÍČEK / SET
+          <span className="absolute top-2.5 left-2.5 bg-primary-container text-on-primary-container px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold z-10 border border-primary/40 flex items-center gap-1">
+            <Layers className="w-3 h-3" /> SET
           </span>
         )}
-        {!isEditMode && isAlreadyInJob && (
-          <span className="absolute top-3 right-3 bg-secondary-container text-on-secondary-container px-2.5 py-1 rounded font-mono text-[11px] font-bold z-10 border border-secondary flex items-center gap-1">
-            <Check className="w-3.5 h-3.5 text-secondary" /> JIŽ V ZAKÁZCE
+        {isAlreadyInJob && (
+          <span className="absolute top-2.5 right-2.5 bg-secondary-container/80 text-on-secondary-container px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold z-10 border border-secondary/50 flex items-center gap-1 backdrop-blur-sm">
+            <Check className="w-3 h-3 text-secondary" /> V zakázce
           </span>
         )}
-
-        {/* Quick Menu Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setContextMenu({ type: 'CATALOG_ITEM', target: item });
-          }}
-          className="absolute top-3 left-3 z-10 p-1.5 bg-card-bg/80 backdrop-blur text-outline hover:text-on-surface rounded-lg border border-outline-variant"
-          title="Kontextové menu"
-        >
-          <MoreVertical className="w-4 h-4" />
-        </button>
-
-        <ItemThumbnail
-          src={item.image}
-          name={item.name}
-          category={item.category}
-          className="w-full h-full"
-        />
+        <ItemThumbnail src={item.image} name={item.name} category={item.category} className="w-full h-full" />
       </div>
 
-      {/* Content Details */}
-      <div className="p-4 flex flex-col flex-grow">
-        <div className="flex items-center gap-2 mb-2">
-          <span className={`p-1.5 rounded-lg border flex items-center justify-center shrink-0 ${catMeta.color}`} title={catMeta.label}>
-            <CatIcon className="w-4 h-4" />
+      {/* Content */}
+      <div className="p-3.5 flex flex-col flex-grow gap-2.5">
+        {/* Name + category */}
+        <div className="flex items-start gap-2">
+          <span className={`mt-0.5 p-1.5 rounded-lg border shrink-0 ${catMeta.color}`}>
+            <CatIcon className="w-3.5 h-3.5" />
           </span>
-          <h3 className="font-bold text-lg text-on-surface leading-snug">{item.name}</h3>
+          <h3 className="font-bold text-sm text-on-surface leading-snug">{item.name}</h3>
         </div>
 
-        {/* Specs Grid */}
-        <div className="flex gap-4 mb-4 text-xs font-mono text-on-surface-variant">
-          <div className="flex flex-col">
-            <span className="text-outline text-[10px]">HMOTNOST</span>
-            <span className="flex items-center gap-1 font-semibold">
-              <Weight className="w-3 h-3 text-outline" /> {item.weight}
-            </span>
-          </div>
-          <div className="w-[1px] bg-outline-variant"></div>
-          <div className="flex flex-col">
-            <span className="text-outline text-[10px]">VÝKON</span>
-            <span className="flex items-center gap-1 font-semibold">
-              <Zap className="w-3 h-3 text-tertiary" /> {item.power}
-            </span>
-          </div>
+        {/* Specs row */}
+        <div className="flex items-center gap-3 text-[11px] font-mono text-on-surface-variant">
+          <span className="flex items-center gap-1">
+            <Weight className="w-3 h-3 text-outline" /> {item.weight}
+          </span>
+          <span className="w-px h-3 bg-outline-variant" />
+          <span className="flex items-center gap-1">
+            <Zap className="w-3 h-3 text-tertiary" /> {item.power}
+          </span>
+          {item.isBundle && (
+            <>
+              <span className="w-px h-3 bg-outline-variant" />
+              <button
+                onClick={(e) => { e.stopPropagation(); onOpenBundle(item); }}
+                className="flex items-center gap-1 text-primary hover:underline"
+              >
+                <Info className="w-3 h-3" /> {item.bundleItems?.length} dílů
+              </button>
+            </>
+          )}
         </div>
 
-        {/* Bundle preview button if bundle */}
-        {item.isBundle && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenBundle(item);
-            }}
-            className="mb-3 text-xs text-primary font-semibold flex items-center gap-1 hover:underline"
-          >
-            <Info className="w-3.5 h-3.5" /> Zobrazit složení balíčku ({item.bundleItems?.length} položek)
-          </button>
-        )}
+        {/* Spacer */}
+        <div className="flex-grow" />
 
-        {/* Edit Mode Buttons vs Normal Add Button */}
-        {isEditMode ? (
-          <div className="mt-auto flex gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(item);
-              }}
-              className="flex-1 h-10 bg-primary text-on-primary-container font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow"
-            >
-              <Edit2 className="w-3.5 h-3.5" /> Upravit
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(item.id, item.name);
-              }}
-              className="h-10 px-3 bg-error-container/30 border border-error/40 text-error font-bold text-xs rounded-xl flex items-center justify-center transition-colors"
-              title="Smazat z katalogu"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
+        {/* Action row */}
+        <div className="flex gap-2 mt-auto">
+          {/* Primary CTA — Add to job */}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAdd(item);
-            }}
-            className="mt-auto h-11 w-full bg-surface-container-high hover:bg-surface-bright border border-outline-variant text-primary font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
+            onClick={(e) => { e.stopPropagation(); onAdd(item); }}
+            className={`flex-1 h-10 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
+              isAlreadyInJob
+                ? 'bg-secondary/10 border border-secondary/40 text-secondary hover:bg-secondary/20'
+                : 'bg-secondary text-on-secondary-container shadow-sm hover:opacity-90'
+            }`}
           >
-            <Plus className="w-4 h-4 text-secondary" />
-            {item.isBundle ? `Vložit set do ${currentJob?.name || 'zakázky'}` : `Přidat do ${currentJob?.name || 'zakázky'}`}
+            <Plus className="w-3.5 h-3.5" />
+            {isAlreadyInJob ? 'Přidat znovu' : 'Přidat'}
           </button>
-        )}
+
+          {/* Admin actions — always visible, no mode toggle */}
+          {isAdmin() && (
+            <div className="flex gap-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+                className="w-10 h-10 rounded-xl border border-outline-variant bg-surface-container hover:bg-surface-container-high text-primary flex items-center justify-center transition-all active:scale-90"
+                title="Upravit položku v katalogu"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.name); }}
+                className="w-10 h-10 rounded-xl border border-outline-variant bg-surface-container hover:bg-error-container/30 hover:border-error/40 text-outline hover:text-error flex items-center justify-center transition-all active:scale-90"
+                title="Smazat z katalogu"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────
+// BUNDLE MODAL — simple bottom sheet
+// ─────────────────────────────────────────────────────────────────────
+const BundleModal = ({ item, onClose, onAdd }) => {
+  if (!item) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 bg-card-bg rounded-t-3xl sm:rounded-2xl border border-outline-variant w-full sm:max-w-md p-5 flex flex-col gap-4 shadow-2xl">
+        <div className="flex justify-between items-start">
+          <div>
+            <span className="text-[10px] font-mono font-bold text-primary uppercase">Složení setu</span>
+            <h3 className="text-lg font-bold text-on-surface mt-0.5">{item.name}</h3>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-outline hover:text-on-surface rounded-lg active:scale-90">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          {item.bundleItems?.map((sub, i) => (
+            <div key={i} className="flex justify-between items-center bg-surface-container p-3 rounded-xl border border-outline-variant text-sm">
+              <span className="text-on-surface font-medium">{sub.name}</span>
+              <span className="font-mono font-bold text-primary">{sub.qty} ks</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-sm active:scale-95">
+            Zavřít
+          </button>
+          <button
+            onClick={() => { onAdd(item); onClose(); }}
+            className="flex-1 py-3 bg-secondary text-on-secondary-container font-bold rounded-xl text-sm flex items-center justify-center gap-1.5 shadow active:scale-95"
+          >
+            <Plus className="w-4 h-4" /> Vložit set
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// MAIN EQUIPMENT CATALOG
+// ─────────────────────────────────────────────────────────────────────
 export const EquipmentCatalog = () => {
   const {
     catalog,
@@ -148,16 +168,15 @@ export const EquipmentCatalog = () => {
     jobs,
     setCurrentJobId,
     setActiveTab,
-    setIsMasterCatalogModalOpen,
     deleteCatalogItem,
-    isAdmin
+    isAdmin,
   } = useInventory();
 
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [hideAlreadyAdded, setHideAlreadyAdded] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [activeBundleModal, setActiveBundleModal] = useState(null);
+  const [drawerItem, setDrawerItem] = useState(null);   // null | 'NEW' | catalogItem
   const [addedItemSuccess, setAddedItemSuccess] = useState(null);
 
   const scrollRef = useRef(null);
@@ -167,20 +186,13 @@ export const EquipmentCatalog = () => {
   const filteredCatalog = catalog.filter((item) => {
     if (selectedCategory !== 'ALL') {
       const meta = getCategoryMeta(item.category);
-      if (meta.id !== selectedCategory && item.category !== selectedCategory) {
-        return false;
-      }
+      if (meta.id !== selectedCategory && item.category !== selectedCategory) return false;
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      if (!item.name.toLowerCase().includes(q) && !item.category.toLowerCase().includes(q)) {
-        return false;
-      }
+      if (!item.name.toLowerCase().includes(q) && !item.category.toLowerCase().includes(q)) return false;
     }
-    // In edit mode: always show ALL items so admin can manage the full catalog
-    if (!isEditMode && hideAlreadyAdded && addedCatalogIds.has(item.id)) {
-      return false;
-    }
+    if (hideAlreadyAdded && addedCatalogIds.has(item.id)) return false;
     return true;
   });
 
@@ -191,320 +203,195 @@ export const EquipmentCatalog = () => {
     setTimeout(() => setAddedItemSuccess(null), 2500);
   };
 
-  const handleEditItem = (item) => {
-    setIsMasterCatalogModalOpen(true);
-  };
-
-  const handleDeleteItem = (itemId, itemName) => {
-    if (window.confirm(`Opravdu chcete smazat položku "${itemName}" z celého katalogu techniky?`)) {
+  const handleDelete = (itemId, itemName) => {
+    if (window.confirm(`Opravdu smazat „${itemName}" z celého katalogu?`)) {
       deleteCatalogItem(itemId);
     }
   };
 
-  const scrollLeft = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
-    }
-  };
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6 pb-28">
-      {/* Responsive Target Active Job Banner */}
-      {!isEditMode && (
-        <div className="bg-card-bg border-2 border-primary/60 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-lg">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="p-2.5 bg-primary-container text-on-primary-container rounded-xl shrink-0">
-              <FolderOpen className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider block">
-                CÍLOVÁ ZAKÁZKA PRO PŘIDÁVÁNÍ
-              </span>
-              <select
-                value={currentJob?.id || ''}
-                onChange={(e) => setCurrentJobId(e.target.value)}
-                className="w-full sm:w-auto max-w-full bg-surface-container text-on-surface font-bold text-sm sm:text-base rounded-lg px-2 py-1 focus:outline-none border border-outline-variant cursor-pointer truncate mt-0.5"
-              >
-                {jobs.map((j) => (
-                  <option key={j.id} value={j.id}>
-                    {j.name} ({j.client})
-                  </option>
-                ))}
-              </select>
-            </div>
+    <div className="max-w-4xl mx-auto px-4 pt-4 pb-32 flex flex-col gap-4">
+
+      {/* ── Job selector banner ── */}
+      <div className="bg-card-bg border border-outline-variant rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="p-2 bg-primary-container text-on-primary-container rounded-xl shrink-0">
+            <FolderOpen className="w-4 h-4" />
           </div>
-
-          {currentJob && (
-            <button
-              onClick={() => setActiveTab('packing')}
-              className="w-full sm:w-auto px-3.5 py-2 bg-secondary text-on-secondary-container font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90 transition-all active:scale-95 shadow shrink-0"
-            >
-              <span>Zobrazit Seznam Zakázky</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Header & Edit Mode Toggle Icon */}
-      <div className="flex justify-between items-center gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-on-surface tracking-tight">Katalog Filmové Techniky</h1>
-            {isEditMode && (
-              <span className="px-2.5 py-0.5 bg-amber-500 text-slate-950 font-mono text-xs font-bold rounded-full animate-pulse">
-                EDITAČNÍ REŽIM
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-outline">
-            {isEditMode ? 'Režim úprav a správy centrálního katalogu techniky' : 'Vyberte techniku ze seznamu a vložte ji do zakázky'}
-          </p>
-        </div>
-
-        {isAdmin() && (
-          <button
-            onClick={() => {
-              setIsEditMode(!isEditMode);
-              // When entering edit mode, show all items
-              if (!isEditMode) setHideAlreadyAdded(false);
-            }}
-            className={`p-2.5 rounded-xl border transition-all shadow-md active:scale-95 flex items-center gap-2 ${
-              isEditMode
-                ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                : 'bg-surface-container hover:bg-surface-container-high border-outline-variant text-primary'
-            }`}
-            title={isEditMode ? 'Ukončit editační režim katalogu' : 'Vstoupit do editačního režimu katalogu'}
-          >
-            {isEditMode ? <X className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
-            <span className="hidden sm:inline font-mono text-xs font-bold">
-              {isEditMode ? 'Ukončit Editaci' : 'Editační Režim (Admin)'}
+          <div className="flex-1 min-w-0">
+            <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider block">
+              Přidávat do zakázky
             </span>
+            <select
+              value={currentJob?.id || ''}
+              onChange={(e) => setCurrentJobId(e.target.value)}
+              className="w-full bg-transparent text-on-surface font-bold text-sm focus:outline-none cursor-pointer truncate mt-0.5 border-none"
+            >
+              {jobs.map((j) => (
+                <option key={j.id} value={j.id}>{j.name} ({j.client})</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        {currentJob && (
+          <button
+            onClick={() => setActiveTab('packing')}
+            className="w-full sm:w-auto px-3 py-2 bg-secondary/10 border border-secondary/40 text-secondary font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
+          >
+            <span>Packing list</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
-      {/* Edit Mode Banner & Create CTA */}
-      {isEditMode && isAdmin() && (
-        <div className="bg-amber-950/20 border-2 border-amber-500/60 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-lg animate-in fade-in duration-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500 text-slate-950 rounded-xl shrink-0">
-              <Settings className="w-5 h-5" />
-            </div>
-            <div>
-              <strong className="block text-sm font-bold text-amber-300">Jste v editačním režimu katalogu</strong>
-              <span className="text-xs text-outline">Můžete přímo upravovat položky, jejich parametry, fotky i složení setů.</span>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setIsMasterCatalogModalOpen(true)}
-            className="w-full sm:w-auto px-4 py-2.5 bg-amber-500 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow hover:opacity-90 shrink-0"
-          >
-            <Plus className="w-4 h-4" /> + Vytvořit Novou Položku
-          </button>
+      {/* ── Header row ── */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-xl font-bold text-on-surface">Katalog techniky</h1>
+          <p className="text-xs text-outline mt-0.5">
+            {catalog.length} položek {isAdmin() && '· Klikněte ✏ pro úpravu'}
+          </p>
         </div>
-      )}
+        {isAdmin() && (
+          <button
+            onClick={() => setDrawerItem('NEW')}
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-secondary text-on-secondary-container font-bold text-sm rounded-2xl shadow-md active:scale-95 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden xs:inline">Nová položka</span>
+          </button>
+        )}
+      </div>
 
-      {/* Success Notification Banner */}
-      {!isEditMode && addedItemSuccess && (
-        <div className="bg-secondary-container text-on-secondary-container p-3.5 rounded-xl font-bold text-xs flex items-center justify-between shadow-lg border border-secondary animate-pulse">
+      {/* ── Success toast ── */}
+      {addedItemSuccess && (
+        <div className="bg-secondary-container/20 border border-secondary/40 text-secondary p-3 rounded-xl font-semibold text-sm flex items-center justify-between gap-2 animate-pulse">
           <span className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-secondary" /> {addedItemSuccess} úspěšně přidáno do zakázky <strong>{currentJob?.name}</strong>!
+            <Check className="w-4 h-4" /> {addedItemSuccess} přidáno do <strong>{currentJob?.name}</strong>
           </span>
-          <button
-            onClick={() => setActiveTab('packing')}
-            className="underline text-xs hover:opacity-80"
-          >
-            Zobrazit v zakázce
+          <button onClick={() => setActiveTab('packing')} className="text-xs underline opacity-80 hover:opacity-100 shrink-0">
+            Zobrazit →
           </button>
         </div>
       )}
 
-      {/* Search Bar & Hide Already Added Toggle */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      {/* ── Search + hide toggle ── */}
+      <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Hledat podle názvu techniky..."
-            className="w-full h-12 pl-11 pr-4 bg-surface-container border border-outline-variant rounded-xl text-on-surface text-sm focus:border-primary focus:outline-none placeholder:text-outline"
+            placeholder="Hledat techniku..."
+            className="w-full h-11 pl-9 pr-9 bg-surface-container border border-outline-variant rounded-xl text-on-surface text-sm focus:border-primary focus:outline-none placeholder:text-outline"
           />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-
-        {!isEditMode && (
-          <button
-            onClick={() => setHideAlreadyAdded(!hideAlreadyAdded)}
-            className={`h-12 px-4 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all shrink-0 ${
-              hideAlreadyAdded
-                ? 'bg-primary-container/30 text-on-primary-container border-primary/40'
-                : 'bg-surface-container text-outline border-outline-variant'
-            }`}
-          >
-            {hideAlreadyAdded ? <EyeOff className="w-4 h-4 text-primary" /> : <Eye className="w-4 h-4 text-outline" />}
-            <span>{hideAlreadyAdded ? 'Skryty již přidané' : 'Zobrazeny všechny'}</span>
-          </button>
-        )}
+        <button
+          onClick={() => setHideAlreadyAdded(!hideAlreadyAdded)}
+          className={`h-11 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 active:scale-90 ${
+            hideAlreadyAdded
+              ? 'bg-primary-container/30 border-primary/40 text-primary'
+              : 'bg-surface-container border-outline-variant text-outline'
+          }`}
+          title={hideAlreadyAdded ? 'Skryty již přidané — kliknout pro zobrazení' : 'Zobrazeny všechny — kliknout pro skrytí přidaných'}
+        >
+          {hideAlreadyAdded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          <span className="hidden xs:inline">{hideAlreadyAdded ? 'Skryty' : 'Vše'}</span>
+        </button>
       </div>
 
-      {/* Responsive Category Selector & Scroll Bar */}
-      <div className="bg-card-bg rounded-2xl border border-outline-variant p-3 flex flex-col gap-2.5 shadow-sm">
-        {/* Category Select Dropdown for direct 1-click jump on mobile */}
-        <div className="flex items-center justify-between gap-2">
-          <label className="text-xs font-mono font-bold text-primary uppercase flex items-center gap-1.5 shrink-0">
-            <Filter className="w-3.5 h-3.5 text-secondary" /> Výběr kategorie:
-          </label>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="h-9 px-2 bg-surface-container border border-outline-variant rounded-lg text-xs font-bold text-on-surface focus:outline-none focus:border-primary cursor-pointer truncate"
-          >
-            <option value="ALL">Všechny kategorie</option>
-            {CATEGORIES.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Scrollable Pills with Scroll Arrow Navigation Buttons */}
-        <div className="relative flex items-center gap-1 pt-2 border-t border-outline-variant/60">
-          <button
-            onClick={scrollLeft}
-            className="p-1.5 bg-surface-container hover:bg-surface-container-high text-outline hover:text-on-surface rounded-lg border border-outline-variant shrink-0"
-            title="Posunout kategorie vlevo"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-
-          <div
-            ref={scrollRef}
-            className="flex overflow-x-auto gap-2 no-scrollbar py-1 scroll-smooth flex-1"
-          >
+      {/* ── Category pills ── */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <button
+          onClick={() => setSelectedCategory('ALL')}
+          className={`px-3 py-1.5 rounded-full font-mono text-[11px] font-bold whitespace-nowrap shrink-0 border transition-all ${
+            selectedCategory === 'ALL'
+              ? 'bg-primary text-on-primary-container border-primary'
+              : 'bg-surface-container text-on-surface-variant border-outline-variant'
+          }`}
+        >
+          Vše ({catalog.length})
+        </button>
+        {CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          const isSelected = selectedCategory === cat.id;
+          const count = catalog.filter(i => {
+            const m = getCategoryMeta(i.category);
+            return m.id === cat.id || i.category === cat.id;
+          }).length;
+          if (count === 0) return null;
+          return (
             <button
-              onClick={() => setSelectedCategory('ALL')}
-              className={`px-3.5 py-1.5 rounded-full font-mono text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
-                selectedCategory === 'ALL'
-                  ? 'bg-primary-container text-on-primary-container border border-primary'
-                  : 'bg-surface-container text-on-surface-variant border border-outline-variant hover:border-outline'
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-3 py-1.5 rounded-full font-mono text-[11px] font-bold whitespace-nowrap flex items-center gap-1 shrink-0 border transition-all ${
+                isSelected
+                  ? 'bg-primary-container text-on-primary-container border-primary shadow-sm'
+                  : 'bg-surface-container text-on-surface-variant border-outline-variant'
               }`}
             >
-              Všechny kategorie
+              <Icon className="w-3 h-3" />
+              {cat.label} <span className="opacity-60">({count})</span>
             </button>
-
-            {CATEGORIES.map((cat) => {
-              const Icon = cat.icon;
-              const isSelected = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-1.5 rounded-full font-mono text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
-                    isSelected
-                      ? 'bg-primary-container text-on-primary-container border border-primary shadow-sm'
-                      : 'bg-surface-container text-on-surface-variant border border-outline-variant hover:border-outline'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{cat.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={scrollRight}
-            className="p-1.5 bg-surface-container hover:bg-surface-container-high text-outline hover:text-on-surface rounded-lg border border-outline-variant shrink-0"
-            title="Posunout kategorie vpravo"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+          );
+        })}
       </div>
 
-      {/* Catalog Grid */}
+      {/* ── Catalog grid ── */}
       {filteredCatalog.length === 0 ? (
-        <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-outline flex flex-col items-center gap-3">
-          <Info className="w-10 h-10 text-outline/50" />
-          <p>
-            {hideAlreadyAdded && addedCatalogIds.size > 0
-              ? 'Všechny položky v této kategorii jsou již přidány v zakázce.'
-              : 'Žádná technika neodpovídá zadanému filtru.'}
+        <div className="bg-card-bg border border-outline-variant rounded-2xl p-10 text-center text-outline flex flex-col items-center gap-3">
+          <Package className="w-10 h-10 text-outline/40" />
+          <p className="text-sm">
+            {searchQuery
+              ? `Žádná shoda pro „${searchQuery}"`
+              : hideAlreadyAdded && addedCatalogIds.size > 0
+              ? 'Všechny položky jsou již v zakázce.'
+              : 'Katalog je prázdný.'}
           </p>
+          {hideAlreadyAdded && addedCatalogIds.size > 0 && (
+            <button
+              onClick={() => setHideAlreadyAdded(false)}
+              className="text-primary text-sm font-semibold hover:underline"
+            >
+              Zobrazit vše →
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3">
           {filteredCatalog.map((item) => (
-            <CatalogCardItem
+            <CatalogCard
               key={item.id}
               item={item}
               isAlreadyInJob={addedCatalogIds.has(item.id)}
               currentJob={currentJob}
-              isEditMode={isEditMode}
               onAdd={handleAdd}
+              onEdit={(item) => setDrawerItem(item)}
+              onDelete={handleDelete}
               onOpenBundle={setActiveBundleModal}
-              onEdit={handleEditItem}
-              onDelete={handleDeleteItem}
             />
           ))}
         </div>
       )}
 
-      {/* Bundle Modal */}
-      {activeBundleModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card-bg rounded-2xl border border-outline-variant max-w-md w-full p-6 flex flex-col gap-4 shadow-2xl">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="text-xs font-mono text-primary font-bold">SLOŽENÍ BALÍČKU</span>
-                <h3 className="text-xl font-bold text-on-surface">{activeBundleModal.name}</h3>
-              </div>
-              <button
-                onClick={() => setActiveBundleModal(null)}
-                className="text-outline hover:text-on-surface p-1"
-              >
-                ✕
-              </button>
-            </div>
+      {/* ── Bundle modal ── */}
+      <BundleModal
+        item={activeBundleModal}
+        onClose={() => setActiveBundleModal(null)}
+        onAdd={handleAdd}
+      />
 
-            <div className="flex flex-col gap-2 my-2">
-              {activeBundleModal.bundleItems?.map((sub, idx) => (
-                <div key={idx} className="flex justify-between items-center bg-surface-container p-2.5 rounded-lg border border-outline-variant text-sm">
-                  <span className="text-on-surface font-medium">{sub.name}</span>
-                  <span className="font-mono font-bold text-primary">{sub.qty} ks</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => setActiveBundleModal(null)}
-                className="flex-1 py-2.5 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-sm"
-              >
-                Zavřít
-              </button>
-              <button
-                onClick={() => {
-                  handleAdd(activeBundleModal);
-                  setActiveBundleModal(null);
-                }}
-                className="flex-1 py-2.5 bg-secondary text-on-secondary-container font-semibold rounded-xl text-sm flex items-center justify-center gap-1 shadow"
-              >
-                <Plus className="w-4 h-4" /> Vložit Set do Zakázky
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Catalog item drawer (create/edit) ── */}
+      <CatalogItemDrawer
+        item={drawerItem}
+        onClose={() => setDrawerItem(null)}
+      />
     </div>
   );
 };
