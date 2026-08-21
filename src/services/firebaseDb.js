@@ -3,28 +3,45 @@ import {
   doc,
   setDoc,
   getDoc,
-  collection,
   onSnapshot,
 } from './firebase';
 
 const GLOBAL_STORE_DOC_ID = 'blp_main_store';
 
-// Track the last server timestamp we received to prevent applying stale data
-let lastServerUpdatedAt = null;
-// Track if we are the one pushing so we can skip our own echo
-let isPushing = false;
+// Unique ID for this browser session — used to identify our own pushes
+// so we don't re-apply our own echo from Firestore
+const SESSION_ID = `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+// Set of updatedAt timestamps that WE generated (our own pushes)
+// We skip snapshots where pushedBy === SESSION_ID
+const localPushTimestamps = new Set();
+
+const writeLocalCache = (data) => {
+  if (data.jobs) localStorage.setItem('blp_jobs_v2', JSON.stringify(data.jobs));
+  if (data.jobItems) localStorage.setItem('blp_job_items_v2', JSON.stringify(data.jobItems));
+  if (data.catalog) localStorage.setItem('blp_catalog_v2', JSON.stringify(data.catalog));
+  if (data.consumables) localStorage.setItem('blp_consumables_v2', JSON.stringify(data.consumables));
+  if (data.auditLogs) localStorage.setItem('blp_audit_logs_v2', JSON.stringify(data.auditLogs));
+};
 
 export const firebaseDb = {
   /**
-   * Pushes full application payload to Cloud Firestore
+   * Pushes full application payload to Cloud Firestore.
+   * Tags the document with this session's ID so the listener can ignore its own echo.
    */
   async pushPayload(payload) {
     try {
-      isPushing = true;
       const updatedAt = new Date().toISOString();
       const mainRef = doc(db, 'inventory_store', GLOBAL_STORE_DOC_ID);
+
+      // Register this timestamp as ours BEFORE the push (in case snapshot arrives fast)
+      localPushTimestamps.add(updatedAt);
+      // Clean up old timestamps after 5 seconds to avoid memory leak
+      setTimeout(() => localPushTimestamps.delete(updatedAt), 5000);
+
       await setDoc(mainRef, {
         updatedAt,
+        pushedBy: SESSION_ID,        // ← identifies the source device/session
         jobs: payload.jobs || [],
         jobItems: payload.jobItems || [],
         catalog: payload.catalog || [],
@@ -32,20 +49,17 @@ export const firebaseDb = {
         auditLogs: payload.auditLogs || [],
       }, { merge: true });
 
-      lastServerUpdatedAt = updatedAt;
-      console.log('[FirebaseDb] Data úspěšně nahrána do cloudu Firestore:', updatedAt);
+      console.log('[FirebaseDb] ✅ Push OK:', updatedAt, '| session:', SESSION_ID.slice(0, 16));
       return { success: true };
     } catch (err) {
-      console.error('[FirebaseDb] Firestore push ERROR (Zkontrolujte pravidla Firestore v konzoli):', err.message);
+      console.error('[FirebaseDb] ❌ Push ERROR:', err.message);
       return { success: false, error: err.message };
-    } finally {
-      // Allow next incoming snapshot to be processed after a brief delay
-      setTimeout(() => { isPushing = false; }, 300);
     }
   },
 
   /**
-   * Directly pulls latest payload from Cloud Firestore
+   * Directly pulls latest payload from Cloud Firestore (one-shot read).
+   * Used on app startup and on visibility change.
    */
   async pullFromCloud() {
     try {
@@ -53,65 +67,65 @@ export const firebaseDb = {
       const snap = await getDoc(mainRef);
       if (snap.exists()) {
         const data = snap.data();
-        if (data.jobs) localStorage.setItem('blp_jobs_v2', JSON.stringify(data.jobs));
-        if (data.jobItems) localStorage.setItem('blp_job_items_v2', JSON.stringify(data.jobItems));
-        if (data.catalog) localStorage.setItem('blp_catalog_v2', JSON.stringify(data.catalog));
-        if (data.consumables) localStorage.setItem('blp_consumables_v2', JSON.stringify(data.consumables));
-        if (data.auditLogs) localStorage.setItem('blp_audit_logs_v2', JSON.stringify(data.auditLogs));
-        lastServerUpdatedAt = data.updatedAt;
-        console.log('[FirebaseDb] Data stažena z cloudu Firestore:', data.updatedAt);
+        writeLocalCache(data);
+        console.log('[FirebaseDb] ✅ Pull OK:', data.updatedAt, '| from:', data.pushedBy?.slice(0, 16));
         return { success: true, data };
       }
+      console.warn('[FirebaseDb] Pull: document does not exist yet in Firestore.');
       return { success: false, error: 'Dokument v cloudu neexistuje.' };
     } catch (err) {
-      console.error('[FirebaseDb] Firestore pull error:', err.message);
+      console.error('[FirebaseDb] ❌ Pull ERROR:', err.message);
       return { success: false, error: err.message };
     }
   },
 
   /**
-   * Subscribes to Realtime Firestore Database updates (<100ms sync across devices)
-   * Only triggers onUpdate when the change originates from ANOTHER device/session.
+   * Subscribes to realtime Firestore snapshots.
+   * Calls onUpdate ONLY when the change came from ANOTHER device/session.
+   *
+   * Echo prevention: checks `pushedBy` field — if it matches our SESSION_ID,
+   * this is our own echo and we skip it.
    */
   subscribeToCloud(onUpdate) {
     try {
       const mainRef = doc(db, 'inventory_store', GLOBAL_STORE_DOC_ID);
-      const unsubscribe = onSnapshot(mainRef, { includeMetadataChanges: true }, (snap) => {
-        if (!snap.exists()) return;
 
-        // Skip local pending writes — wait for server confirmation only
-        if (snap.metadata.hasPendingWrites) return;
+      const unsubscribe = onSnapshot(
+        mainRef,
+        { includeMetadataChanges: true },
+        (snap) => {
+          if (!snap.exists()) return;
 
-        // Skip if the snapshot came from our own push (echo prevention)
-        if (isPushing) return;
+          // Skip optimistic/pending local writes — only process server-confirmed data
+          if (snap.metadata.hasPendingWrites) {
+            console.log('[FirebaseDb] Listener: skipping pending write (not yet confirmed by server)');
+            return;
+          }
 
-        const data = snap.data();
+          const data = snap.data();
 
-        // Only apply remote updates that are newer than what we last pushed/received
-        if (lastServerUpdatedAt && data.updatedAt <= lastServerUpdatedAt) {
-          console.log('[FirebaseDb] Skipping stale/own snapshot:', data.updatedAt);
-          return;
+          // Echo prevention: if this snapshot was pushed by THIS session, ignore it
+          if (data.pushedBy === SESSION_ID) {
+            console.log('[FirebaseDb] Listener: skipping own echo (pushedBy matches session)');
+            return;
+          }
+
+          // This is a genuine remote update from another device
+          console.log('[FirebaseDb] 🔔 Remote update from:', data.pushedBy?.slice(0, 16), '| updatedAt:', data.updatedAt);
+          writeLocalCache(data);
+
+          if (onUpdate) onUpdate(data);
+        },
+        (err) => {
+          // Non-fatal — can happen when offline or Firestore rules are strict
+          console.warn('[FirebaseDb] Listener warning:', err.code, err.message);
         }
-
-        console.log('[FirebaseDb] Realtime remote cloud aktualizace od jiného zařízení:', data.updatedAt);
-        lastServerUpdatedAt = data.updatedAt;
-
-        // Update local cache with real cloud data
-        if (data.jobs) localStorage.setItem('blp_jobs_v2', JSON.stringify(data.jobs));
-        if (data.jobItems) localStorage.setItem('blp_job_items_v2', JSON.stringify(data.jobItems));
-        if (data.catalog) localStorage.setItem('blp_catalog_v2', JSON.stringify(data.catalog));
-        if (data.consumables) localStorage.setItem('blp_consumables_v2', JSON.stringify(data.consumables));
-        if (data.auditLogs) localStorage.setItem('blp_audit_logs_v2', JSON.stringify(data.auditLogs));
-
-        if (onUpdate) onUpdate(data);
-      }, (err) => {
-        console.warn('[FirebaseDb] Firestore listener notice (pravidla/offline):', err.message);
-      });
+      );
 
       return unsubscribe;
     } catch (err) {
-      console.warn('[FirebaseDb] Firestore subscribe notice:', err.message);
+      console.warn('[FirebaseDb] Subscribe error:', err.message);
       return () => {};
     }
-  }
+  },
 };

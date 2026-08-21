@@ -58,18 +58,33 @@ export const InventoryProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Initial local cache setup on app startup
+    // Step 1: Initialize from local defaults (if first run)
+    // Does NOT push to cloud — avoids overwriting remote changes on startup
     storageService.init();
-    refreshDataFromLocal();
 
-    // 1. Subscribe to Realtime Firebase Firestore Cloud Database
-    // Only fires for REMOTE changes from other devices (echo prevention in firebaseDb.js)
+    // Step 2: Pull latest from cloud BEFORE showing data
+    // This ensures we always start with the freshest server state
+    setSyncStatus('syncing');
+    firebaseDb.pullFromCloud().then((res) => {
+      if (res.success) {
+        console.log('[Context] Startup cloud pull OK, refreshing UI.');
+      } else {
+        console.warn('[Context] Startup cloud pull failed (offline?), using local cache.');
+      }
+      // Always refresh from local (which now has cloud data if pull succeeded)
+      refreshDataFromLocal();
+      setSyncStatus(res.success ? 'synced' : 'offline');
+    });
+
+    // Step 3: Subscribe to real-time Firestore updates
+    // Only fires for changes from OTHER devices (echo prevention in firebaseDb.js)
     const unsubscribeCloud = firebaseDb.subscribeToCloud(() => {
+      console.log('[Context] Remote update received, refreshing UI.');
       setSyncStatus('synced');
       refreshDataFromLocal();
     });
 
-    // 2. Subscribe to Real Firebase Auth State Changes
+    // Step 4: Subscribe to Firebase Auth state
     const unsubscribeAuth = firebaseAuth.onAuthChange((user) => {
       if (user) {
         setCurrentUserState(user);
@@ -80,13 +95,15 @@ export const InventoryProvider = ({ children }) => {
       }
     });
 
-    // 3. Auto-pull fresh cloud data when switching back to the app
+    // Step 5: Pull fresh data when user switches back to the app
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        firebaseDb.pullFromCloud().then(res => {
+        setSyncStatus('syncing');
+        firebaseDb.pullFromCloud().then((res) => {
           if (res.success) {
             refreshDataFromLocal();
           }
+          setSyncStatus(res.success ? 'synced' : 'offline');
         });
       }
     };
@@ -94,12 +111,16 @@ export const InventoryProvider = ({ children }) => {
     const handleOnline = () => {
       setIsOffline(false);
       setSyncStatus('syncing');
-      cloudSyncService.syncPendingChanges().then(res => {
-        setSyncStatus('synced');
-        if (res.synced > 0) {
-          setSyncNotice(`Synchronizováno ${res.synced} offline změn s Firebase cloudem.`);
-          setTimeout(() => setSyncNotice(null), 3500);
-        }
+      // On coming back online: pull first, then push our pending changes
+      firebaseDb.pullFromCloud().then((pullRes) => {
+        if (pullRes.success) refreshDataFromLocal();
+        cloudSyncService.syncPendingChanges().then(res => {
+          setSyncStatus('synced');
+          if (res.synced > 0) {
+            setSyncNotice(`Synchronizováno ${res.synced} offline změn s Firebase cloudem.`);
+            setTimeout(() => setSyncNotice(null), 3500);
+          }
+        });
       });
     };
     const handleOffline = () => {

@@ -19,7 +19,8 @@ const KEYS = {
   CURRENT_USER_ROLE: 'blp_user_role_v2',
 };
 
-// Debounce helper to prevent rapid double cloud pushes
+// Debounce helper — 800ms window prevents rapid-fire pushes
+// that can race each other and corrupt cloud state
 let syncTimeout = null;
 
 export const storageService = {
@@ -33,7 +34,7 @@ export const storageService = {
         consumables: this.getConsumables(),
         auditLogs: this.getAuditLogs(),
       });
-    }, 50);
+    }, 800);
   },
 
   async syncToCloudManual() {
@@ -118,8 +119,9 @@ export const storageService = {
     const rawItems = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
     const cleanItems = this.consolidateItems(rawItems);
     localStorage.setItem(KEYS.JOB_ITEMS, JSON.stringify(cleanItems));
-
-    this.syncToCloud();
+    // NOTE: Do NOT call syncToCloud() here!
+    // The correct startup sequence is: init (local only) → pull cloud → refresh UI
+    // Pushing on startup would overwrite cloud data with potentially stale local data.
   },
 
   resetDemoData() {
