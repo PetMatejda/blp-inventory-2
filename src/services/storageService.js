@@ -46,6 +46,10 @@ export const storageService = {
     });
   },
 
+  async syncFromCloudManual() {
+    return await firebaseDb.pullFromCloud();
+  },
+
   consolidateItems(items) {
     const map = new Map();
     const consolidated = [];

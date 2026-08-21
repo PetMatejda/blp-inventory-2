@@ -68,7 +68,7 @@ export const InventoryProvider = ({ children }) => {
       refreshDataFromLocal();
     });
 
-    // 2. Subscribe to Real Firebase Auth State Changes (Google OAuth & Email Auth)
+    // 2. Subscribe to Real Firebase Auth State Changes
     const unsubscribeAuth = firebaseAuth.onAuthChange((user) => {
       if (user) {
         setCurrentUserState(user);
@@ -78,6 +78,17 @@ export const InventoryProvider = ({ children }) => {
         setIsAuthModalOpen(true);
       }
     });
+
+    // 3. Auto-pull fresh cloud data when switching tabs or returning to app
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        firebaseDb.pullFromCloud().then(res => {
+          if (res.success) {
+            refreshDataFromLocal();
+          }
+        });
+      }
+    };
 
     const handleOnline = () => {
       setIsOffline(false);
@@ -95,12 +106,16 @@ export const InventoryProvider = ({ children }) => {
       setSyncStatus('offline');
     };
 
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
       unsubscribeCloud();
       unsubscribeAuth();
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -328,6 +343,20 @@ export const InventoryProvider = ({ children }) => {
     setIsNewJobModalOpen(false);
   };
 
+  const forceSyncAll = async () => {
+    setSyncStatus('syncing');
+    const pushRes = await storageService.syncToCloudManual();
+    const pullRes = await storageService.syncFromCloudManual();
+    refreshDataFromLocal();
+    setSyncStatus('synced');
+    if (pushRes.success && pullRes.success) {
+      setSyncNotice('🔥 Cloud plně synchronizován s databází Firebase!');
+    } else {
+      setSyncNotice(`⚠️ Pozor: ${pushRes.error || pullRes.error || 'Zkontrolujte připojení k internetu'}`);
+    }
+    setTimeout(() => setSyncNotice(null), 4000);
+  };
+
   const resetDemoData = () => {
     storageService.resetDemoData();
     refreshDataFromLocal();
@@ -383,6 +412,7 @@ export const InventoryProvider = ({ children }) => {
         updateConsumableState,
         toggleJobMode,
         createJob,
+        forceSyncAll,
         resetDemoData,
 
         // Modals & Editing

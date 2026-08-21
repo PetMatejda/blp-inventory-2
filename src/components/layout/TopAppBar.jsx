@@ -1,10 +1,10 @@
 import React from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Wifi, WifiOff, Settings, Shield, User, LogOut, LogIn } from 'lucide-react';
+import { Wifi, WifiOff, Settings, Shield, User, LogOut, LogIn, RefreshCw } from 'lucide-react';
 import { firebaseAuth } from '../../services/firebaseAuth';
 
 export const TopAppBar = () => {
-  const { currentJob, currentUser, setCurrentUser, isAdmin, setIsAuthModalOpen, setIsSettingsModalOpen, isOffline } = useInventory();
+  const { currentJob, currentUser, setCurrentUser, isAdmin, setIsAuthModalOpen, setIsSettingsModalOpen, isOffline, forceSyncAll, syncStatus } = useInventory();
 
   const handleLogout = async (e) => {
     e.stopPropagation();
@@ -78,8 +78,20 @@ export const TopAppBar = () => {
         </div>
       )}
 
-      {/* Right controls: Connection, Logout & Settings */}
+      {/* Right controls: Force Sync, Connection, Logout & Settings */}
       <div className="flex items-center gap-2">
+        <button
+          onClick={forceSyncAll}
+          className={`p-2 rounded-full border transition-all ${
+            syncStatus === 'syncing'
+              ? 'bg-amber-500/20 text-amber-400 border-amber-500 animate-spin'
+              : 'bg-surface-container hover:bg-surface-container-high text-primary border-outline-variant'
+          }`}
+          title="Vynutit okamžitou synchronizaci s Firebase cloudem"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+
         <button
           onClick={() => setIsSettingsModalOpen(true)}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium border transition-colors ${
