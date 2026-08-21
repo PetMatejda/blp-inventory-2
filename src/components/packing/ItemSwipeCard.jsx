@@ -45,16 +45,17 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
       longPressProps.cancelLongPress();
     }
 
-    setDragOffset(Math.max(-120, Math.min(120, diff)));
+    setDragOffset(Math.max(-140, Math.min(140, diff)));
   };
 
   const handleTouchEnd = (e) => {
     if (!isDragging) return;
     setIsDragging(false);
 
-    if (dragOffset > 70) {
+    // Effortless swipe threshold: 40px (was 70px)
+    if (dragOffset > 40) {
       setItemLoadedOrPacked(item.id);
-    } else if (dragOffset < -70) {
+    } else if (dragOffset < -40) {
       setItemPending(item.id);
     } else {
       longPressProps.onMouseUp(e);
@@ -74,13 +75,13 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
     switch (item.status) {
       case 'LOADED':
         return (
-          <span className="bg-secondary text-on-secondary-container px-2 py-0.5 rounded font-mono text-[11px] font-bold flex items-center gap-1 shrink-0 shadow-sm">
+          <span className="bg-secondary text-on-secondary-container px-2 py-0.5 rounded font-mono text-[11px] font-bold flex items-center gap-1 shrink-0 shadow-sm border border-secondary/50">
             <CheckCircle className="w-3.5 h-3.5" /> Na place / Naloženo
           </span>
         );
       case 'PACKED':
         return (
-          <span className="bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded font-mono text-[11px] font-bold flex items-center gap-1 shrink-0 shadow-sm">
+          <span className="bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded font-mono text-[11px] font-bold flex items-center gap-1 shrink-0 shadow-sm border border-tertiary/50">
             <Package className="w-3.5 h-3.5" /> Sbaleno k odvozu
           </span>
         );
@@ -99,23 +100,24 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
     }
   };
 
-  const getBorderColor = () => {
+  // High-contrast, thick status color bar on the left edge of the card
+  const getCardStatusStyle = () => {
     switch (item.status) {
       case 'LOADED':
-        return 'border-l-4 border-l-secondary border-outline-variant';
+        return 'border-l-[6px] border-l-emerald-500 border-y-outline-variant border-r-outline-variant bg-card-bg';
       case 'PACKED':
-        return 'border-l-4 border-l-tertiary-container border-outline-variant';
+        return 'border-l-[6px] border-l-cyan-400 border-y-outline-variant border-r-outline-variant bg-card-bg';
       case 'DAMAGED':
-        return 'border-l-4 border-l-error border-error-container';
+        return 'border-l-[6px] border-l-red-500 border-y-error/40 border-r-error/40 bg-error-container/10';
       default:
-        return 'border-l-4 border-l-outline-variant border-outline-variant';
+        return 'border-l-[6px] border-l-slate-600 border-y-outline-variant border-r-outline-variant bg-card-bg';
     }
   };
 
   const photoUrl = item.photoUrls?.[0] || 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80';
 
   return (
-    <div className="swipe-card-container bg-surface-container rounded-xl overflow-hidden shadow-sm relative group select-none">
+    <div className="swipe-card-container bg-surface-container rounded-xl overflow-hidden shadow-sm relative group select-none touch-pan-y">
       {/* Background action reveal layers - Mode Aware */}
       <div className="absolute inset-0 flex justify-between z-0 pointer-events-none font-bold text-xs">
         <div
@@ -124,18 +126,18 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
           }`}
         >
           <Check className="w-5 h-5" />
-          <span>{isModeDerigging ? '✓ SBALENO (Naloženo k odvozu)' : '✓ NALOŽIT (Na place)'}</span>
+          <span>{isModeDerigging ? '✓ SBALENO' : '✓ NALOŽIT'}</span>
         </div>
 
         <div className="bg-surface-variant text-on-surface-variant w-1/2 flex items-center justify-end pr-4 gap-1.5 border-l border-outline-variant">
-          <span>{isModeDerigging ? '↩ NENALOŽENO' : '↩ K NALOŽENÍ (Připraveno)'}</span>
+          <span>{isModeDerigging ? '↩ NENALOŽENO' : '↩ K NALOŽENÍ'}</span>
           <RotateCcw className="w-4 h-4" />
         </div>
       </div>
 
       {/* Swipeable content layer */}
       <div
-        className={`swipe-content bg-card-bg flex border ${getBorderColor()} rounded-xl relative z-10 transition-transform cursor-pointer ${
+        className={`swipe-content flex border ${getCardStatusStyle()} rounded-xl relative z-10 transition-transform cursor-pointer ${
           isDragging ? 'transition-none' : 'duration-200'
         }`}
         style={{ transform: `translateX(${dragOffset}px)` }}
@@ -151,7 +153,7 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
           <div>
             {/* Header with Category Icon, Truncated Title & Action Buttons */}
             <div className="flex items-start justify-between mb-2 gap-2 w-full">
-              {/* Left Title Box with min-w-0 flex-1 */}
+              {/* Left Title Box */}
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span
                   className={`p-1.5 rounded-lg border flex items-center justify-center shrink-0 shadow-xs ${catMeta.color}`}
@@ -179,7 +181,7 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
                 </button>
               </div>
 
-              {/* Right Action Bar (Always visible, never pushed off-screen) */}
+              {/* Right Action Bar */}
               <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                 {getStatusBadge()}
 
@@ -309,7 +311,7 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
           </div>
         </div>
 
-        {/* Clickable thumbnail preview for desktop & tablet */}
+        {/* Clickable thumbnail preview */}
         <div
           onClick={(e) => {
             e.stopPropagation();
