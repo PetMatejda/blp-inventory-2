@@ -131,7 +131,7 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
         </div>
 
         <div className="bg-surface-variant text-on-surface-variant w-1/2 flex items-center justify-end pr-4 gap-1.5 border-l border-outline-variant">
-          <span>{isModeDerigging ? '↩ NENALOŽENO' : '↩ K NALOŽENÍ'}</span>
+          <span>{isModeDerigging ? '↩ VRÁTIT NA PLACE' : '↩ K NALOŽENÍ'}</span>
           <RotateCcw className="w-4 h-4" />
         </div>
       </div>

@@ -437,16 +437,24 @@ export const storageService = {
     if (index === -1) return null;
 
     const item = { ...allItems[index] };
-    item.quantityLoaded = 0;
-    item.status = 'PENDING';
+
+    if (mode === 'DERIGGING') {
+      item.quantityLoaded = item.quantityRequested;
+      item.status = 'LOADED';
+    } else {
+      item.quantityLoaded = 0;
+      item.status = 'PENDING';
+    }
 
     allItems[index] = item;
 
     this.addAuditLog(
       user,
       item.jobId,
-      mode === 'DERIGGING' ? 'Swipe Nenaloženo' : 'Swipe K naložení',
-      `${item.name} zrušena nakládka, stav vrácen na K naložení (0/${item.quantityRequested} ks)`,
+      mode === 'DERIGGING' ? 'Swipe Vráceno na place' : 'Swipe K naložení',
+      mode === 'DERIGGING'
+        ? `${item.name} zrušeno sbalení, stav vrácen na Na place (${item.quantityLoaded}/${item.quantityRequested} ks)`
+        : `${item.name} zrušena nakládka, stav vrácen na K naložení (0/${item.quantityRequested} ks)`,
       'loaded'
     );
     this.saveJobItems(allItems);
