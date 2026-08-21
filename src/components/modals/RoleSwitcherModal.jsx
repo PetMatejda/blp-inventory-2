@@ -1,35 +1,19 @@
 import React from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { UserCheck, X, Shield, Wrench, Warehouse } from 'lucide-react';
+import { UserCheck, X, Shield, User, LogIn } from 'lucide-react';
+import { authService } from '../../services/authService';
 
 export const RoleSwitcherModal = () => {
-  const { isRoleModalOpen, setIsRoleModalOpen, userRole, setUserRole } = useInventory();
+  const { isRoleModalOpen, setIsRoleModalOpen, currentUser, setCurrentUser, setIsAuthModalOpen } = useInventory();
 
   if (!isRoleModalOpen) return null;
 
-  const roles = [
-    {
-      id: 'Lead Gaffer',
-      title: 'Lead Gaffer (Vedoucí osvětlovač)',
-      desc: 'Hlavní odpovědnost za zakázku, schvalování techniky a finální podpis předávacího protokolu.',
-      icon: Shield,
-      color: 'border-primary bg-primary-container/10',
-    },
-    {
-      id: 'Best Boy Electric',
-      title: 'Best Boy Electric (Logistik techniky)',
-      desc: 'Řízení nakládky/vykládky na place, kontrola kusů, zápis ad-hoc položek a hlášení poruch.',
-      icon: Wrench,
-      color: 'border-secondary bg-secondary-container/10',
-    },
-    {
-      id: 'Rental Custodian',
-      title: 'Rental Custodian (Filmový skladník)',
-      desc: 'Příjem závad z placu, vyřizování doplňování kufru Brácha a fyzické naskladňování do skladu.',
-      icon: Warehouse,
-      color: 'border-tertiary bg-tertiary-container/10',
-    },
-  ];
+  const users = authService.getUsers();
+
+  const handleSelectUser = (user) => {
+    setCurrentUser(user);
+    setIsRoleModalOpen(false);
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -37,9 +21,9 @@ export const RoleSwitcherModal = () => {
         <div className="flex justify-between items-start border-b border-outline-variant pb-3">
           <div>
             <span className="text-xs font-mono font-bold text-primary uppercase flex items-center gap-1">
-              <UserCheck className="w-4 h-4" /> UŽIVATELSKÁ ROLE & OPRÁVNĚNÍ
+              <UserCheck className="w-4 h-4" /> UŽIVATELSKÝ ÚČET & ROLE
             </span>
-            <h2 className="text-xl font-bold text-on-surface mt-1">Přepínač Rolí</h2>
+            <h2 className="text-xl font-bold text-on-surface mt-1">Aktivní Uživatel</h2>
           </div>
           <button onClick={() => setIsRoleModalOpen(false)} className="text-outline hover:text-on-surface p-1">
             <X className="w-5 h-5" />
@@ -47,42 +31,63 @@ export const RoleSwitcherModal = () => {
         </div>
 
         <div className="flex flex-col gap-3 my-1">
-          {roles.map((r) => {
-            const Icon = r.icon;
-            const isSelected = userRole.includes(r.id);
+          {users.map((u) => {
+            const isSelected = currentUser?.id === u.id;
+            const isAdminRole = u.role === 'ADMIN';
+
             return (
               <button
-                key={r.id}
+                key={u.id}
                 type="button"
-                onClick={() => {
-                  setUserRole(r.id);
-                  setIsRoleModalOpen(false);
-                }}
-                className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 ${
+                onClick={() => handleSelectUser(u)}
+                className={`p-3.5 rounded-xl border text-left transition-all flex items-center gap-3 ${
                   isSelected
-                    ? `${r.color} ring-1 ring-primary`
+                    ? 'border-primary bg-primary-container/20 ring-1 ring-primary/40'
                     : 'bg-surface-container border-outline-variant hover:border-outline'
                 }`}
               >
-                <div className="p-2 rounded-lg bg-surface-variant text-primary shrink-0 mt-0.5">
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-on-surface">{r.title}</h3>
-                  <p className="text-xs text-outline mt-1 leading-normal">{r.desc}</p>
+                <img
+                  src={u.avatar}
+                  alt={u.name}
+                  className="w-10 h-10 rounded-full object-cover border border-outline shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-on-surface truncate">{u.name}</h3>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase font-bold ${
+                        isAdminRole ? 'bg-tertiary-container text-on-tertiary-container' : 'bg-primary-container text-on-primary-container'
+                      }`}
+                    >
+                      {u.role}
+                    </span>
+                  </div>
+                  <p className="text-xs text-outline truncate">{u.email}</p>
                 </div>
               </button>
             );
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsRoleModalOpen(false)}
-          className="w-full py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-sm"
-        >
-          Zavřít
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setIsRoleModalOpen(false);
+              setIsAuthModalOpen(true);
+            }}
+            className="flex-1 py-3 bg-primary text-on-primary-container font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow"
+          >
+            <LogIn className="w-4 h-4" /> Přihlásit Jiný Účet / Registrace
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsRoleModalOpen(false)}
+            className="px-4 py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-xs"
+          >
+            Zavřít
+          </button>
+        </div>
       </div>
     </div>
   );
