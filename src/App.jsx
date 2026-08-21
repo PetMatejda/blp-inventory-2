@@ -1,0 +1,76 @@
+import React from 'react';
+import { InventoryProvider, useInventory } from './context/InventoryContext';
+import { TopAppBar } from './components/layout/TopAppBar';
+import { BottomNavBar } from './components/layout/BottomNavBar';
+
+import { JobDashboard } from './components/dashboard/JobDashboard';
+import { PackingList } from './components/packing/PackingList';
+import { EquipmentCatalog } from './components/catalog/EquipmentCatalog';
+import { ConsumableKit } from './components/bracha/ConsumableKit';
+import { AuditTimeline } from './components/audit/AuditTimeline';
+
+import { NewJobModal } from './components/modals/NewJobModal';
+import { AdHocModal } from './components/modals/AdHocModal';
+import { BarcodeScannerModal } from './components/modals/BarcodeScannerModal';
+import { DamageReportModal } from './components/damage/DamageReportModal';
+import { ProtocolModal } from './components/protocol/ProtocolModal';
+import { RoleSwitcherModal } from './components/modals/RoleSwitcherModal';
+import { SettingsModal } from './components/modals/SettingsModal';
+import { MasterCatalogModal } from './components/modals/MasterCatalogModal';
+import { EditJobModal } from './components/modals/EditJobModal';
+import { DuplicateJobModal } from './components/modals/DuplicateJobModal';
+import { ContextMenuModal } from './components/modals/ContextMenuModal';
+import { AuthModal } from './components/modals/AuthModal';
+
+const MainContent = () => {
+  const { activeTab } = useInventory();
+
+  switch (activeTab) {
+    case 'dashboard':
+      return <JobDashboard />;
+    case 'packing':
+      return <PackingList />;
+    case 'catalog':
+      return <EquipmentCatalog />;
+    case 'bracha':
+      return <ConsumableKit />;
+    case 'history':
+      return <AuditTimeline />;
+    default:
+      return <JobDashboard />;
+  }
+};
+
+export function App() {
+  return (
+    <InventoryProvider>
+      <div className="min-h-screen flex flex-col bg-background text-on-surface">
+        {/* Fixed Top Bar */}
+        <TopAppBar />
+
+        {/* Main Dynamic View */}
+        <main className="flex-1 w-full max-w-5xl mx-auto">
+          <MainContent />
+        </main>
+
+        {/* Bottom Mobile & Desktop Navigation */}
+        <BottomNavBar />
+
+        {/* Dialog & Modal Layer */}
+        <NewJobModal />
+        <AdHocModal />
+        <BarcodeScannerModal />
+        <DamageReportModal />
+        <ProtocolModal />
+        <RoleSwitcherModal />
+        <SettingsModal />
+        <MasterCatalogModal />
+        <EditJobModal />
+        <DuplicateJobModal />
+        <ContextMenuModal />
+      </div>
+    </InventoryProvider>
+  );
+}
+
+export default App;

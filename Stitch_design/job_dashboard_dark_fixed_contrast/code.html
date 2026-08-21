@@ -1,0 +1,335 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Job Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "inverse-primary": "#005ac2",
+                "on-primary-container": "#00285d",
+                "tertiary-container": "#df7412",
+                "on-primary-fixed": "#001a42",
+                "on-primary": "#002e6a",
+                "background": "#10131a",
+                "primary": "#adc6ff",
+                "on-tertiary": "#502400",
+                "error": "#ffb4ab",
+                "on-secondary-container": "#00311f",
+                "secondary-fixed": "#6ffbbe",
+                "tertiary-fixed-dim": "#ffb786",
+                "on-tertiary-fixed": "#311400",
+                "primary-container": "#4d8eff",
+                "secondary-container": "#00a572",
+                "on-secondary-fixed-variant": "#005236",
+                "surface-container-low": "#191b23",
+                "tertiary": "#ffb786",
+                "surface-container-high": "#272a31",
+                "primary-fixed-dim": "#adc6ff",
+                "surface-container": "#1d2027",
+                "outline-variant": "#424754",
+                "on-tertiary-fixed-variant": "#723600",
+                "surface-dim": "#10131a",
+                "inverse-on-surface": "#2e3038",
+                "inverse-surface": "#e1e2ec",
+                "primary-fixed": "#d8e2ff",
+                "surface-variant": "#32353c",
+                "on-secondary-fixed": "#002113",
+                "surface": "#10131a",
+                "error-container": "#93000a",
+                "on-error": "#690005",
+                "on-error-container": "#ffdad6",
+                "surface-container-highest": "#32353c",
+                "on-surface-variant": "#c2c6d6",
+                "surface-container-lowest": "#0b0e15",
+                "tertiary-fixed": "#ffdcc6",
+                "secondary": "#4edea3",
+                "on-tertiary-container": "#461f00",
+                "on-secondary": "#003824",
+                "on-primary-fixed-variant": "#004395",
+                "on-background": "#e1e2ec",
+                "outline": "#8c909f",
+                "surface-bright": "#363941",
+                "secondary-fixed-dim": "#4edea3",
+                "on-surface": "#e1e2ec",
+                "surface-tint": "#adc6ff"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "margin-edge": "20px",
+                "gutter": "16px",
+                "card-padding": "20px",
+                "touch-target-min": "56px",
+                "stack-gap": "12px"
+        },
+        "fontFamily": {
+                "label-caps": [
+                        "JetBrains Mono"
+                ],
+                "body-md": [
+                        "Inter"
+                ],
+                "headline-sm": [
+                        "Inter"
+                ],
+                "headline-md": [
+                        "Inter"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "display-lg": [
+                        "Inter"
+                ],
+                "status-badge": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "label-caps": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-sm": [
+                        "20px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "display-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "status-badge": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "700"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        body {
+            background-color: #0F172A; /* Base background from Style Guidance */
+            color: theme('colors.on-surface');
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col pb-24 md:pb-0 pt-[56px] md:pt-0 bg-background text-on-surface">
+<!-- TopAppBar from JSON -->
+<header class="bg-background dark:bg-background docked full-width top-0 border-b border-outline-variant dark:border-outline-variant flat no shadows flex justify-between items-center w-full px-margin-edge h-touch-target-min fixed z-50 md:relative">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline">
+<img class="object-cover w-full h-full" data-alt="A rugged close-up portrait of an industrial lighting professional, a lead gaffer on a film set. High-contrast dramatic lighting illuminates their face, emphasizing determination and focus. Dark background setting the mood for a cinematic production environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAM77v5zHY-55G9Um9etJLzoxOALgXZWjlw9nJMuKq59hAX4532b1z56u4tHncQmZ8F8ZGXy-PXlJzQa91PCTjKxc4Kj30GHgHFr6wnzmVxJJ4y4jlFNxrTUwcIcXdqN_prBsnv-tjsKoGtgYBPxSErSh8amIlIwTqVEW7uMZyopjnwMSLiH8q_iVJyY04AoP2e6En8AVDgaKifRvUAGAoTs5sZ9QJ6GR6jZyPjt6pTuEi8h8-Wpgqo">
+</div>
+<div>
+<h1 class="font-label-caps text-label-caps tracking-widest text-primary dark:text-primary">BLP INVENTORY</h1>
+<p class="font-body-md text-body-md text-on-surface-variant dark:text-on-surface-variant">Petr M. (Lead Gaffer)</p>
+</div>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-primary dark:text-primary hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">settings_input_component</span>
+</button>
+</header>
+<main class="flex-1 w-full max-w-4xl mx-auto px-margin-edge py-6 flex flex-col gap-6">
+<!-- Toggle Section -->
+<div class="flex justify-between items-center w-full bg-surface-container rounded-lg p-1 border border-outline-variant">
+<button class="flex-1 py-3 h-touch-target-min text-center rounded-md bg-surface-variant font-headline-sm text-headline-sm text-on-surface border border-primary transition-colors flex items-center justify-center">
+                Active Jobs
+            </button>
+<button class="flex-1 py-3 h-touch-target-min text-center rounded-md font-headline-sm text-headline-sm text-on-surface-variant hover:bg-surface-variant transition-colors border border-transparent flex items-center justify-center">
+                Archived
+            </button>
+</div>
+<!-- Job List -->
+<div class="flex flex-col gap-stack-gap w-full">
+<!-- Job Card 1 -->
+<article class="bg-surface-container rounded-lg border border-outline-variant overflow-hidden flex flex-col relative group">
+<!-- Status Bar Indicator -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary"></div>
+<div class="p-card-padding flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-2">Reklama Škoda – Den 2</h2>
+<div class="flex flex-col gap-2">
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">person</span> Lead Gaffer: Petr M.
+                                </p>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">local_shipping</span> Vehicle: Sprinter 1
+                                </p>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">calendar_today</span> Today, 08:00 - 20:00
+                                </p>
+</div>
+</div>
+<span class="px-3 py-1 bg-secondary-container text-on-secondary-container font-status-badge text-status-badge rounded-full border border-secondary">
+                            Active
+                        </span>
+</div>
+<!-- Progress Section -->
+<div class="flex flex-col gap-2 mt-2">
+<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant">
+<span>LOADING PROGRESS</span>
+<span class="text-secondary font-bold">34 / 48</span>
+</div>
+<div class="w-full h-3 bg-surface-dim rounded-full overflow-hidden border border-outline-variant shadow-inner">
+<div class="h-full bg-secondary rounded-full shadow-[0_0_8px_rgba(78,222,163,0.5)]" style="width: 70%"></div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-outline-variant bg-surface-container-low flex justify-end">
+<button class="h-touch-target-min px-8 rounded bg-primary-container hover:bg-primary-fixed text-on-primary-container font-headline-sm text-headline-sm transition-colors flex items-center gap-2 justify-center w-full sm:w-auto">
+<span class="material-symbols-outlined">exit_to_app</span>
+                        Open Job
+                    </button>
+</div>
+</article>
+<!-- Job Card 2 -->
+<article class="bg-surface-container rounded-lg border border-outline-variant overflow-hidden flex flex-col relative">
+<!-- Status Bar Indicator -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-outline"></div>
+<div class="p-card-padding flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-2">Music Video - 'Neon'</h2>
+<div class="flex flex-col gap-2">
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">person</span> Lead Gaffer: Anna K.
+                                </p>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">local_shipping</span> Vehicle: Box Truck B
+                                </p>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">calendar_today</span> Tomorrow, 06:00
+                                </p>
+</div>
+</div>
+<span class="px-3 py-1 bg-surface-variant text-on-surface-variant font-status-badge text-status-badge rounded-full border border-outline">
+                            Pending
+                        </span>
+</div>
+<!-- Progress Section -->
+<div class="flex flex-col gap-2 mt-2">
+<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant">
+<span>LOADING PROGRESS</span>
+<span class="font-bold text-on-surface">0 / 120</span>
+</div>
+<div class="w-full h-3 bg-surface-dim rounded-full overflow-hidden border border-outline-variant shadow-inner">
+<div class="h-full bg-outline rounded-full" style="width: 0%"></div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-outline-variant bg-surface-container-low flex justify-end">
+<button class="h-touch-target-min px-8 rounded bg-surface-variant hover:bg-surface-bright text-on-surface font-headline-sm text-headline-sm transition-colors flex items-center gap-2 justify-center w-full sm:w-auto border border-outline-variant">
+<span class="material-symbols-outlined">visibility</span>
+                        View Details
+                    </button>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar from JSON -->
+<nav class="md:hidden bg-surface-container dark:bg-surface-container fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-2 border-t border-outline-variant dark:border-outline-variant">
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary-container text-on-secondary-container dark:text-on-secondary-container rounded-xl px-4 py-2 hover:bg-surface-variant dark:hover:bg-surface-variant scale-90 transition-all cursor-pointer h-touch-target-min" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors cursor-pointer h-touch-target-min" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-caps text-label-caps mt-1">Packing</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors cursor-pointer h-touch-target-min" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-label-caps text-label-caps mt-1">Catalog</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors cursor-pointer h-touch-target-min" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-caps text-label-caps mt-1">History</span>
+</a>
+</nav>
+<!-- Desktop Side Nav Overlay for responsive demonstration (Hidden on mobile, taking space of bottom nav logic) -->
+<aside class="hidden md:flex fixed top-[56px] left-0 bottom-0 w-[240px] bg-surface-container border-r border-outline-variant flex-col gap-2 p-4 pt-8">
+<a class="flex items-center gap-4 bg-secondary-container text-on-secondary-container rounded-lg px-4 py-3 hover:bg-surface-variant transition-all cursor-pointer border border-secondary min-h-touch-target-min" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-headline-sm text-headline-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant px-4 py-3 hover:bg-surface-variant rounded-lg transition-colors cursor-pointer border border-transparent min-h-touch-target-min" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-headline-sm text-headline-sm">Packing</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant px-4 py-3 hover:bg-surface-variant rounded-lg transition-colors cursor-pointer border border-transparent min-h-touch-target-min" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-headline-sm text-headline-sm">Catalog</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant px-4 py-3 hover:bg-surface-variant rounded-lg transition-colors cursor-pointer border border-transparent min-h-touch-target-min" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-headline-sm text-headline-sm">History</span>
+</a>
+</aside>
+<!-- Add margin to main content on desktop to accommodate side nav -->
+<style>
+        @media (min-width: 768px) {
+            main {
+                margin-left: 240px;
+                max-width: calc(100% - 240px - 40px); /* Adjusting max width */
+            }
+        }
+    </style>
+</body></html>

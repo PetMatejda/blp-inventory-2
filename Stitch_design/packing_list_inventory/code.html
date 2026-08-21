@@ -1,0 +1,436 @@
+<!DOCTYPE html><html class="dark" lang="en" style="width: 390px; height: 873px; overflow: hidden; position: relative;"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>BLP INVENTORY - Packing List</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed-dim": "#adc6ff",
+                        "error-container": "#93000a",
+                        "secondary-fixed-dim": "#4edea3",
+                        "outline-variant": "#424754",
+                        "surface-dim": "#10131a",
+                        "tertiary-fixed": "#ffdcc6",
+                        "surface-container": "#1d2027",
+                        "inverse-primary": "#005ac2",
+                        "on-surface": "#e1e2ec",
+                        "primary": "#adc6ff",
+                        "tertiary-container": "#df7412",
+                        "tertiary-fixed-dim": "#ffb786",
+                        "surface-container-lowest": "#0b0e15",
+                        "surface-variant": "#32353c",
+                        "on-background": "#e1e2ec",
+                        "on-primary-fixed-variant": "#004395",
+                        "secondary-fixed": "#6ffbbe",
+                        "primary-container": "#4d8eff",
+                        "surface-tint": "#adc6ff",
+                        "primary-fixed": "#d8e2ff",
+                        "on-secondary": "#003824",
+                        "surface-bright": "#363941",
+                        "background": "#10131a",
+                        "on-surface-variant": "#c2c6d6",
+                        "on-secondary-fixed": "#002113",
+                        "secondary": "#4edea3",
+                        "surface-container-highest": "#32353c",
+                        "on-primary": "#002e6a",
+                        "on-tertiary-fixed": "#311400",
+                        "on-tertiary-fixed-variant": "#723600",
+                        "surface-container-high": "#272a31",
+                        "secondary-container": "#00a572",
+                        "inverse-on-surface": "#2e3038",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-error": "#690005",
+                        "on-tertiary": "#502400",
+                        "on-primary-fixed": "#001a42",
+                        "outline": "#8c909f",
+                        "surface-container-low": "#191b23",
+                        "on-tertiary-container": "#461f00",
+                        "on-secondary-container": "#00311f",
+                        "error": "#ffb4ab",
+                        "on-primary-container": "#00285d",
+                        "tertiary": "#ffb786",
+                        "surface": "#10131a",
+                        "inverse-surface": "#e1e2ec"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "card-padding": "20px",
+                        "touch-target-min": "56px",
+                        "stack-gap": "12px",
+                        "margin-edge": "20px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["JetBrains Mono"],
+                        "status-badge": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "status-badge": ["14px", { "lineHeight": "20px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Hide scrollbar for horizontal scrolling tabs */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Swipe Actions Styles */
+        .swipe-card-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            touch-action: pan-y;
+        }
+        .swipe-content {
+            position: relative;
+            z-index: 10;
+            background-color: #1E293B; /* surface-container equivalent mapped manually for stability if needed, but classes preferred */
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: transform;
+        }
+        .swipe-actions {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: space-between;
+            z-index: 1;
+        }
+        .swipe-action-left, .swipe-action-right {
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            color: white;
+            font-weight: bold;
+        }
+        .swipe-action-left { background-color: #93000a; justify-content: flex-start; } /* error-container */
+        .swipe-action-right { background-color: #00a572; justify-content: flex-end; } /* secondary-container */
+    </style>
+</head>
+<body class="bg-background dark:bg-background text-on-background font-body-md min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-background dark:bg-background text-primary dark:text-primary docked full-width top-0 border-b border-outline-variant dark:border-outline-variant flat no shadows flex justify-between items-center w-full px-margin-edge h-touch-target-min sticky z-40">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-variant flex-shrink-0">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A rugged, moody portrait of a professional film set gaffer wearing a heavy-duty canvas jacket, set against a dark studio background with subtle cool blue rim lighting. The style is cinematic, high-contrast industrial modernism, perfect for an avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAa3cFkqxTOrvJJbtIsAJgHYRyyzVD3h5Sly9GDGoSlUv326Dgpz7wuqr-0CQcd-kI83oPcRLUFLp67Nl9gQ0JX7Boinmw6YCE_M1YTfwYRu7R00q2WO7jxJGM7QIL2-kwJosbM1us-S-vQ-ZQkEr-sFVLBVy9Jev6jRcmogo7Kqa0-3TGqyrUsz1hdssTMlPYDmKsje1uSkefKND_1CkwLfd9ylA3_RENLYP5pvsZXVEyHkr7RTOTX">
+</div>
+<h1 class="font-headline-md text-headline-md">BLP INVENTORY</h1>
+</div>
+<div class="font-label-caps text-label-caps tracking-widest text-primary dark:text-primary">
+            REKLAMA ŠKODA
+        </div>
+<button class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors text-on-surface-variant dark:text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="settings_input_component">settings_input_component</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="max-w-4xl mx-auto px-margin-edge pt-4 flex flex-col gap-stack-gap">
+<!-- Sticky Search & Filters Header -->
+<div class="sticky top-[56px] z-30 bg-background/95 backdrop-blur-md pt-2 pb-4 -mx-margin-edge px-margin-edge shadow-sm border-b border-outline-variant">
+<!-- Search Bar -->
+<div class="relative w-full h-14 mb-4">
+<div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-outline">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</div>
+<input class="w-full h-full pl-12 pr-4 bg-surface-container border-2 border-outline-variant rounded-lg text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder:text-on-surface-variant" placeholder="Search equipment, packages..." type="text">
+<div class="absolute inset-y-0 right-0 flex items-center pr-2">
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="barcode_scanner">barcode_scanner</span>
+</button>
+</div>
+</div>
+<!-- Horizontal Filter Tabs -->
+<div class="flex overflow-x-auto gap-2 no-scrollbar pb-2">
+<button class="px-4 py-2 h-touch-target-min flex-shrink-0 rounded-full border-2 border-primary bg-primary text-on-primary font-status-badge whitespace-nowrap transition-transform active:scale-95">
+                    All (48)
+                </button>
+<button class="px-4 py-2 h-touch-target-min flex-shrink-0 rounded-full border border-outline-variant bg-surface-container text-on-surface-variant font-status-badge whitespace-nowrap hover:border-outline transition-colors active:scale-95">
+                    To Load (14)
+                </button>
+<button class="px-4 py-2 h-touch-target-min flex-shrink-0 rounded-full border border-outline-variant bg-surface-container text-on-surface-variant font-status-badge whitespace-nowrap hover:border-outline transition-colors active:scale-95 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+                    On Set (20)
+                </button>
+<button class="px-4 py-2 h-touch-target-min flex-shrink-0 rounded-full border border-outline-variant bg-surface-container text-on-surface-variant font-status-badge whitespace-nowrap hover:border-outline transition-colors active:scale-95 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-tertiary-container"></div>
+                    Return (10)
+                </button>
+<button class="px-4 py-2 h-touch-target-min flex-shrink-0 rounded-full border border-outline-variant bg-surface-container text-on-surface-variant font-status-badge whitespace-nowrap hover:border-outline transition-colors active:scale-95 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+                    Damaged (4)
+                </button>
+</div>
+<div class="text-center font-label-caps text-on-surface-variant mt-2 opacity-70 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="swipe_left">swipe_left</span>
+                Swipe Right to Load | Swipe Left for Damage
+                <span class="material-symbols-outlined text-[16px]" data-icon="swipe_right">swipe_right</span>
+</div>
+</div>
+<!-- Equipment List -->
+<div class="flex flex-col gap-stack-gap mt-2" id="equipment-list">
+<!-- Card 1: On Set (Green) -->
+<div class="swipe-card-container bg-surface-container rounded-lg border-2 border-secondary overflow-hidden" id="card-1">
+<div class="swipe-actions">
+<div class="swipe-action-left w-1/2">
+<span class="material-symbols-outlined mr-2" data-icon="broken_image">broken_image</span> Damaged
+                    </div>
+<div class="swipe-action-right w-1/2">
+                        Load <span class="material-symbols-outlined ml-2" data-icon="local_shipping">local_shipping</span>
+</div>
+</div>
+<!-- Content layer -->
+<div class="swipe-content bg-surface-container flex border-l-4 border-l-secondary h-full relative" data-card="1">
+<div class="flex-1 p-card-padding flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-sm text-on-surface leading-tight pr-4">Arri Skypanel S60-C</h3>
+<div class="bg-secondary text-on-secondary px-2 py-1 rounded-sm font-status-badge text-[12px] flex items-center gap-1 shrink-0">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span>
+                                    On Set
+                                </div>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-label-caps text-[10px] border border-outline-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="inventory_2">inventory_2</span>
+                                    Pkg: Mattress 8x6
+                                </span>
+</div>
+</div>
+<!-- Giga-Stepper -->
+<div class="flex items-center gap-4 bg-surface-container-highest p-2 rounded-lg mt-auto border border-outline-variant">
+<button class="w-12 h-12 flex items-center justify-center bg-surface-variant text-on-surface rounded border border-outline-variant hover:bg-surface-bright active:scale-95 transition-all">
+<span class="material-symbols-outlined text-3xl font-light" data-icon="remove">remove</span>
+</button>
+<div class="flex-1 text-center font-display-lg text-primary tracking-tighter">
+                                4<span class="text-on-surface-variant font-headline-sm">/4</span>
+</div>
+<button class="w-12 h-12 flex items-center justify-center bg-surface-variant text-on-surface rounded border border-outline-variant hover:bg-surface-bright active:scale-95 transition-all">
+<span class="material-symbols-outlined text-3xl font-light" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Image thumbnail placeholder -->
+<div class="w-1/3 min-h-[160px] max-w-[140px] bg-surface-variant hidden sm:block relative">
+<img alt="Arri Skypanel S60-C" class="w-full h-full object-cover" data-alt="A high-end cinematic LED lighting panel (Arri Skypanel) mounted on a heavy-duty stand. The image is taken in a dark studio setting with functional, industrial aesthetics. Cool blue light spills slightly across the textured metal surface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOxKySe5rctnEsyprSHHz9cUuij--VY8eWnthQiKbYLvGuvrYSCcOQGCAIDcgDIe4yJofJ8RR2rmTBbF4OTJAvnMSVf8DGeuSHcBzs7mmZPXDZ4iK4JOaG_VUnKB9EI8Iry3FmhLRpUGHbD3K6AdzUR1xmsz6sWtULuZn0XFGtOn-vjaRveX17K2wSIpi1esMycMUyesRmsbzaz5vX5VF93c40OcA3q1Xye009h6Jhs6IW_GpbnLVF">
+<div class="absolute inset-0 bg-gradient-to-r from-surface-container to-transparent w-4"></div>
+</div>
+</div>
+</div>
+<!-- Card 2: Pending (Gray) -->
+<div class="swipe-card-container bg-surface-container rounded-lg border border-outline-variant overflow-hidden" id="card-2">
+<div class="swipe-actions">
+<div class="swipe-action-left w-1/2">
+<span class="material-symbols-outlined mr-2" data-icon="broken_image">broken_image</span> Damaged
+                    </div>
+<div class="swipe-action-right w-1/2">
+                        Load <span class="material-symbols-outlined ml-2" data-icon="local_shipping">local_shipping</span>
+</div>
+</div>
+<div class="swipe-content bg-surface-container flex border-l-4 border-l-outline-variant h-full relative" data-card="2">
+<div class="flex-1 p-card-padding flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-sm text-on-surface leading-tight pr-4">C-Stand 40"</h3>
+<div class="border border-outline-variant text-on-surface-variant px-2 py-1 rounded-sm font-status-badge text-[12px] flex items-center gap-1 shrink-0">
+<span class="material-symbols-outlined text-[14px]" data-icon="pending">pending</span>
+                                    To Load
+                                </div>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<span class="text-outline font-label-caps text-[10px]">LOC: TRUCK A</span>
+</div>
+</div>
+<!-- Giga-Stepper -->
+<div class="flex items-center gap-4 bg-surface-container-highest p-2 rounded-lg mt-auto border border-outline-variant">
+<button class="w-12 h-12 flex items-center justify-center bg-surface-variant text-on-surface rounded border border-outline-variant hover:bg-surface-bright active:scale-95 transition-all opacity-50 cursor-not-allowed">
+<span class="material-symbols-outlined text-3xl font-light" data-icon="remove">remove</span>
+</button>
+<div class="flex-1 text-center font-display-lg text-on-surface-variant tracking-tighter">
+                                0<span class="text-on-surface-variant font-headline-sm">/12</span>
+</div>
+<button class="w-12 h-12 flex items-center justify-center bg-primary text-on-primary rounded border border-primary hover:bg-primary-container active:scale-95 transition-all">
+<span class="material-symbols-outlined text-3xl font-light" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3: Damaged (Red) -->
+<div class="swipe-card-container bg-surface-container rounded-lg border-2 border-error overflow-hidden" id="card-3">
+<div class="swipe-actions">
+<div class="swipe-action-left w-1/2">
+<span class="material-symbols-outlined mr-2" data-icon="build">build</span> Repair Log
+                    </div>
+<div class="swipe-action-right w-1/2">
+                        Clear <span class="material-symbols-outlined ml-2" data-icon="undo">undo</span>
+</div>
+</div>
+<div class="swipe-content bg-surface-container flex border-l-4 border-l-error h-full relative" data-card="3">
+<div class="flex-1 p-card-padding flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-sm text-on-surface leading-tight pr-4 line-through opacity-70">10kW Fresnel</h3>
+<div class="bg-error text-on-error px-2 py-1 rounded-sm font-status-badge text-[12px] flex items-center gap-1 shrink-0">
+<span class="material-symbols-outlined text-[14px]" data-icon="warning">warning</span>
+                                    Damaged
+                                </div>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<span class="text-error font-body-md text-sm italic">Lens cracked during transport</span>
+</div>
+</div>
+<!-- Giga-Stepper (Disabled State) -->
+<div class="flex items-center gap-4 bg-surface-container-lowest p-2 rounded-lg mt-auto border border-outline-variant/30 opacity-50">
+<button class="w-12 h-12 flex items-center justify-center bg-surface-variant text-on-surface rounded border border-outline-variant" disabled="">
+<span class="material-symbols-outlined text-3xl font-light" data-icon="remove">remove</span>
+</button>
+<div class="flex-1 text-center font-display-lg text-on-surface-variant tracking-tighter">
+                                1<span class="text-on-surface-variant font-headline-sm">/1</span>
+</div>
+<button class="w-12 h-12 flex items-center justify-center bg-surface-variant text-on-surface rounded border border-outline-variant" disabled="">
+<span class="material-symbols-outlined text-3xl font-light" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Buttons (FAB) -->
+<div class="fixed bottom-24 right-margin-edge flex flex-col gap-4 z-40 hidden md:flex">
+<!-- Kept for md layout mostly, hidden on mobile in favor of bottom nav context if needed, but requested FAB -->
+<button class="w-14 h-14 bg-surface-container-high rounded-xl shadow-lg border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-bright transition-colors">
+<span class="material-symbols-outlined text-2xl" data-icon="add_circle">add_circle</span>
+</button>
+<button class="w-16 h-16 bg-primary rounded-2xl shadow-lg border-2 border-primary-fixed flex items-center justify-center text-on-primary hover:bg-primary-container transition-transform active:scale-95">
+<span class="material-symbols-outlined text-3xl" data-icon="document_scanner">document_scanner</span>
+</button>
+</div>
+<!-- Mobile FAB (Single combined or primary action) -->
+<div class="fixed bottom-20 right-margin-edge z-40 md:hidden flex flex-col gap-3">
+<button class="w-12 h-12 bg-surface-container-high rounded-full shadow-lg border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-bright active:scale-95 self-end">
+<span class="material-symbols-outlined text-xl" data-icon="add">add</span>
+</button>
+<button class="w-14 h-14 bg-primary rounded-2xl shadow-[0_0_15px_rgba(77,142,255,0.3)] border-2 border-primary-fixed-dim flex items-center justify-center text-on-primary active:scale-90 transition-transform self-end">
+<span class="material-symbols-outlined text-3xl" data-icon="document_scanner">document_scanner</span>
+</button>
+</div>
+<!-- BottomNavBar -->
+<nav class="bg-surface-container dark:bg-surface-container text-secondary dark:text-secondary font-label-caps text-label-caps fixed bottom-0 w-full z-50 border-t border-outline-variant dark:border-outline-variant flat no shadows hidden md:hidden flex justify-around items-center px-gutter py-2 h-[72px]" style="display: flex;">
+<!-- Inactive: Dashboard -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-variant dark:hover:bg-surface-variant w-16 h-full rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="dashboard">dashboard</span>
+<span class="text-[10px]">Dashboard</span>
+</a>
+<!-- Active: Packing -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary-container text-on-secondary-container dark:text-on-secondary-container rounded-xl px-4 py-2 hover:bg-surface-variant dark:hover:bg-surface-variant w-auto min-w-[72px] h-full transition-transform active:scale-90 duration-100" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="inventory_2" data-weight="fill" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="text-[10px]">Packing</span>
+</a>
+<!-- Inactive: Catalog -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-variant dark:hover:bg-surface-variant w-16 h-full rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="menu_book">menu_book</span>
+<span class="text-[10px]">Catalog</span>
+</a>
+<!-- Inactive: History -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-variant dark:hover:bg-surface-variant w-16 h-full rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="history">history</span>
+<span class="text-[10px]">History</span>
+</a>
+</nav>
+<!-- Simple Swipe Logic Implementation (Vanilla JS) -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.swipe-content');
+            
+            cards.forEach(card => {
+                let startX = 0;
+                let currentX = 0;
+                let isDragging = false;
+                const threshold = 100; // px to trigger action
+
+                card.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    isDragging = true;
+                    card.style.transition = 'none'; // Disable transition during drag
+                });
+
+                card.addEventListener('touchmove', (e) => {
+                    if (!isDragging) return;
+                    
+                    const x = e.touches[0].clientX;
+                    currentX = x - startX;
+                    
+                    // Add some resistance
+                    let translate = currentX;
+                    if (Math.abs(currentX) > threshold) {
+                        translate = currentX > 0 ? threshold + (currentX - threshold) * 0.2 : -threshold + (currentX + threshold) * 0.2;
+                    }
+
+                    // Constrain max swipe visually
+                    if (translate > 150) translate = 150;
+                    if (translate < -150) translate = -150;
+
+                    card.style.transform = `translateX(${translate}px)`;
+                });
+
+                card.addEventListener('touchend', () => {
+                    isDragging = false;
+                    card.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+                    
+                    if (currentX > threshold) {
+                        // Swipe Right Action (Load)
+                        card.style.transform = 'translateX(100%)';
+                        setTimeout(() => {
+                            // Reset for demo purposes
+                            card.style.transform = 'translateX(0)';
+                            currentX = 0;
+                        }, 500);
+                    } else if (currentX < -threshold) {
+                        // Swipe Left Action (Damage)
+                        card.style.transform = 'translateX(-100%)';
+                        setTimeout(() => {
+                             // Reset for demo purposes
+                            card.style.transform = 'translateX(0)';
+                            currentX = 0;
+                        }, 500);
+                    } else {
+                        // Snap back
+                        card.style.transform = 'translateX(0)';
+                        currentX = 0;
+                    }
+                });
+            });
+        });
+    </script>
+</body></html>

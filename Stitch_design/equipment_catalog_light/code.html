@@ -1,0 +1,266 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Lumen Field - Equipment Catalog</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#93000a",
+                        "status-error": "#dc2626",
+                        "surface-border": "#e2e8f0",
+                        "text-muted": "#64748b",
+                        "primary-fixed": "#dae2fd",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-container": "#7c839b",
+                        "tertiary-fixed": "#fcdeb5",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-surface-variant": "#45464d",
+                        "surface-container-high": "#e6e8ea",
+                        "on-tertiary-fixed": "#271901",
+                        "surface-variant": "#e0e3e5",
+                        "surface-container": "#eceef0",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-background": "#191c1e",
+                        "on-secondary-container": "#fefcff",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "primary": "#000000",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#574425",
+                        "primary-fixed-dim": "#bec6e0",
+                        "surface-bright": "#f7f9fb",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-secondary-fixed": "#00174b",
+                        "on-primary-fixed": "#131b2e",
+                        "status-success": "#059669",
+                        "on-primary": "#ffffff",
+                        "outline-variant": "#c6c6cd",
+                        "secondary": "#0051d5",
+                        "surface": "#f7f9fb",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#2d3133",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-tint": "#565e74",
+                        "on-surface": "#191c1e",
+                        "surface-container-highest": "#e0e3e5",
+                        "tertiary-container": "#271901",
+                        "tertiary-fixed-dim": "#dec29a",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-container": "#98805d",
+                        "primary-container": "#131b2e",
+                        "status-warning": "#d97706",
+                        "surface-dim": "#d8dadc",
+                        "inverse-primary": "#bec6e0",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#000000",
+                        "outline": "#76777d",
+                        "on-secondary": "#ffffff",
+                        "background": "#f7f9fb",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-gap": "12px",
+                        "card-padding": "20px",
+                        "gutter": "16px",
+                        "margin-edge": "20px",
+                        "base-grid": "4px",
+                        "touch-target": "56px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "status-badge": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "status-badge": ["14px", { "lineHeight": "20px", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased min-h-screen pt-[72px] pb-safe md:pb-0">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background dark:bg-background border-b-2 border-outline-variant flex justify-between items-center h-[72px] px-margin-edge">
+<div class="flex items-center gap-gutter">
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden shrink-0">
+<img alt="Technician profile photo" class="w-full h-full object-cover" data-alt="A close-up portrait of a male technician wearing industrial safety gear. The lighting is bright and crisp, emphasizing a rugged, professional aesthetic against a pure white background. High contrast, sharp focus, industrial setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGSHyah0tt2bT7FvQlIn7oED4fPy-fHwf_6BgAMRJ6_V5cmGYHgHrWMCXndN-dTaWjp09eJyp2k4b1TWDIdV-0EdVEud02D3-TEfXt0SwGcyjeNtlXNyzquYYRulbE8kQreBEnlTEIhU9TSsXI7oam_OK3N2IVPgJcJlHo28EGj-ePu_mXSfK5QmR13vgMAQP-iJZjj6jDEWUorMh7QxJKVUUrcRF_iVIIxU4Q_Tnyk3dgC-rWp2Ff">
+</div>
+<h1 class="font-headline-sm text-headline-sm font-bold tracking-tight text-primary uppercase">LUMEN FIELD</h1>
+</div>
+<button class="w-touch-target h-touch-target flex items-center justify-center text-primary dark:text-primary hover:bg-surface-container-high transition-colors active:scale-95 duration-100 rounded-full">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</header>
+<main class="w-full max-w-7xl mx-auto px-margin-edge py-gutter md:py-8 space-y-8 pb-32 md:pb-8">
+<!-- Search and Categories -->
+<section class="space-y-stack-gap">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full h-touch-target pl-12 pr-4 bg-surface-container-lowest border border-surface-border focus:border-2 focus:border-primary rounded-lg font-body-md text-body-md text-on-surface outline-none transition-all" placeholder="Search catalog..." type="text">
+</div>
+<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-margin-edge px-margin-edge md:mx-0 md:px-0">
+<button class="px-6 h-12 bg-primary text-on-primary rounded-full font-label-caps text-label-caps shrink-0 border-2 border-primary">Lights</button>
+<button class="px-6 h-12 bg-surface-container-lowest text-on-surface rounded-full font-label-caps text-label-caps shrink-0 border border-surface-border hover:border-primary transition-colors">Stands</button>
+<button class="px-6 h-12 bg-surface-container-lowest text-on-surface rounded-full font-label-caps text-label-caps shrink-0 border border-surface-border hover:border-primary transition-colors">Cables</button>
+<button class="px-6 h-12 bg-surface-container-lowest text-on-surface rounded-full font-label-caps text-label-caps shrink-0 border border-surface-border hover:border-primary transition-colors">Distribution</button>
+<button class="px-6 h-12 bg-surface-container-lowest text-on-surface rounded-full font-label-caps text-label-caps shrink-0 border border-surface-border hover:border-primary transition-colors">Grip</button>
+<button class="px-6 h-12 bg-surface-container-lowest text-on-surface rounded-full font-label-caps text-label-caps shrink-0 border border-surface-border hover:border-primary transition-colors">Kits</button>
+</div>
+</section>
+<!-- Equipment Grid -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Item Card 1 -->
+<article class="relative flex flex-col bg-surface-container-lowest border border-surface-border rounded-xl overflow-hidden shadow-sm hover:border-outline transition-colors group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary"></div>
+<div class="h-48 bg-surface-container-low p-4 flex items-center justify-center">
+<img alt="LED Panel Light" class="w-full h-full object-contain" data-alt="A sleek, high-intensity LED panel light fixture mounted on a heavy-duty industrial stand. The equipment is presented on a stark white background under bright, clinical studio lighting. High contrast black and silver metal details highlight the precision engineering. Industrial modernism aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJ_kbqZ-f-z5MHuek4qt2P07bEPU92CbWgBorzwWnqXpvnoG2aIUxiUSpjy3s1gWL-KmESoNRrU69otxlRNuWeKoEu8JDnSwXFfZhhJnspJSVSSQvMDC6HBxwjOABg2N08hZgUcj8WSFHJynK_MkyjVYmemBAxj0YfrAoVLS_6WmIbfu5yNn-CNZcDrWurhoAJ7ky5836j5uqS4r0E7F2VGbeq_gnHDTVQV43zFt9A33c7r8pW9_Mj">
+</div>
+<div class="p-card-padding flex flex-col flex-grow gap-base-grid">
+<h2 class="font-headline-md text-headline-md text-on-surface">Arri SkyPanel S60-C</h2>
+<p class="font-body-sm text-body-sm text-text-muted mb-4">High output LED soft light panel.</p>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[16px]" data-icon="weight">weight</span> 28 lbs
+                        </span>
+<span class="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[16px]" data-icon="bolt">bolt</span> 420W
+                        </span>
+</div>
+<div class="mt-auto pt-4 border-t border-surface-variant flex justify-between items-center">
+<span class="font-body-lg text-body-lg text-on-surface">Available: <strong class="font-bold">4</strong></span>
+<button class="h-10 px-4 bg-primary text-on-primary font-label-caps text-label-caps rounded flex items-center gap-2 hover:bg-opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span> ADD TO JOB
+                        </button>
+</div>
+</div>
+</article>
+<!-- Item Card 2 -->
+<article class="relative flex flex-col bg-surface-container-lowest border border-surface-border rounded-xl overflow-hidden shadow-sm hover:border-outline transition-colors group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary"></div>
+<div class="h-48 bg-surface-container-low p-4 flex items-center justify-center">
+<img alt="HMI Fresnel" class="w-full h-full object-contain" data-alt="A compact, heavy-duty HMI fresnel light head. The metallic casing is rugged with sharp, functional design lines. Placed against a pure white background in bright, uniform lighting to emphasize its mechanical utility. High contrast, precise industrial look." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBz4sgs9BSXXy4Cc0Mibq7f7H9pDXhFj9XQS6KkYYWLCgbYUzBNHT15bcPeiqkzGeWgGDA6Sazp0aHG_PUQGdtAgj6IToV5DlWBaLcrlaq9-a1dlFvnnSmbagwnB32UxLIsXLZz8fR3wabqzKDz7K4qAmFkLelf9F1Lwk68CVJGb_NItaE_koV2KjOUdWI4BcekujaW0DLTqvzKRzwSHPrGoH68Fr5VtTolIb_NlN3UkgicFxDbdu-">
+</div>
+<div class="p-card-padding flex flex-col flex-grow gap-base-grid">
+<h2 class="font-headline-md text-headline-md text-on-surface">M18 HMI System</h2>
+<p class="font-body-sm text-body-sm text-text-muted mb-4">1800W HMI Open Face with ballast.</p>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[16px]" data-icon="weight">weight</span> 23 lbs
+                        </span>
+<span class="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[16px]" data-icon="bolt">bolt</span> 1800W
+                        </span>
+</div>
+<div class="mt-auto pt-4 border-t border-surface-variant flex justify-between items-center">
+<span class="font-body-lg text-body-lg text-on-surface">Available: <strong class="font-bold">2</strong></span>
+<button class="h-10 px-4 bg-primary text-on-primary font-label-caps text-label-caps rounded flex items-center gap-2 hover:bg-opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span> ADD TO JOB
+                        </button>
+</div>
+</div>
+</article>
+<!-- Item Card 3 -->
+<article class="relative flex flex-col bg-surface-container-lowest border border-surface-border rounded-xl overflow-hidden shadow-sm hover:border-outline transition-colors group opacity-75">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-status-warning"></div>
+<div class="h-48 bg-surface-container-low p-4 flex items-center justify-center grayscale">
+<img alt="LED Tube" class="w-full h-full object-contain" data-alt="A slender, portable LED tube light, standing upright. The object is sleek, modern, and utilitarian, shot against a crisp white background with high key lighting. The image conveys precision and lab-grade cleanliness. Industrial design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpiamkLsTSFUhxXrSlrMas0kHPchK7_OWap2cbVU6OGW1B55PStdlyogw6GbAUHqferMObRauiCgvage3MCaUzdH6m6zoK5-DKl5MjYJP-kVTGTpXtGtU0Xynx16PA14hFBaq6LGBsN4y4DoBjdkGJz3pZ8GRMaNZR76U9D8Gg9viTAM7OS2m5IjRQ2Ykvv19T0E_a7CkODOVRwqLXSUI8pWAyoilOBghwaaSjEHjRIbyzQZPbYqR8">
+</div>
+<div class="p-card-padding flex flex-col flex-grow gap-base-grid">
+<h2 class="font-headline-md text-headline-md text-on-surface">Astera Titan Tube</h2>
+<p class="font-body-sm text-body-sm text-text-muted mb-4">Battery powered RGBW LED tube.</p>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[16px]" data-icon="weight">weight</span> 3 lbs
+                        </span>
+<span class="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[16px]" data-icon="battery_charging_full">battery_charging_full</span> 20h
+                        </span>
+</div>
+<div class="mt-auto pt-4 border-t border-surface-variant flex justify-between items-center">
+<span class="font-body-lg text-body-lg text-status-warning flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]" data-icon="warning">warning</span> Out on Job
+                        </span>
+<button class="h-10 px-4 border border-outline text-on-surface font-label-caps text-label-caps rounded flex items-center gap-2 hover:bg-surface-container-high transition-all" disabled="">
+                            WAITLIST
+                        </button>
+</div>
+</div>
+</article>
+<!-- Item Card 4 -->
+<article class="relative flex flex-col bg-surface-container-lowest border border-surface-border rounded-xl overflow-hidden shadow-sm hover:border-outline transition-colors group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary"></div>
+<div class="h-48 bg-surface-container-low p-4 flex items-center justify-center">
+<img alt="Tungsten Fresnel" class="w-full h-full object-contain" data-alt="A massive, industrial-grade tungsten spotlight. The metallic body is rugged with visible vents and heavy bolts, shot on a stark white background. Bright, even lighting highlights the mechanical texture and authoritative presence. High contrast." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLDEsYEWXH2dAHoSlchFTEJCTy-UR5k1mifC2u_VxckJqCTuqKbfPKF_G6hcGcxyrXYc0iVTXwbzXNJQBkofWi2_Avcd6kNija1TBv3-hQ7Zl9EJMmKhQddhUgQMnrCw1Qaj64q6L8wKJ2z4IFqxzUQDOvgNbrO23RxjUpj62yXCwGuAxmb3vD5bWucobWHUKNwqDgQZWNQ8LkoyQY0z_4Qavp5gZjYZdtvrntLZHa9b7-ER86N4uK">
+</div>
+<div class="p-card-padding flex flex-col flex-grow gap-base-grid">
+<h2 class="font-headline-md text-headline-md text-on-surface">Tungsten 5K</h2>
+<p class="font-body-sm text-body-sm text-text-muted mb-4">Heavy duty 5000W tungsten fresnel.</p>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[16px]" data-icon="weight">weight</span> 45 lbs
+                        </span>
+<span class="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[16px]" data-icon="bolt">bolt</span> 5000W
+                        </span>
+</div>
+<div class="mt-auto pt-4 border-t border-surface-variant flex justify-between items-center">
+<span class="font-body-lg text-body-lg text-on-surface">Available: <strong class="font-bold">1</strong></span>
+<button class="h-10 px-4 bg-primary text-on-primary font-label-caps text-label-caps rounded flex items-center gap-2 hover:bg-opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span> ADD TO JOB
+                        </button>
+</div>
+</div>
+</article>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 h-[96px] bg-surface-container dark:bg-surface-container border-t-2 border-outline-variant flex justify-around items-center px-gutter pb-safe">
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75 rounded-xl">
+<span class="material-symbols-outlined mb-1" data-icon="dashboard">dashboard</span>
+<span class="font-label-caps text-[10px]">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75 rounded-xl">
+<span class="material-symbols-outlined mb-1" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-caps text-[10px]">Packing</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75">
+<span class="material-symbols-outlined mb-1" data-icon="menu_book" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="font-label-caps text-[10px]">Catalog</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75 rounded-xl">
+<span class="material-symbols-outlined mb-1" data-icon="history">history</span>
+<span class="font-label-caps text-[10px]">History</span>
+</button>
+</nav>
+</body></html>

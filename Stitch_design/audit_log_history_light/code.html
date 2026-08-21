@@ -1,0 +1,199 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Audit Log &amp; History - Lumen Field</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-error-container": "#93000a",
+                        "status-error": "#dc2626",
+                        "surface-border": "#e2e8f0",
+                        "text-muted": "#64748b",
+                        "primary-fixed": "#dae2fd",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-container": "#7c839b",
+                        "tertiary-fixed": "#fcdeb5",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-surface-variant": "#45464d",
+                        "surface-container-high": "#e6e8ea",
+                        "on-tertiary-fixed": "#271901",
+                        "surface-variant": "#e0e3e5",
+                        "surface-container": "#eceef0",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-background": "#191c1e",
+                        "on-secondary-container": "#fefcff",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "primary": "#000000",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#574425",
+                        "primary-fixed-dim": "#bec6e0",
+                        "surface-bright": "#f7f9fb",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-secondary-fixed": "#00174b",
+                        "on-primary-fixed": "#131b2e",
+                        "status-success": "#059669",
+                        "on-primary": "#ffffff",
+                        "outline-variant": "#c6c6cd",
+                        "secondary": "#0051d5",
+                        "surface": "#f7f9fb",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#2d3133",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-tint": "#565e74",
+                        "on-surface": "#191c1e",
+                        "surface-container-highest": "#e0e3e5",
+                        "tertiary-container": "#271901",
+                        "tertiary-fixed-dim": "#dec29a",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-container": "#98805d",
+                        "primary-container": "#131b2e",
+                        "status-warning": "#d97706",
+                        "surface-dim": "#d8dadc",
+                        "inverse-primary": "#bec6e0",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#000000",
+                        "outline": "#76777d",
+                        "on-secondary": "#ffffff",
+                        "background": "#f7f9fb",
+                        "on-error": "#ffffff"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    spacing: {
+                        "stack-gap": "12px",
+                        "card-padding": "20px",
+                        "gutter": "16px",
+                        "margin-edge": "20px",
+                        "base-grid": "4px",
+                        "touch-target": "56px"
+                    },
+                    fontFamily: {
+                        "display-lg": ["Inter"],
+                        "status-badge": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    fontSize: {
+                        "display-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "status-badge": ["14px", { lineHeight: "20px", fontWeight: "700" }],
+                        "body-sm": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+                        "label-caps": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "700" }],
+                        "headline-sm": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+                        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "600" }],
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen pt-[56px] pb-[96px] md:pb-0">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background dark:bg-background border-b-2 border-outline-variant flex justify-between items-center h-[56px] px-margin-edge w-full">
+<div class="flex items-center gap-gutter">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A clean, industrial-style avatar of a technician wearing a white hardhat and safety glasses, high key lighting, light background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1uMIaAwizvCb17zI73aTTkwIZGHD1zDvyL_TIHxXFG8dNuY7reesFddPlVy7YE5NkNqxVZRrfo6K63ItTiF3TaF7zqLgvTAf04YFdsZcwWVwQIXdRqCy3R1oPMtW4JLJeHXUhX6bAr1xcF-1lAUwi8zosxHUO5K_quLyraW8860QLjRaBYqY-7SgqY4nl4ePHw5cEp-UyPdNd0bq_b6roc_ZwapYIoDHTF6dpNGXYpk1hVCFhvxGF">
+<h1 class="font-headline-sm text-headline-sm font-bold tracking-tight text-primary">LUMEN FIELD</h1>
+</div>
+<button class="text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 duration-100 p-2 rounded-full w-touch-target h-touch-target flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="max-w-4xl mx-auto px-margin-edge py-gutter mt-gutter md:mt-card-padding">
+<div class="mb-8">
+<h2 class="font-headline-md text-headline-md text-primary mb-2">Audit Log</h2>
+<p class="font-body-lg text-body-lg text-text-muted">System activity and access history.</p>
+</div>
+<div class="bg-surface-container-lowest border border-surface-border rounded-lg shadow-sm">
+<!-- Timeline Container -->
+<div class="relative p-card-padding">
+<!-- Vertical Line -->
+<div class="absolute left-[36px] top-card-padding bottom-card-padding w-0.5 bg-surface-border hidden sm:block"></div>
+<!-- Entry 1 -->
+<div class="relative flex flex-col sm:flex-row gap-gutter mb-stack-gap last:mb-0 group">
+<div class="flex items-center gap-4 sm:w-[120px] sm:shrink-0 sm:justify-end">
+<div class="font-label-caps text-label-caps text-text-muted">10:42 AM</div>
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center z-10 border-2 border-surface-container-lowest sm:absolute sm:left-[20px] sm:-translate-x-1/2 hidden sm:flex">
+<span class="material-symbols-outlined text-[16px] text-status-success">check_circle</span>
+</div>
+</div>
+<div class="bg-surface border border-surface-border p-4 rounded-md flex-1 transition-colors group-hover:border-outline-variant">
+<div class="flex justify-between items-start mb-2">
+<span class="font-body-sm text-body-sm font-bold text-primary">J. Doe</span>
+<span class="font-label-caps text-label-caps text-status-success border border-status-success px-2 py-0.5 rounded uppercase">Success</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Authenticated via biometric terminal 04.</p>
+</div>
+</div>
+<!-- Entry 2 -->
+<div class="relative flex flex-col sm:flex-row gap-gutter mb-stack-gap last:mb-0 group">
+<div class="flex items-center gap-4 sm:w-[120px] sm:shrink-0 sm:justify-end">
+<div class="font-label-caps text-label-caps text-text-muted">09:15 AM</div>
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center z-10 border-2 border-surface-container-lowest sm:absolute sm:left-[20px] sm:-translate-x-1/2 hidden sm:flex">
+<span class="material-symbols-outlined text-[16px] text-status-warning">warning</span>
+</div>
+</div>
+<div class="bg-surface border border-surface-border p-4 rounded-md flex-1 transition-colors group-hover:border-outline-variant">
+<div class="flex justify-between items-start mb-2">
+<span class="font-body-sm text-body-sm font-bold text-primary">System</span>
+<span class="font-label-caps text-label-caps text-status-warning border border-status-warning px-2 py-0.5 rounded uppercase">Warning</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Multiple failed login attempts detected on Terminal 02.</p>
+</div>
+</div>
+<!-- Entry 3 -->
+<div class="relative flex flex-col sm:flex-row gap-gutter mb-stack-gap last:mb-0 group">
+<div class="flex items-center gap-4 sm:w-[120px] sm:shrink-0 sm:justify-end">
+<div class="font-label-caps text-label-caps text-text-muted">08:00 AM</div>
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center z-10 border-2 border-surface-container-lowest sm:absolute sm:left-[20px] sm:-translate-x-1/2 hidden sm:flex">
+<span class="material-symbols-outlined text-[16px] text-primary">inventory_2</span>
+</div>
+</div>
+<div class="bg-surface border border-surface-border p-4 rounded-md flex-1 transition-colors group-hover:border-outline-variant">
+<div class="flex justify-between items-start mb-2">
+<span class="font-body-sm text-body-sm font-bold text-primary">A. Smith</span>
+<span class="font-label-caps text-label-caps text-text-muted border border-surface-border px-2 py-0.5 rounded uppercase">Info</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Updated inventory counts for Sector 7G.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 h-24 border-t-2 border-outline-variant bg-surface-container dark:bg-surface-container flex justify-around items-center px-gutter w-full pb-safe md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75 rounded-xl" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75 rounded-xl" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">inventory_2</span>
+<span class="font-label-caps text-label-caps mt-1">Packing</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75 rounded-xl" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu_book</span>
+<span class="font-label-caps text-label-caps mt-1">Catalog</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-caps text-label-caps mt-1">History</span>
+</a>
+</nav>
+</body></html>

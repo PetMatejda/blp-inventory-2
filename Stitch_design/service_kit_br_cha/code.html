@@ -1,0 +1,295 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Service Kit: Brácha</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error-container": "#ffdad6",
+                      "primary-fixed-dim": "#adc6ff",
+                      "error-container": "#93000a",
+                      "secondary-fixed-dim": "#4edea3",
+                      "outline-variant": "#424754",
+                      "surface-dim": "#10131a",
+                      "tertiary-fixed": "#ffdcc6",
+                      "surface-container": "#1d2027",
+                      "inverse-primary": "#005ac2",
+                      "on-surface": "#e1e2ec",
+                      "primary": "#adc6ff",
+                      "tertiary-container": "#df7412",
+                      "tertiary-fixed-dim": "#ffb786",
+                      "surface-container-lowest": "#0b0e15",
+                      "surface-variant": "#32353c",
+                      "on-background": "#e1e2ec",
+                      "on-primary-fixed-variant": "#004395",
+                      "secondary-fixed": "#6ffbbe",
+                      "primary-container": "#4d8eff",
+                      "surface-tint": "#adc6ff",
+                      "primary-fixed": "#d8e2ff",
+                      "on-secondary": "#003824",
+                      "surface-bright": "#363941",
+                      "background": "#10131a",
+                      "on-surface-variant": "#c2c6d6",
+                      "on-secondary-fixed": "#002113",
+                      "secondary": "#4edea3",
+                      "surface-container-highest": "#32353c",
+                      "on-primary": "#002e6a",
+                      "on-tertiary-fixed": "#311400",
+                      "on-tertiary-fixed-variant": "#723600",
+                      "surface-container-high": "#272a31",
+                      "secondary-container": "#00a572",
+                      "inverse-on-surface": "#2e3038",
+                      "on-secondary-fixed-variant": "#005236",
+                      "on-error": "#690005",
+                      "on-tertiary": "#502400",
+                      "on-primary-fixed": "#001a42",
+                      "outline": "#8c909f",
+                      "surface-container-low": "#191b23",
+                      "on-tertiary-container": "#461f00",
+                      "on-secondary-container": "#00311f",
+                      "error": "#ffb4ab",
+                      "on-primary-container": "#00285d",
+                      "tertiary": "#ffb786",
+                      "surface": "#10131a",
+                      "inverse-surface": "#e1e2ec"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "16px",
+                      "card-padding": "20px",
+                      "touch-target-min": "56px",
+                      "stack-gap": "12px",
+                      "margin-edge": "20px"
+              },
+              "fontFamily": {
+                      "label-caps": [
+                              "JetBrains Mono"
+                      ],
+                      "status-badge": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "status-badge": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background dark:bg-background border-b border-outline-variant dark:border-outline-variant flex justify-between items-center px-margin-edge h-touch-target-min">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary dark:text-primary" data-icon="account_circle">account_circle</span>
+<h1 class="font-label-caps text-label-caps tracking-widest text-primary dark:text-primary m-0">BLP INVENTORY</h1>
+</div>
+<button class="flex items-center justify-center hover:bg-surface-variant dark:hover:bg-surface-variant rounded-full w-10 h-10 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant dark:text-on-surface-variant" data-icon="settings_input_component">settings_input_component</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 pt-20 pb-24 px-margin-edge md:hidden">
+<section class="mb-6">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-1">Kit: Brácha</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Verify consumable levels.</p>
+</section>
+<!-- Equipment Grid/List -->
+<div class="flex flex-col gap-stack-gap">
+<!-- Item 1: Black Tape (REFILL) -->
+<article class="bg-surface-container rounded-lg p-card-padding border border-outline-variant flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<h3 class="font-body-lg text-body-lg text-on-surface font-semibold">Black Tape 50mm</h3>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="texture">texture</span>
+</div>
+<!-- Segmented Control -->
+<div class="flex bg-surface-container-highest rounded-xl border border-outline-variant p-1">
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors flex items-center justify-center">
+                        OK
+                    </button>
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors flex items-center justify-center">
+                        50%
+                    </button>
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps bg-tertiary-container text-on-tertiary-container shadow-sm border border-tertiary flex items-center justify-center transition-colors">
+                        REFILL
+                    </button>
+</div>
+</article>
+<!-- Item 2: Red Insulation Tape (OK) -->
+<article class="bg-surface-container rounded-lg p-card-padding border border-outline-variant flex flex-col gap-4 relative overflow-hidden">
+<!-- Status bar indicator (design system spec) -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary-container"></div>
+<div class="flex justify-between items-center pl-2">
+<h3 class="font-body-lg text-body-lg text-on-surface font-semibold">Red Insulation Tape</h3>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="lens_blur">lens_blur</span>
+</div>
+<!-- Segmented Control -->
+<div class="flex bg-surface-container-highest rounded-xl border border-outline-variant p-1 pl-2">
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps bg-secondary-container text-on-secondary-container shadow-sm border border-secondary flex items-center justify-center transition-colors">
+                        OK
+                    </button>
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors flex items-center justify-center">
+                        50%
+                    </button>
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors flex items-center justify-center">
+                        REFILL
+                    </button>
+</div>
+</article>
+<!-- Item 3: Zip Ties 300mm (50%) -->
+<article class="bg-surface-container rounded-lg p-card-padding border border-outline-variant flex flex-col gap-4 relative overflow-hidden">
+<!-- Status bar indicator -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary-container"></div>
+<div class="flex justify-between items-center pl-2">
+<h3 class="font-body-lg text-body-lg text-on-surface font-semibold">Zip Ties 300mm</h3>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="all_inclusive">all_inclusive</span>
+</div>
+<!-- Segmented Control -->
+<div class="flex bg-surface-container-highest rounded-xl border border-outline-variant p-1 pl-2">
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors flex items-center justify-center">
+                        OK
+                    </button>
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps bg-primary-container text-on-primary-container shadow-sm border border-primary flex items-center justify-center transition-colors">
+                        50%
+                    </button>
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors flex items-center justify-center">
+                        REFILL
+                    </button>
+</div>
+</article>
+<!-- Item 4: AA Batteries (OK) -->
+<article class="bg-surface-container rounded-lg p-card-padding border border-outline-variant flex flex-col gap-4 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary-container"></div>
+<div class="flex justify-between items-center pl-2">
+<h3 class="font-body-lg text-body-lg text-on-surface font-semibold">AA Batteries (Procell)</h3>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="battery_full_alt">battery_full_alt</span>
+</div>
+<div class="flex bg-surface-container-highest rounded-xl border border-outline-variant p-1 pl-2">
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps bg-secondary-container text-on-secondary-container shadow-sm border border-secondary flex items-center justify-center transition-colors">
+                        OK
+                    </button>
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors flex items-center justify-center">
+                        50%
+                    </button>
+<button class="flex-1 h-touch-target-min rounded-lg font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors flex items-center justify-center">
+                        REFILL
+                    </button>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-2 border-t border-outline-variant dark:border-outline-variant bg-surface-container dark:bg-surface-container md:hidden">
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors rounded-xl group w-20">
+<span class="material-symbols-outlined mb-1 group-active:scale-90 transition-transform" data-icon="dashboard">dashboard</span>
+<span class="font-label-caps text-label-caps">Dashboard</span>
+</button>
+<!-- Active State: Packing -->
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary-container text-on-secondary-container dark:text-on-secondary-container rounded-xl px-4 py-2 hover:bg-surface-variant dark:hover:bg-surface-variant transition-all scale-90 group w-20">
+<span class="material-symbols-outlined icon-filled mb-1 group-active:scale-90 transition-transform" data-icon="inventory_2" data-weight="fill">inventory_2</span>
+<span class="font-label-caps text-label-caps">Packing</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors rounded-xl group w-20">
+<span class="material-symbols-outlined mb-1 group-active:scale-90 transition-transform" data-icon="menu_book">menu_book</span>
+<span class="font-label-caps text-label-caps">Catalog</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors rounded-xl group w-20">
+<span class="material-symbols-outlined mb-1 group-active:scale-90 transition-transform" data-icon="history">history</span>
+<span class="font-label-caps text-label-caps">History</span>
+</button>
+</nav>
+<!-- Desktop Fallback Message -->
+<div class="hidden md:flex flex-1 items-center justify-center bg-background text-on-surface-variant font-headline-md text-headline-md">
+        This interface is optimized for mobile touch devices.
+    </div>
+</body></html>

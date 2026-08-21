@@ -1,0 +1,283 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Audit Log &amp; History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "background": "#10131a",
+                      "outline": "#8c909f",
+                      "surface-container": "#1d2027",
+                      "secondary-fixed": "#6ffbbe",
+                      "surface-tint": "#adc6ff",
+                      "on-tertiary-fixed-variant": "#723600",
+                      "primary-container": "#4d8eff",
+                      "tertiary-fixed": "#ffdcc6",
+                      "secondary": "#4edea3",
+                      "surface-container-high": "#272a31",
+                      "on-primary-fixed": "#001a42",
+                      "primary-fixed-dim": "#adc6ff",
+                      "on-tertiary": "#502400",
+                      "secondary-fixed-dim": "#4edea3",
+                      "secondary-container": "#00a572",
+                      "tertiary": "#ffb786",
+                      "on-secondary-fixed": "#002113",
+                      "primary-fixed": "#d8e2ff",
+                      "error-container": "#93000a",
+                      "primary": "#adc6ff",
+                      "surface-container-low": "#191b23",
+                      "inverse-primary": "#005ac2",
+                      "on-error": "#690005",
+                      "surface-container-highest": "#32353c",
+                      "inverse-surface": "#e1e2ec",
+                      "on-secondary": "#003824",
+                      "error": "#ffb4ab",
+                      "on-error-container": "#ffdad6",
+                      "outline-variant": "#424754",
+                      "surface-bright": "#363941",
+                      "on-surface": "#e1e2ec",
+                      "surface-container-lowest": "#0b0e15",
+                      "on-tertiary-fixed": "#311400",
+                      "surface": "#10131a",
+                      "on-primary-fixed-variant": "#004395",
+                      "on-tertiary-container": "#461f00",
+                      "on-secondary-fixed-variant": "#005236",
+                      "surface-dim": "#10131a",
+                      "on-secondary-container": "#00311f",
+                      "on-background": "#e1e2ec",
+                      "surface-variant": "#32353c",
+                      "inverse-on-surface": "#2e3038",
+                      "on-surface-variant": "#c2c6d6",
+                      "on-primary-container": "#00285d",
+                      "tertiary-fixed-dim": "#ffb786",
+                      "tertiary-container": "#df7412",
+                      "on-primary": "#002e6a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "touch-target-min": "56px",
+                      "stack-gap": "12px",
+                      "gutter": "16px",
+                      "card-padding": "20px",
+                      "margin-edge": "20px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "label-caps": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "status-badge": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "status-badge": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center h-touch-target-min px-margin-edge bg-background border-b-2 border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high shrink-0">
+<img class="w-full h-full object-cover" data-alt="A close-up portrait of a rugged film set technician wearing a headset, illuminated by dramatic studio lighting with high contrast dark shadows and bright blue highlights, industrial aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpNYxaiARZF4ls5gM8nYf-wcYLszwXkZl2sG9JSJ-o71SUAZwBeFn36WD1CaWSftDrYvgJysTG7U_nZz6ddiM2lczivK8NWYFftKQmG5pnbFhOe-nEGFSeSDcVLEbhmAkpLKFnuwzeXi-GCO-qmWNlIfWTv4vLFrGX6huHMP93Cn0AQwMhi9fC_G-c08hQsGkfIO7iJdIK3JlyqDuJHOif4KJuQ351xIRybn2mARBpC0E6uwCfwdPE">
+</div>
+<span class="font-headline-sm text-headline-sm font-bold tracking-tight text-primary">LUMEN FIELD</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined text-primary">settings</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 px-margin-edge max-w-3xl mx-auto space-y-8">
+<div class="flex items-center justify-between">
+<h1 class="font-headline-md text-headline-md">Audit Log</h1>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-surface-container-high rounded border border-outline-variant font-label-caps text-label-caps hover:bg-surface-variant transition-colors">FILTER</button>
+</div>
+</div>
+<!-- Timeline Container -->
+<div class="relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-outline-variant before:opacity-30">
+<!-- Day Group 1 -->
+<div class="relative">
+<div class="sticky top-20 z-10 bg-background py-2 flex items-center mb-4">
+<span class="bg-surface-container-high text-on-surface font-label-caps text-label-caps px-3 py-1.5 rounded-full border border-outline-variant">TODAY, OCT 24</span>
+</div>
+<div class="space-y-4 relative">
+<!-- Entry 1 -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+<!-- Timeline Dot -->
+<div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-secondary shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 absolute left-0 md:left-1/2 md:-ml-5">
+<span class="material-symbols-outlined text-on-secondary text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<!-- Card -->
+<div class="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] ml-auto md:ml-0 bg-[#1E293B] rounded-lg p-card-padding border-l-4 border-secondary border border-outline-variant">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps text-outline">14:32</span>
+<span class="bg-secondary text-on-secondary font-status-badge text-status-badge px-2 py-0.5 rounded">LOADED</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm mb-1">Arri Skypanel S60-C</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-3">Status updated to Loaded for Truck A.</p>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full overflow-hidden bg-surface-variant">
+<img class="w-full h-full object-cover" data-alt="A small circular avatar of a male technician in a dark industrial setting, sharp focus, cinematic lighting with cyan accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuChwT7UFUtV8r3haMFPKYeFuqJBSA1P3DsZcGxlpWPyXOOoBBNLeqVxwEUOv5OvFHZWm5L9F29DUqnF_XKWrVW_7E8iztEU_QRSsrSw66aMyuGS5CqyoHl59tkIMEHM7XguFDbX6djV_TiQhHIV4wsrRUyuqsw0-qrMHfVt4r5cyPtddiKnNYgjpeESSb98UbmhXWzYM7rwbm7LmoGPPUjeuQRFjkCnEGsPJTNQdWiDdxAWjgo9bXrs">
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Petr M.</span>
+</div>
+</div>
+</div>
+<!-- Entry 2 -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
+<!-- Timeline Dot -->
+<div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-error shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 absolute left-0 md:left-1/2 md:-ml-5">
+<span class="material-symbols-outlined text-on-error text-sm" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<!-- Card -->
+<div class="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] ml-auto md:ml-0 bg-[#1E293B] rounded-lg p-card-padding border-l-4 border-error border border-outline-variant opacity-80 hover:opacity-100 transition-opacity">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps text-outline">11:15</span>
+<span class="border border-error text-error font-status-badge text-status-badge px-2 py-0.5 rounded bg-error/10">DAMAGED</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm mb-1">C-Stand 40"</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-3">Reported damaged during wrap. Missing top knuckle.</p>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center text-xs font-bold bg-primary-container text-on-primary-container">
+                                    SJ
+                                </div>
+<span class="font-label-caps text-label-caps text-on-surface">Sarah J.</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Day Group 2 -->
+<div class="relative mt-8">
+<div class="sticky top-20 z-10 bg-background py-2 flex items-center mb-4">
+<span class="bg-surface-container-high text-on-surface font-label-caps text-label-caps px-3 py-1.5 rounded-full border border-outline-variant">YESTERDAY, OCT 23</span>
+</div>
+<div class="space-y-4 relative">
+<!-- Entry 3 -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
+<!-- Timeline Dot -->
+<div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-tertiary shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 absolute left-0 md:left-1/2 md:-ml-5">
+<span class="material-symbols-outlined text-on-tertiary text-sm" style="font-variation-settings: 'FILL' 1;">build</span>
+</div>
+<!-- Card -->
+<div class="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] ml-auto md:ml-0 bg-[#1E293B] rounded-lg p-card-padding border-l-4 border-tertiary border border-outline-variant opacity-80">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps text-outline">18:45</span>
+<span class="bg-tertiary text-on-tertiary font-status-badge text-status-badge px-2 py-0.5 rounded">REPAIRING</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm mb-1">Kino Flo Celeb 250</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-3">Sent to maintenance for ballast check.</p>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full overflow-hidden bg-surface-variant">
+<img class="w-full h-full object-cover" data-alt="A small circular avatar of a female technician in a dark industrial setting, sharp focus, cinematic lighting with cyan accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCcYQYYsQIgbAyO3o_Na5v2y3Ss4rbJPefyju_uDwfyNc0cVBOFTZmQmbx9-k1deqocnmLpjN1iHwPEi_OCnczc7owM91dA_gESuhtLlXl-8TWBTRUxgkzinAPiFMXjOD5p-NwDWnsXvTauMOZ_qGafXVqE6XOy3IZBdcJ-72L7u5K9Nxm5Jw5f1Rbd8COjfqmUKlfa6O5QqMPi31i0vHvtqZ87RQpC1VUdZgxbqa3wsyutbVfsKd-N">
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Alex W.</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 h-24 bg-surface-container border-t-2 border-outline-variant flex justify-around items-center px-gutter pb-safe">
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75 rounded-xl">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75 rounded-xl">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-caps text-label-caps mt-1">Packing</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75 rounded-xl">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-label-caps text-label-caps mt-1">Catalog</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75 rounded-xl">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-caps text-label-caps mt-1">History</span>
+</button>
+</nav>
+</body></html>

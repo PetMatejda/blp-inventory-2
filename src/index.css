@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface antialiased font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Light theme overrides matching Stitch Light designs */
+html.light body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+html.light .bg-background {
+  background-color: #f1f5f9 !important;
+}
+html.light .bg-card-bg {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+html.light .bg-surface-container {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+html.light .bg-surface-container-high,
+html.light .bg-surface-container-highest,
+html.light .bg-surface-variant {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+html.light .bg-surface-container-lowest {
+  background-color: #ffffff !important;
+}
+html.light .text-on-surface {
+  color: #0f172a !important;
+}
+html.light .text-on-surface-variant,
+html.light .text-outline {
+  color: #475569 !important;
+}
+html.light .border-outline-variant {
+  border-color: #cbd5e1 !important;
+}
+html.light header,
+html.light nav {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+html.light .text-primary {
+  color: #0284c7 !important;
+}
+html.light .bg-primary {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+html.light .bg-primary-container {
+  background-color: #e0f2fe !important;
+  color: #0369a1 !important;
+}
+html.light .bg-secondary-container {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+}
+html.light .bg-tertiary-container {
+  background-color: #ffedd5 !important;
+  color: #9a3412 !important;
+}
+
+/* Custom Scrollbar for dark & light themes */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #424754;
+  border-radius: 3px;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Swipe card custom styling */
+.swipe-card-container {
+  touch-action: pan-y;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Giga stepper touch targets */
+.giga-btn {
+  @apply active:scale-95 transition-transform duration-75 select-none;
+}

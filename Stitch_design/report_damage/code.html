@@ -1,0 +1,290 @@
+<!DOCTYPE html><html class="dark" lang="en" style="width: 390px; height: 1108px; overflow: hidden; position: relative;"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Damage Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error-container": "#ffdad6",
+                      "primary-fixed-dim": "#adc6ff",
+                      "error-container": "#93000a",
+                      "secondary-fixed-dim": "#4edea3",
+                      "outline-variant": "#424754",
+                      "surface-dim": "#10131a",
+                      "tertiary-fixed": "#ffdcc6",
+                      "surface-container": "#1d2027",
+                      "inverse-primary": "#005ac2",
+                      "on-surface": "#e1e2ec",
+                      "primary": "#adc6ff",
+                      "tertiary-container": "#df7412",
+                      "tertiary-fixed-dim": "#ffb786",
+                      "surface-container-lowest": "#0b0e15",
+                      "surface-variant": "#32353c",
+                      "on-background": "#e1e2ec",
+                      "on-primary-fixed-variant": "#004395",
+                      "secondary-fixed": "#6ffbbe",
+                      "primary-container": "#4d8eff",
+                      "surface-tint": "#adc6ff",
+                      "primary-fixed": "#d8e2ff",
+                      "on-secondary": "#003824",
+                      "surface-bright": "#363941",
+                      "background": "#10131a",
+                      "on-surface-variant": "#c2c6d6",
+                      "on-secondary-fixed": "#002113",
+                      "secondary": "#4edea3",
+                      "surface-container-highest": "#32353c",
+                      "on-primary": "#002e6a",
+                      "on-tertiary-fixed": "#311400",
+                      "on-tertiary-fixed-variant": "#723600",
+                      "surface-container-high": "#272a31",
+                      "secondary-container": "#00a572",
+                      "inverse-on-surface": "#2e3038",
+                      "on-secondary-fixed-variant": "#005236",
+                      "on-error": "#690005",
+                      "on-tertiary": "#502400",
+                      "on-primary-fixed": "#001a42",
+                      "outline": "#8c909f",
+                      "surface-container-low": "#191b23",
+                      "on-tertiary-container": "#461f00",
+                      "on-secondary-container": "#00311f",
+                      "error": "#ffb4ab",
+                      "on-primary-container": "#00285d",
+                      "tertiary": "#ffb786",
+                      "surface": "#10131a",
+                      "inverse-surface": "#e1e2ec"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "16px",
+                      "card-padding": "20px",
+                      "touch-target-min": "56px",
+                      "stack-gap": "12px",
+                      "margin-edge": "20px"
+              },
+              "fontFamily": {
+                      "label-caps": [
+                              "JetBrains Mono"
+                      ],
+                      "status-badge": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "status-badge": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Specific overrides for this screen */
+        .damage-red {
+            background-color: #93000a;
+            color: #ffdad6;
+            border-color: #ffb4ab;
+        }
+        
+        .camera-viewfinder {
+            position: relative;
+        }
+        .camera-viewfinder::before, .camera-viewfinder::after {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+        }
+        .camera-viewfinder::before {
+            top: 20px; left: 20px;
+            border-bottom: none; border-right: none;
+        }
+        .camera-viewfinder::after {
+            bottom: 20px; right: 20px;
+            border-top: none; border-left: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col antialiased selection:bg-error selection:text-on-error">
+<!-- TopAppBar -->
+<header class="bg-background border-b border-outline-variant flex justify-between items-center w-full px-margin-edge h-touch-target-min flex-shrink-0 z-10 sticky top-0">
+<div class="flex items-center gap-4">
+<button aria-label="Go back" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined text-2xl" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold tracking-tight text-primary">REPORT DAMAGE</h1>
+</div>
+<div>
+<span class="font-label-caps text-label-caps tracking-widest text-error">CRITICAL</span>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow flex flex-col p-margin-edge gap-stack-gap overflow-y-auto">
+<!-- Header Info -->
+<div class="bg-surface-container rounded-lg p-card-padding border-l-4 border-error shadow-sm mb-2">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Arri Skypanel S60 #02</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="barcode_scanner">barcode_scanner</span>
+                Asset ID: ASK-S60-002
+            </p>
+</div>
+<!-- Camera Preview -->
+<div class="rounded-lg overflow-hidden relative bg-surface-container-highest border border-outline-variant h-64 md:h-80 flex-shrink-0 flex items-center justify-center camera-viewfinder group">
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover opacity-60 mix-blend-luminosity" data-alt="A simulated camera viewfinder view showing a damaged professional lighting fixture, specifically an Arri Skypanel, on a dimly lit film set. The lighting is dramatic and moody, focusing on a cracked casing or smashed LED panel. Industrial modern aesthetic with dark tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJlb5YFWnqhIlrrdloGs3d0DJOdcwuCkH8wRIxpPibks_KgKLuwM-7bSXj9e3zq_h80IShgPI8tCjVhjCHSjAXSbnXNgBgbnFVcy7SnNoH3yQSIhMZIozLpVVJH1pWqJIUSFSZ6XJJkeS94_s6o09HDRsWNcUXkN0YM5h2PZK4gAojCpti8HcBsw7Bi3BH3Iq_ExknlwZltb67Z73vi2Peug4MOPpTRb2RrvxAoVE916Mz83CjIwG6">
+</div>
+<div class="z-10 flex flex-col items-center gap-4">
+<button class="w-16 h-16 rounded-full border-4 border-on-surface bg-error/20 backdrop-blur-sm flex items-center justify-center hover:bg-error/40 transition-colors shadow-lg active:scale-95">
+<div class="w-10 h-10 rounded-full bg-error"></div>
+</button>
+<span class="font-label-caps text-label-caps text-on-surface bg-surface-container/80 px-3 py-1 rounded backdrop-blur-md">CAPTURE EVIDENCE</span>
+</div>
+<!-- Rec Indicator -->
+<div class="absolute top-4 right-4 flex items-center gap-2 bg-surface-container-lowest/80 px-2 py-1 rounded">
+<div class="w-2 h-2 rounded-full bg-error animate-pulse"></div>
+<span class="font-label-caps text-label-caps text-error">LIVE</span>
+</div>
+</div>
+<!-- Photo Thumbnail strip -->
+<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+<div class="w-20 h-20 rounded border border-outline-variant bg-surface-container-high flex-shrink-0 relative overflow-hidden group">
+<img class="w-full h-full object-cover opacity-80" data-alt="A small thumbnail showing a close-up of a dented metal corner on heavy machinery. Dark, industrial lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnX5AzsI5wwOOGRmOlKNxPpvMdFJd2nxpYjY3BcIEO_T1MtWUU8mC4m693-EvVoukR9_rbSf4FPh87c4IbMP3yu-srMQ5V5p9TSO_V0VFLaqRLppBFSbQPOqgddjSNb6z4YUQHphtiarehH6PDiR183JtA2HpPI3PTm7CCHTG0CTZuUU7NnWnWR3ZvRzGeIwtGNAwJQGhmU10RBVJ6mJtHemqfx-1gjCDUXgSoT1RTIZat9gEudQeH">
+<button class="absolute top-1 right-1 bg-surface-container/80 rounded-full p-0.5 text-on-surface-variant hover:text-error opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-sm" data-icon="close">close</span>
+</button>
+</div>
+<div class="w-20 h-20 rounded border border-outline border-dashed bg-surface-container flex-shrink-0 flex items-center justify-center text-outline cursor-pointer hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="add_a_photo">add_a_photo</span>
+</div>
+</div>
+<!-- Severity Selector -->
+<div class="mt-4">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-3">SEVERITY LEVEL</h3>
+<div class="flex flex-col gap-3">
+<label class="relative flex items-center p-4 border border-outline-variant rounded-lg bg-surface-container cursor-pointer hover:bg-surface-variant transition-colors has-[:checked]:bg-surface-variant has-[:checked]:border-secondary">
+<input class="peer sr-only" name="severity" type="radio" value="scratch">
+<div class="flex-grow flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant peer-checked:text-secondary" data-icon="design_services">design_services</span>
+<span class="font-body-md text-body-md text-on-surface font-semibold">Scratch (Light)</span>
+</div>
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant peer-checked:border-secondary peer-checked:bg-secondary flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-surface-container-lowest hidden peer-checked:block"></div>
+</div>
+</label>
+<label class="relative flex items-center p-4 border border-outline-variant rounded-lg bg-surface-container cursor-pointer hover:bg-surface-variant transition-colors has-[:checked]:bg-surface-variant has-[:checked]:border-tertiary">
+<input checked="" class="peer sr-only" name="severity" type="radio" value="malfunction">
+<div class="flex-grow flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary" data-icon="warning">warning</span>
+<span class="font-body-md text-body-md text-on-surface font-semibold">Malfunction (On Set)</span>
+</div>
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant peer-checked:border-tertiary peer-checked:bg-tertiary flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-surface-container-lowest block"></div>
+</div>
+</label>
+<label class="relative flex items-center p-4 border border-outline-variant rounded-lg bg-surface-container cursor-pointer hover:damage-red transition-colors has-[:checked]:damage-red">
+<input class="peer sr-only" name="severity" type="radio" value="critical">
+<div class="flex-grow flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant peer-checked:text-on-error-container" data-icon="dangerous">dangerous</span>
+<span class="font-body-md text-body-md text-on-surface peer-checked:text-on-error-container font-semibold">Critical Failure</span>
+</div>
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant peer-checked:border-on-error-container peer-checked:bg-on-error-container flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-error-container hidden peer-checked:block"></div>
+</div>
+</label>
+</div>
+</div>
+<!-- Notes Area -->
+<div class="mt-4 pb-24">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-3">NOTES FOR WAREHOUSE</h3>
+<textarea class="w-full bg-surface-dim border-2 border-outline-variant rounded-lg p-4 font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-shadow shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] resize-none h-32" placeholder="Describe the issue, circumstances, or required repairs...">Panel flickers intermittently when dimmed below 20%. Started during Scene 4 setup. No visible physical damage to casing.</textarea>
+</div>
+</main>
+<!-- Bottom Action Bar -->
+<div class="fixed bottom-0 left-0 w-full bg-surface-container border-t border-outline-variant p-4 z-50 pb-safe">
+<button class="w-full h-touch-target-min bg-error hover:bg-error/90 text-on-error font-headline-sm text-headline-sm rounded-lg flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(255,180,171,0.2)] transition-transform active:scale-95">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+            Save and Send to Warehouse
+        </button>
+</div>
+</body></html>

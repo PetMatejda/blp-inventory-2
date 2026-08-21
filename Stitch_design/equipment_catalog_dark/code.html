@@ -1,0 +1,259 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>LUMEN FIELD - Catalog</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#10131a",
+                        "outline": "#8c909f",
+                        "surface-container": "#1d2027",
+                        "secondary-fixed": "#6ffbbe",
+                        "surface-tint": "#adc6ff",
+                        "on-tertiary-fixed-variant": "#723600",
+                        "primary-container": "#4d8eff",
+                        "tertiary-fixed": "#ffdcc6",
+                        "secondary": "#4edea3",
+                        "surface-container-high": "#272a31",
+                        "on-primary-fixed": "#001a42",
+                        "primary-fixed-dim": "#adc6ff",
+                        "on-tertiary": "#502400",
+                        "secondary-fixed-dim": "#4edea3",
+                        "secondary-container": "#00a572",
+                        "tertiary": "#ffb786",
+                        "on-secondary-fixed": "#002113",
+                        "primary-fixed": "#d8e2ff",
+                        "error-container": "#93000a",
+                        "primary": "#adc6ff",
+                        "surface-container-low": "#191b23",
+                        "inverse-primary": "#005ac2",
+                        "on-error": "#690005",
+                        "surface-container-highest": "#32353c",
+                        "inverse-surface": "#e1e2ec",
+                        "on-secondary": "#003824",
+                        "error": "#ffb4ab",
+                        "on-error-container": "#ffdad6",
+                        "outline-variant": "#424754",
+                        "surface-bright": "#363941",
+                        "on-surface": "#e1e2ec",
+                        "surface-container-lowest": "#0b0e15",
+                        "on-tertiary-fixed": "#311400",
+                        "surface": "#10131a",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-tertiary-container": "#461f00",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface-dim": "#10131a",
+                        "on-secondary-container": "#00311f",
+                        "on-background": "#e1e2ec",
+                        "surface-variant": "#32353c",
+                        "inverse-on-surface": "#2e3038",
+                        "on-surface-variant": "#c2c6d6",
+                        "on-primary-container": "#00285d",
+                        "tertiary-fixed-dim": "#ffb786",
+                        "tertiary-container": "#df7412",
+                        "on-primary": "#002e6a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "touch-target-min": "56px",
+                        "stack-gap": "12px",
+                        "gutter": "16px",
+                        "card-padding": "20px",
+                        "margin-edge": "20px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "status-badge": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "status-badge": ["14px", { "lineHeight": "20px", "fontWeight": "700" }],
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen pb-safe pb-[112px]"> <!-- Added pb for bottom nav -->
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background dark:bg-background flex justify-between items-center h-touch-target-min px-margin-edge w-full border-b-2 border-outline-variant">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high flex-shrink-0">
+<img alt="Technician profile photo" class="w-full h-full object-cover" data-alt="A rugged film set technician wearing a beanie and heavy canvas jacket, looking determined in a moody, dramatically lit warehouse environment. Cinematic lighting with deep shadows and industrial tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAX79uAHLoEz2a5J-5N_oeKrRsrB5XuNC5YPnoD8MbLTIeNd4pOJETw3CPq7asbb8LYO53NUBCymn7bYcQFWMHN8yI_vgIz-qvtrvuDaeZ4bMXWerVcaP9KO9yijhgLsfe8nMvXy31fv81ycIOKB_RZghomIH9Bgf-Nt6MtotC9O5QlFHE3klDc9xq2uuwfYOn43jqOjGofL-2WEchDP6OhgFYc2UcSKDXxW5q3vh0hm17vhujxypzE">
+</div>
+<span class="font-headline-sm text-headline-sm font-bold tracking-tight text-primary">LUMEN FIELD</span>
+</div>
+<button class="w-12 h-12 flex items-center justify-center text-primary dark:text-primary hover:bg-surface-container-high transition-colors rounded-full active:scale-95 duration-100">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="pt-[72px] px-margin-edge">
+<!-- Category Filter -->
+<div class="py-4 overflow-x-auto hide-scrollbar mb-4 -mx-margin-edge px-margin-edge">
+<div class="flex gap-3">
+<button class="px-6 h-touch-target-min bg-primary-container text-on-primary-container rounded-full font-label-caps text-label-caps whitespace-nowrap flex items-center justify-center">Lights</button>
+<button class="px-6 h-touch-target-min bg-surface-container-high text-on-surface-variant border border-outline-variant rounded-full font-label-caps text-label-caps whitespace-nowrap flex items-center justify-center">Stands</button>
+<button class="px-6 h-touch-target-min bg-surface-container-high text-on-surface-variant border border-outline-variant rounded-full font-label-caps text-label-caps whitespace-nowrap flex items-center justify-center">Cables</button>
+<button class="px-6 h-touch-target-min bg-surface-container-high text-on-surface-variant border border-outline-variant rounded-full font-label-caps text-label-caps whitespace-nowrap flex items-center justify-center">Distribution</button>
+<button class="px-6 h-touch-target-min bg-surface-container-high text-on-surface-variant border border-outline-variant rounded-full font-label-caps text-label-caps whitespace-nowrap flex items-center justify-center">Grip</button>
+<button class="px-6 h-touch-target-min bg-surface-container-high text-on-surface-variant border border-outline-variant rounded-full font-label-caps text-label-caps whitespace-nowrap flex items-center justify-center">Kits</button>
+</div>
+</div>
+<!-- Catalog Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-gap">
+<!-- Item Card 1 -->
+<div class="bg-[#1E293B] rounded-xl overflow-hidden border border-outline-variant flex flex-col relative group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary-container z-10"></div>
+<div class="h-48 relative overflow-hidden bg-[#0F172A] p-4 flex items-center justify-center">
+<img alt="ARRI SkyPanel S60-C" class="max-w-full max-h-full object-contain filter drop-shadow-lg group-hover:scale-105 transition-transform duration-300" data-alt="A high-end cinematic LED panel light fixture, the ARRI SkyPanel, shown against a pure black background. Industrial design, heavy metal construction, rugged and precise aesthetic. dramatic spotlighting highlighting its texture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnYj6_HbLcugF3WyEHiuEIwXtMbrrTurT6PGXebsEdVQJ48WaC2SrjMmec69jtH-ZZGOS64CaOrV_lvO20b5AjRJkWwBGy2nmeAinsUxIGJX7K-eQ0-MYE5ZE6mvIDAVSYYJpjPyvF83-SQ59DvTntdnvJYB-dVyVHZaJ0eA-qXtce4k7OKssXZfJK7jcQtmfr7RGRqrCSod3ln1spisMi2TLLYIpzu4kn8jMAGX64CkKs53mug4R4">
+</div>
+<div class="p-card-padding flex flex-col flex-grow">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">ARRI SkyPanel S60-C</h3>
+<div class="flex gap-4 mb-6">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-outline mb-1">WEIGHT</span>
+<span class="font-body-lg text-body-lg text-on-surface-variant">28 lbs</span>
+</div>
+<div class="w-[1px] bg-outline-variant"></div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-outline mb-1">POWER</span>
+<span class="font-body-lg text-body-lg text-on-surface-variant">400W</span>
+</div>
+</div>
+<button class="mt-auto h-touch-target-min w-full bg-surface-container-high hover:bg-surface-bright border border-outline-variant text-primary font-headline-sm text-headline-sm rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">add</span>
+                        Add to Job
+                    </button>
+</div>
+</div>
+<!-- Item Card 2 -->
+<div class="bg-[#1E293B] rounded-xl overflow-hidden border border-outline-variant flex flex-col relative group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary-container z-10"></div>
+<div class="h-48 relative overflow-hidden bg-[#0F172A] p-4 flex items-center justify-center">
+<img alt="Aputure LS 600d Pro" class="max-w-full max-h-full object-contain filter drop-shadow-lg group-hover:scale-105 transition-transform duration-300" data-alt="A powerful Aputure 600d Pro daylight point-source LED light fixture on a black background. Professional film equipment, rugged industrial build, high contrast lighting highlighting the heat sink and mount." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjOIu7cRbPf2vQVTzd8rJPK6WveESNB7-vZaiqNC7RUfEcfcTGcD_U1Q6NVC267w-0Cl4KCtxIj0j8Xx9PDnB6LE1tfa-lt0vbSfrIAyArPys4vj47eTOfgc_6m1YCVYTOje7Dq1BeuKKDXhspSTAnSFCbwyIeRHdXFeJgUfnQ3XdwQKy7XsV-cAWbA_Ed9u614QvWq2ajDNtNdll4jhzZBTyMXczumu6rN-CGX5pwtaY29yw2xELP">
+</div>
+<div class="p-card-padding flex flex-col flex-grow">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">Aputure LS 600d Pro</h3>
+<div class="flex gap-4 mb-6">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-outline mb-1">WEIGHT</span>
+<span class="font-body-lg text-body-lg text-on-surface-variant">10.1 lbs</span>
+</div>
+<div class="w-[1px] bg-outline-variant"></div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-outline mb-1">POWER</span>
+<span class="font-body-lg text-body-lg text-on-surface-variant">720W</span>
+</div>
+</div>
+<button class="mt-auto h-touch-target-min w-full bg-surface-container-high hover:bg-surface-bright border border-outline-variant text-primary font-headline-sm text-headline-sm rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">add</span>
+                        Add to Job
+                    </button>
+</div>
+</div>
+<!-- Item Card 3 -->
+<div class="bg-[#1E293B] rounded-xl overflow-hidden border border-[#374151] flex flex-col relative group">
+<div class="h-48 relative overflow-hidden bg-[#0F172A] p-4 flex items-center justify-center">
+<img alt="Astera Titan Tube" class="max-w-full max-h-full object-contain filter drop-shadow-lg group-hover:scale-105 transition-transform duration-300" data-alt="A compact Aster Titan Tube LED light wand displayed diagonally against a stark black background. Sleek, industrial cylinder design with rugged end caps. High contrast lighting emphasizing its technological precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8uIzbXVDS1OsPcYVKj3TWsqcePJmGOLRCwZzbyVLf-gvfYiQPE9ZJzzDzRyP7AJTD-l8yfKmQV9whE0oQKwqQyj5WtK1ISKaSsuliPHgoaiRGTLqEf05C4IBaqyWQavvbK_XAsPh3KGML4e6R6Xq0R0YofHk-4-931RlQPA4MZGzKNlVX9YHuCkS_s4hSj-KmcebSoo0N0KVrwSThk688Z3IJSAZe6JHjlZpdL-U5jPHKqFBPpCQo">
+</div>
+<div class="p-card-padding flex flex-col flex-grow">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">Astera Titan Tube</h3>
+<div class="flex gap-4 mb-6">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-outline mb-1">WEIGHT</span>
+<span class="font-body-lg text-body-lg text-on-surface-variant">3 lbs</span>
+</div>
+<div class="w-[1px] bg-outline-variant"></div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-outline mb-1">POWER</span>
+<span class="font-body-lg text-body-lg text-on-surface-variant">72W</span>
+</div>
+</div>
+<button class="mt-auto h-touch-target-min w-full bg-surface-container-high hover:bg-surface-bright border border-outline-variant text-primary font-headline-sm text-headline-sm rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">add</span>
+                        Add to Job
+                    </button>
+</div>
+</div>
+<!-- Item Card 4 -->
+<div class="bg-[#1E293B] rounded-xl overflow-hidden border border-[#374151] flex flex-col relative group opacity-75">
+<div class="h-48 relative overflow-hidden bg-[#0F172A] p-4 flex items-center justify-center">
+<div class="absolute top-4 right-4 bg-error-container text-on-error-container px-3 py-1 rounded font-status-badge text-status-badge z-20">OUT</div>
+<img alt="ARRI M18 HMI" class="max-w-full max-h-full object-contain filter drop-shadow-lg grayscale" data-alt="A large, heavy-duty HMI light head, the ARRI M18, shown in profile on a dark background. Industrial metal casing, robust cooling fins, a piece of rugged, essential film set lighting gear." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJI5ZhQ0Uk2wxzJgMro1Iw1vUwMJfqpwp5R6CRKae0NsYAuW10GitweOHnSNlBOg8RDiz0W9hI1pRFOVPcb8OtTwvMdZunz9XVKtqrJdggTZNIsRmn-ch6UIbiSKMqJU72IN-L7MaFGVlNsiuH41nVnUJJv5TSdEK1FFecUiPg0Ef2Mj5XLMnu4eJGGklb-9LX5AagaqcZg84BVzAApmAWppsi2mUa1t1q2Bgshbpkwudmqb3s55Y3">
+</div>
+<div class="p-card-padding flex flex-col flex-grow">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">ARRI M18 HMI</h3>
+<div class="flex gap-4 mb-6">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-outline mb-1">WEIGHT</span>
+<span class="font-body-lg text-body-lg text-on-surface-variant">23 lbs</span>
+</div>
+<div class="w-[1px] bg-outline-variant"></div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-outline mb-1">POWER</span>
+<span class="font-body-lg text-body-lg text-on-surface-variant">1800W</span>
+</div>
+</div>
+<button class="mt-auto h-touch-target-min w-full bg-surface-container-low border border-outline-variant text-outline font-headline-sm text-headline-sm rounded-lg flex items-center justify-center gap-2 cursor-not-allowed" disabled="">
+<span class="material-symbols-outlined">block</span>
+                        Unavailable
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 h-24 bg-surface-container dark:bg-surface-container flex justify-around items-center px-gutter pb-safe md:hidden">
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors rounded-xl active:bg-secondary-fixed-dim duration-75">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors rounded-xl active:bg-secondary-fixed-dim duration-75">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">inventory_2</span>
+<span class="font-label-caps text-label-caps mt-1">Packing</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl w-16 h-14 hover:bg-surface-container-highest transition-colors active:bg-secondary-fixed-dim duration-75">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="font-label-caps text-label-caps mt-1">Catalog</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 h-14 hover:bg-surface-container-highest transition-colors rounded-xl active:bg-secondary-fixed-dim duration-75">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">history</span>
+<span class="font-label-caps text-label-caps mt-1">History</span>
+</button>
+</nav>
+</body></html>

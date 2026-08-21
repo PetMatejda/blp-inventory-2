@@ -1,0 +1,109 @@
+import React from 'react';
+import { useInventory } from '../../context/InventoryContext';
+import { Settings, X, Moon, Sun, Wifi, WifiOff, RotateCcw, ShieldCheck } from 'lucide-react';
+
+export const SettingsModal = () => {
+  const { isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode, isOffline, setIsOffline, resetDemoData } = useInventory();
+
+  if (!isSettingsModalOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-card-bg rounded-2xl border border-outline-variant max-w-md w-full p-6 flex flex-col gap-5 shadow-2xl relative my-8">
+        {/* Header */}
+        <div className="flex justify-between items-start border-b border-outline-variant pb-3">
+          <div>
+            <span className="text-xs font-mono font-bold text-primary uppercase flex items-center gap-1">
+              <Settings className="w-4 h-4" /> SYSTÉMOVÉ NASTAVENÍ
+            </span>
+            <h2 className="text-xl font-bold text-on-surface mt-1">Nastavení Aplikace</h2>
+          </div>
+          <button
+            onClick={() => setIsSettingsModalOpen(false)}
+            className="text-outline hover:text-on-surface p-1 rounded-full hover:bg-surface-variant transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Theme Settings */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-mono text-outline uppercase font-bold">Vzhled Aplikace (Theme)</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setThemeMode('dark')}
+              className={`py-3 px-3 rounded-xl border text-xs font-bold font-mono flex items-center justify-center gap-2 transition-all ${
+                themeMode === 'dark'
+                  ? 'bg-primary-container text-on-primary-container border-primary shadow'
+                  : 'bg-surface-container text-outline border-outline-variant hover:border-outline'
+              }`}
+            >
+              <Moon className="w-4 h-4 text-primary" /> Industrial Dark
+            </button>
+            <button
+              onClick={() => setThemeMode('light')}
+              className={`py-3 px-3 rounded-xl border text-xs font-bold font-mono flex items-center justify-center gap-2 transition-all ${
+                themeMode === 'light'
+                  ? 'bg-primary-container text-on-primary-container border-primary shadow'
+                  : 'bg-surface-container text-outline border-outline-variant hover:border-outline'
+              }`}
+            >
+              <Sun className="w-4 h-4 text-tertiary" /> Industrial Light
+            </button>
+          </div>
+        </div>
+
+        {/* Network connection simulation */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-mono text-outline uppercase font-bold">Stav Síťového Připojení</label>
+          <button
+            onClick={() => setIsOffline(!isOffline)}
+            className={`w-full py-3 px-4 rounded-xl border text-xs font-mono font-bold flex items-center justify-between transition-all ${
+              isOffline
+                ? 'bg-error-container text-on-error-container border-error'
+                : 'bg-secondary-container/20 text-secondary border-secondary/40'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              {isOffline ? <WifiOff className="w-4 h-4 text-error" /> : <Wifi className="w-4 h-4 text-secondary" />}
+              {isOffline ? 'Offline Režim (Simulace výpadku signálu)' : 'Online Režim (Synchronizace Aktivní)'}
+            </span>
+            <span className="text-[10px] bg-background/50 px-2 py-0.5 rounded font-normal uppercase">Přepnout</span>
+          </button>
+        </div>
+
+        {/* Reset Data */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-mono text-outline uppercase font-bold">Správa Lokálních Dat</label>
+          <button
+            onClick={() => {
+              if (window.confirm('Opravdu chcete vymazat provedené změny a obnovit původní demo data?')) {
+                resetDemoData();
+                setIsSettingsModalOpen(false);
+              }
+            }}
+            className="w-full py-3 px-4 bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface text-xs font-mono font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
+          >
+            <RotateCcw className="w-4 h-4 text-tertiary" /> Obnovit Výchozí Demo Data
+          </button>
+        </div>
+
+        {/* System Info */}
+        <div className="bg-surface-container p-3 rounded-xl border border-outline-variant text-xs font-mono text-outline flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-secondary" /> BLP INVENTORY Engine
+          </span>
+          <span className="font-bold text-on-surface">v2.0.0 (Offline-First)</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsSettingsModalOpen(false)}
+          className="w-full py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-sm"
+        >
+          Zavřít Nastavení
+        </button>
+      </div>
+    </div>
+  );
+};
