@@ -113,6 +113,7 @@ export const InventoryProvider = ({ children }) => {
     setCurrentUserState(user);
     if (user) {
       storageService.setUserRole(user.role);
+      setActiveTab('dashboard');
     }
   };
 
