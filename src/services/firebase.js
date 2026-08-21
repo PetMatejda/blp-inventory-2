@@ -41,12 +41,23 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Initialize Firestore with Persistent Offline Caching & Multi-Tab Sync
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager(),
-  }),
-});
+// Initialize Firestore safely with offline persistent cache fallback
+let firestoreInstance;
+try {
+  if (typeof window !== 'undefined' && 'indexedDB' in window) {
+    firestoreInstance = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } else {
+    firestoreInstance = getFirestore(app);
+  }
+} catch (e) {
+  firestoreInstance = getFirestore(app);
+}
+
+export const db = firestoreInstance;
 
 export {
   GoogleAuthProvider,
