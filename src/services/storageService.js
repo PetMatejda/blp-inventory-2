@@ -33,7 +33,7 @@ export const storageService = {
         consumables: this.getConsumables(),
         auditLogs: this.getAuditLogs(),
       });
-    }, 150);
+    }, 50);
   },
 
   async syncToCloudManual() {
