@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { useLongPress } from '../../hooks/useLongPress';
 import { CATEGORIES, getCategoryMeta } from '../../utils/categoryIcons';
+import { ItemThumbnail } from '../common/ItemThumbnail';
 import { Search, Plus, Layers, Zap, Weight, Check, Info, FolderOpen, ArrowRight, Settings, Eye, EyeOff, MoreVertical, Edit3, Trash2, Edit2, X, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 
 const CatalogCardItem = ({ item, isAlreadyInJob, currentJob, isEditMode, onAdd, onOpenBundle, onEdit, onDelete }) => {
@@ -59,10 +60,11 @@ const CatalogCardItem = ({ item, isAlreadyInJob, currentJob, isEditMode, onAdd, 
           <MoreVertical className="w-4 h-4" />
         </button>
 
-        <img
+        <ItemThumbnail
           src={item.image}
-          alt={item.name}
-          className="max-h-full max-w-full object-contain filter drop-shadow-lg group-hover:scale-105 transition-transform duration-300"
+          name={item.name}
+          category={item.category}
+          className="w-full h-full"
         />
       </div>
 
