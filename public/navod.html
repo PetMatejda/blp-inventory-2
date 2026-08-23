@@ -20,6 +20,7 @@
       --text-muted: #9CA3AF;
       --accent-blue: #3B82F6;
       --accent-purple: #8B5CF6;
+      --warning: #EF4444;
     }
 
     * {
@@ -44,7 +45,7 @@
     /* Header */
     .header {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 28px;
       padding-top: 12px;
     }
 
@@ -88,6 +89,62 @@
       font-weight: 500;
     }
 
+    /* App URL Box */
+    .url-card {
+      background: rgba(245, 158, 11, 0.06);
+      border: 1px solid var(--primary);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .url-label {
+      font-size: 12px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .url-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .url-input {
+      flex: 1;
+      background: #0B1120;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #FFF;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .copy-btn {
+      background: var(--primary);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--primary-hover);
+    }
+
     /* Big Action Button */
     .cta-btn {
       display: flex;
@@ -104,12 +161,31 @@
       text-decoration: none;
       box-shadow: 0 8px 24px var(--primary-glow);
       transition: all 0.2s ease;
-      margin: 24px 0 36px;
+      margin: 12px 0 28px;
     }
 
     .cta-btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 12px 28px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Notice Banner */
+    .notice-banner {
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 13.5px;
+      color: #BFDBFE;
+    }
+
+    .notice-icon {
+      font-size: 18px;
+      flex-shrink: 0;
     }
 
     /* Cards */
@@ -154,8 +230,8 @@
     }
 
     .flow-num {
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
       background: var(--primary);
       color: #000;
       font-weight: 800;
@@ -164,7 +240,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 13px;
+      font-size: 14px;
       flex-shrink: 0;
     }
 
@@ -177,16 +253,15 @@
 
     .flow-content p {
       color: var(--text-muted);
-      font-size: 13px;
+      font-size: 13.5px;
     }
 
-    /* Install Tabs */
+    /* Platform Cards */
     .platform-card {
-      border-left: 4px solid var(--primary);
       margin-bottom: 16px;
       background: rgba(255,255,255,0.02);
       border-radius: 14px;
-      padding: 16px;
+      padding: 18px;
       border: 1px solid var(--card-border);
       border-left: 4px solid var(--primary);
     }
@@ -205,7 +280,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .step-list {
@@ -215,11 +290,24 @@
     }
 
     .step-list li {
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
     .step-list strong {
       color: #FFF;
+    }
+
+    .apk-tag {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: var(--secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-top: 4px;
     }
 
     /* Login Box */
@@ -228,7 +316,7 @@
       border: 1px dashed var(--primary);
       border-radius: 14px;
       padding: 16px;
-      margin-top: 12px;
+      margin-top: 14px;
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -263,13 +351,30 @@
         BLP INVENTORY 2.0
       </div>
       <h1>Testovací manuál pro partu</h1>
-      <p class="lead">Čau lidi, testujeme novou appku na balení a evidenci techniky. Přečti si těch pár bodů níže a zkus to s náma otestovat.</p>
+      <p class="lead">Čau lidi, testujeme novou appku na balení a evidenci techniky. Přečti si pár rychlých bodů níže a zkus to s náma projet.</p>
     </header>
 
+    <!-- App URL Box -->
+    <div class="url-card">
+      <div class="url-label">🔗 Odkaz na aplikaci pro otevření v mobilu:</div>
+      <div class="url-row">
+        <input type="text" id="appUrl" class="url-input" readonly value="">
+        <button type="button" class="copy-btn" id="copyBtn" onclick="copyAppUrl()">Kopírovat odkaz</button>
+      </div>
+    </div>
+
     <!-- Main CTA -->
-    <a href="/" class="cta-btn">
+    <a id="mainCta" href="/" class="cta-btn">
       🚀 Otevřít aplikaci BLP Inventory
     </a>
+
+    <!-- Notice Banner -->
+    <div class="notice-banner">
+      <span class="notice-icon">💡</span>
+      <div>
+        <strong>Poznámka k testování:</strong> Může být drobný rozdíl mezi webovou verzí (v prohlížeči) a instalovanou aplikací (APK / Přidat na plochu) v některých detailech. Otestujte klidně obojí!
+      </div>
+    </div>
 
     <!-- 1. O co vlastně jde -->
     <div class="card">
@@ -306,8 +411,8 @@
         <div class="flow-item">
           <div class="flow-num">👉</div>
           <div class="flow-content">
-            <strong>Kliknutí / Swipe na položku</strong>
-            <p>Klepni na řádek s technikou (nebo přetáhni doprava) a stav se posune na <em>Naloženo / Vyloženo</em>.</p>
+            <strong>Swipe doprava na položce (Gesto)</strong>
+            <p>Přejeď prstem doprava po řádku s technikou a stav se okamžitě posune na <em>Naloženo / Vyloženo</em>.</p>
           </div>
         </div>
         <div class="flow-item">
@@ -321,7 +426,7 @@
           <div class="flow-num">➕</div>
           <div class="flow-content">
             <strong>Katalog & Přidávání techniky</strong>
-            <p>Dole v záložce <em>Katalog</em> můžeš vyhledat jakýkoli světlo nebo příslušenství a jedním klikem ho přihodit do aktivního jobu.</p>
+            <p>Dole v záložce <em>Katalog</em> můžeš vyhledat jakýkoli světlo a jedním klikem ho přihodit do aktivního jobu.</p>
           </div>
         </div>
         <div class="flow-item">
@@ -349,7 +454,7 @@
           <li>Otevři odkaz v prohlížeči <strong>Safari</strong>.</li>
           <li>Dole uprostřed klepni na tlačítko <strong>Sdílet</strong> (čtvereček se šipkou nahoru ⎋).</li>
           <li>Sjeď kousek dolů a zvol <strong>„Přidat na plochu“</strong> (Add to Home Screen).</li>
-          <li>Hotovo! Appka se spustí na celou obrazovku jako nativní aplikace s vlastní BLP ikonou.</li>
+          <li>Hotovo! Appka se spustí na celou obrazovku jako samostatná aplikace s BLP ikonou.</li>
         </ol>
       </div>
 
@@ -359,9 +464,8 @@
           🤖 Android (Samsung, Xiaomi, Pixel...)
         </div>
         <ol class="step-list">
-          <li>Otevři odkaz v prohlížeči <strong>Chrome</strong>.</li>
-          <li>Vyskočí hláška <em>„Instalovat aplikaci“</em> nebo klepni vpravo nahoře na <strong>3 tečky ➔ Přidat na plochu / Instalovat</strong>.</li>
-          <li>Appka se ti uloží mezi ostatní aplikace v telefonu.</li>
+          <li><strong>Možnost A (Rychlá instalace přes Chrome):</strong> Otevři v prohlížeči <strong>Chrome</strong> ➔ klepni na hlášku <em>„Přidat na plochu / Instalovat aplikaci“</em> (nebo vpravo nahoře 3 tečky ➔ <em>Přidat na plochu</em>).</li>
+          <li><strong>Možnost B (Přímo APK balíček):</strong> V aplikaci klikni na ikonu <strong>Nastavení ⚙️</strong> a zvol <strong>Stáhnout APK</strong> pro přímou instalaci do Androidu. <span class="apk-tag">APK INSTALACE</span></li>
         </ol>
       </div>
 
@@ -383,5 +487,24 @@
     </footer>
   </div>
 
+  <script>
+    // Auto-fill active domain URL
+    const appOrigin = window.location.origin;
+    const urlInput = document.getElementById('appUrl');
+    const mainCta = document.getElementById('mainCta');
+    if (urlInput) urlInput.value = appOrigin;
+
+    function copyAppUrl() {
+      const copyBtn = document.getElementById('copyBtn');
+      navigator.clipboard.writeText(appOrigin).then(() => {
+        copyBtn.innerText = '✓ Zkopírováno!';
+        copyBtn.style.background = '#10B981';
+        setTimeout(() => {
+          copyBtn.innerText = 'Kopírovat odkaz';
+          copyBtn.style.background = '#F59E0B';
+        }, 2000);
+      });
+    }
+  </script>
 </body>
 </html>
