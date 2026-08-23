@@ -65,8 +65,12 @@ export const InventoryProvider = ({ children }) => {
     // Does NOT push to cloud — avoids overwriting remote changes on startup
     storageService.init();
 
-    // Step 2: Pull latest from cloud BEFORE showing data
-    // This ensures we always start with the freshest server state
+    // Step 1b: IMMEDIATELY populate React state from local cache.
+    // This ensures dashboard shows cached counts right away (not 0/0)
+    // even before the cloud pull completes.
+    refreshDataFromLocal();
+
+    // Step 2: Pull latest from cloud and refresh again with fresh data
     setSyncStatus('syncing');
     firebaseDb.pullFromCloud().then((res) => {
       if (res.success) {
@@ -74,7 +78,7 @@ export const InventoryProvider = ({ children }) => {
       } else {
         console.warn('[Context] Startup cloud pull failed (offline?), using local cache.');
       }
-      // Always refresh from local (which now has cloud data if pull succeeded)
+      // Refresh again — local cache now contains cloud data if pull succeeded
       refreshDataFromLocal();
       setSyncStatus(res.success ? 'synced' : 'offline');
     });
@@ -178,6 +182,8 @@ export const InventoryProvider = ({ children }) => {
     storageService.setCurrentJobId(jobId);
     setCurrentJobIdState(jobId);
     setJobItems(storageService.getJobItems(jobId));
+    // Also refresh allJobItems so dashboard counts stay accurate after navigation
+    setAllJobItems(storageService.getJobItems(null));
   };
 
   const currentJob = jobs.find(j => j.id === currentJobId) || jobs[0] || null;
