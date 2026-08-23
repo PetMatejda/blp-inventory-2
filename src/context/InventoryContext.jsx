@@ -173,7 +173,7 @@ export const InventoryProvider = ({ children }) => {
     }
   };
 
-  const isAdmin = () => currentUser?.role === 'ADMIN';
+  const isAdmin = () => true; // All users are admins for this phase
   const canEditPacking = () => true;
 
   const userRole = currentUser?.role || 'USER';

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { useLongPress } from '../../hooks/useLongPress';
-import { Plus, FolderOpen, Calendar, User, FileText, AlertTriangle, CheckCircle, Lock, Unlock, Copy, Edit2, Archive, MoreVertical, Shield, Package, Truck } from 'lucide-react';
+import { Plus, FolderOpen, Calendar, User, FileText, AlertTriangle, CheckCircle, Lock, Unlock, Copy, Edit2, Archive, MoreVertical, Package, Truck } from 'lucide-react';
 
 const JobCardItem = ({ job, isSelected }) => {
   const { allJobItems, setCurrentJobId, setActiveTab, setEditingJob, setTemplateJob, setIsProtocolModalOpen, finishJob, reactivateJob, setContextMenu, isAdmin } = useInventory();
@@ -213,50 +213,38 @@ export const JobDashboard = () => {
   const filteredJobs = jobs.filter(j => j.status === filterState);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6 pb-24">
-      {/* Header section & Add Job CTA */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-on-surface tracking-tight">Správa Zakázek (Joby)</h1>
-          <p className="text-sm text-outline">Operativní přehled natáčecích projektů a stavu nakládky</p>
+    <div className="max-w-4xl mx-auto px-4 py-4 flex flex-col gap-4 pb-24">
+      {/* Active vs Archived Toggle + New Job CTA */}
+      <div className="flex items-center gap-2">
+        <div className="flex bg-surface-container p-1 rounded-xl border border-outline-variant shadow-sm flex-1">
+          <button
+            onClick={() => setFilterState('ACTIVE')}
+            className={`flex-1 py-2 text-center rounded-lg font-semibold text-sm transition-all ${
+              filterState === 'ACTIVE'
+                ? 'bg-primary-container text-on-primary-container shadow-sm border border-primary/30'
+                : 'text-outline hover:text-on-surface'
+            }`}
+          >
+            Aktivní ({jobs.filter(j => j.status === 'ACTIVE').length})
+          </button>
+          <button
+            onClick={() => setFilterState('ARCHIVED')}
+            className={`flex-1 py-2 text-center rounded-lg font-semibold text-sm transition-all ${
+              filterState === 'ARCHIVED'
+                ? 'bg-primary-container text-on-primary-container shadow-sm border border-primary/30'
+                : 'text-outline hover:text-on-surface'
+            }`}
+          >
+            Archiv ({jobs.filter(j => j.status === 'ARCHIVED').length})
+          </button>
         </div>
 
-        {isAdmin() ? (
-          <button
-            onClick={() => setIsNewJobModalOpen(true)}
-            className="h-11 px-4 bg-primary text-on-primary-container font-semibold rounded-xl hover:bg-opacity-90 transition-all flex items-center gap-2 shadow-md active:scale-95"
-          >
-            <Plus className="w-5 h-5 text-on-primary-container" />
-            <span className="hidden sm:inline">Nová Zakázka</span>
-          </button>
-        ) : (
-          <span className="text-xs font-mono font-bold text-primary bg-primary-container/20 px-3 py-1.5 rounded-xl border border-primary/30 flex items-center gap-1">
-            <Shield className="w-3.5 h-3.5 text-primary" /> Role: UŽIVATEL (Práce v Packaging)
-          </span>
-        )}
-      </div>
-
-      {/* Active vs Archived Toggle */}
-      <div className="flex bg-surface-container p-1 rounded-xl border border-outline-variant shadow-sm">
         <button
-          onClick={() => setFilterState('ACTIVE')}
-          className={`flex-1 py-2.5 text-center rounded-lg font-semibold text-sm transition-all ${
-            filterState === 'ACTIVE'
-              ? 'bg-primary-container text-on-primary-container shadow-sm border border-primary/30'
-              : 'text-outline hover:text-on-surface'
-          }`}
+          onClick={() => setIsNewJobModalOpen(true)}
+          className="h-10 w-10 bg-primary text-on-primary-container font-semibold rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md active:scale-95 shrink-0"
+          title="Nová Zakázka"
         >
-          Aktivní Zakázky ({jobs.filter(j => j.status === 'ACTIVE').length})
-        </button>
-        <button
-          onClick={() => setFilterState('ARCHIVED')}
-          className={`flex-1 py-2.5 text-center rounded-lg font-semibold text-sm transition-all ${
-            filterState === 'ARCHIVED'
-              ? 'bg-primary-container text-on-primary-container shadow-sm border border-primary/30'
-              : 'text-outline hover:text-on-surface'
-          }`}
-        >
-          Ukončené & Archivované ({jobs.filter(j => j.status === 'ARCHIVED').length})
+          <Plus className="w-5 h-5" />
         </button>
       </div>
 

@@ -25,7 +25,7 @@ export const PackingList = () => {
     setEditingJob,
   } = useInventory();
 
-  const [jobHeaderCollapsed, setJobHeaderCollapsed] = useState(false);
+  const [jobHeaderCollapsed, setJobHeaderCollapsed] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
   const jobHeaderRef = useRef(null);
   const sentinelRef = useRef(null);
@@ -101,11 +101,8 @@ export const PackingList = () => {
   return (
     <div className="max-w-4xl mx-auto pb-32">
 
-      {/* ════════════════════════════════════════════
-          SENTINEL — detected by IntersectionObserver
-          placed right after padding, before sticky bar
-      ════════════════════════════════════════════ */}
-      <div ref={sentinelRef} className="h-px w-full" />
+      {/* Sentinel for IntersectionObserver */}
+      <div ref={sentinelRef} className="h-0 w-full" />
 
       {/* ════════════════════════════════════════════
           STICKY COMMAND BAR (single sticky layer)

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Settings, RefreshCw, Wifi, WifiOff, Shield, User, LogOut } from 'lucide-react';
+import { Settings, RefreshCw, WifiOff, User, LogOut } from 'lucide-react';
 import { firebaseAuth } from '../../services/firebaseAuth';
 
 export const TopAppBar = () => {
@@ -8,7 +8,6 @@ export const TopAppBar = () => {
     currentJob,
     currentUser,
     setCurrentUser,
-    isAdmin,
     setIsAuthModalOpen,
     setIsSettingsModalOpen,
     isOffline,
@@ -33,11 +32,11 @@ export const TopAppBar = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-md border-b border-outline-variant h-14 flex items-center justify-between px-3 shadow-sm">
-      {/* LEFT: Avatar + App name */}
-      <div className="flex items-center gap-2.5 min-w-0">
+      {/* LEFT: Avatar + Job name (or user name) */}
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <button
           onClick={handleAvatarClick}
-          className="relative w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center overflow-hidden shrink-0 active:scale-90 transition-transform"
+          className="relative w-9 h-9 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center overflow-hidden shrink-0 active:scale-90 transition-transform"
           title="Profil uživatele"
         >
           {currentUser?.avatar && !avatarError ? (
@@ -50,7 +49,7 @@ export const TopAppBar = () => {
           ) : (
             <User className="w-4 h-4 text-primary" />
           )}
-          {/* Online/offline dot on avatar */}
+          {/* Online/offline dot */}
           <span
             className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-background ${
               isOffline ? 'bg-error' : 'bg-secondary'
@@ -58,27 +57,29 @@ export const TopAppBar = () => {
           />
         </button>
 
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono text-[11px] font-bold tracking-widest text-primary leading-none">BLP</span>
-            <span className="font-mono text-[11px] font-bold text-on-surface-variant tracking-wide leading-none">INVENTORY</span>
-          </div>
-          {/* Active job name — truncated, below app name */}
+        {/* Context-aware title: show job name when selected, else generic */}
+        <div className="min-w-0 flex-1">
           {currentJob ? (
-            <p className="text-xs font-semibold text-on-surface truncate max-w-[140px] sm:max-w-[220px] leading-tight mt-0.5">
+            <h1 className="font-bold text-sm text-on-surface truncate leading-tight">
               {currentJob.name}
+            </h1>
+          ) : (
+            <h1 className="font-bold text-sm text-on-surface leading-tight">
+              BLP Film
+            </h1>
+          )}
+          {/* Offline warning inline */}
+          {isOffline && (
+            <p className="text-[10px] text-error font-mono font-bold flex items-center gap-1 mt-0.5">
+              <WifiOff className="w-3 h-3" /> Offline — data nemusí být aktuální
             </p>
-          ) : currentUser ? (
-            <p className="text-[11px] text-outline leading-tight mt-0.5 truncate max-w-[140px]">
-              {currentUser.name}
-            </p>
-          ) : null}
+          )}
         </div>
       </div>
 
-      {/* RIGHT: Sync + Settings — only 2 clean actions */}
+      {/* RIGHT: Sync + Settings + Logout — compact */}
       <div className="flex items-center gap-1 shrink-0">
-        {/* Sync button — spins while syncing */}
+        {/* Sync button */}
         <button
           onClick={forceSyncAll}
           className={`w-9 h-9 flex items-center justify-center rounded-xl border transition-all active:scale-90 ${
@@ -88,7 +89,7 @@ export const TopAppBar = () => {
               ? 'bg-error-container/20 border-error/40 text-error'
               : 'bg-surface-container border-outline-variant text-outline hover:text-primary hover:border-primary/40'
           }`}
-          title={isSyncing ? 'Synchronizuji...' : isOffline ? 'Offline — bez připojení' : 'Synchronizovat s cloudem'}
+          title={isSyncing ? 'Synchronizuji...' : isOffline ? 'Offline' : 'Synchronizovat'}
         >
           {isOffline ? (
             <WifiOff className="w-4 h-4" />
@@ -106,7 +107,7 @@ export const TopAppBar = () => {
           <Settings className="w-4 h-4" />
         </button>
 
-        {/* Logout — only if logged in, clear red icon */}
+        {/* Logout */}
         {currentUser && (
           <button
             onClick={handleLogout}

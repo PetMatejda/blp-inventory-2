@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Settings, X, Moon, Sun, Wifi, WifiOff, RotateCcw, ShieldCheck, CloudUpload, CheckCircle2, AlertCircle, Smartphone, Download } from 'lucide-react';
+import { Settings, X, Moon, Sun, CloudUpload, CheckCircle2, AlertCircle, Smartphone, Download, ShieldCheck } from 'lucide-react';
 import { storageService } from '../../services/storageService';
 
 export const SettingsModal = () => {
-  const { isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode, isOffline, setIsOffline, resetDemoData } = useInventory();
+  const { isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode } = useInventory();
   const [syncStatus, setSyncStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -35,9 +35,9 @@ export const SettingsModal = () => {
     const res = await storageService.syncToCloudManual();
     setLoading(false);
     if (res.success) {
-      setSyncStatus({ type: 'success', text: 'Kolekce inventory_store/blp_main_store byla úspěšně zapsána do Firebase!' });
+      setSyncStatus({ type: 'success', text: 'Data byla úspěšně nahrána do Firebase!' });
     } else {
-      setSyncStatus({ type: 'error', text: `Chyba zápisu: ${res.error || 'Zkontrolujte přihlášení a pravidla'}` });
+      setSyncStatus({ type: 'error', text: `Chyba zápisu: ${res.error || 'Zkontrolujte přihlášení'}` });
     }
   };
 
@@ -61,7 +61,7 @@ export const SettingsModal = () => {
         <div className="flex justify-between items-start border-b border-outline-variant pb-3">
           <div>
             <span className="text-xs font-mono font-bold text-primary uppercase flex items-center gap-1">
-              <Settings className="w-4 h-4" /> SYSTÉMOVÉ NASTAVENÍ
+              <Settings className="w-4 h-4" /> NASTAVENÍ
             </span>
             <h2 className="text-xl font-bold text-on-surface mt-1">Nastavení Aplikace</h2>
           </div>
@@ -87,7 +87,7 @@ export const SettingsModal = () => {
           </div>
         )}
 
-        {/* Android App & PWA Download / Installation Box */}
+        {/* Android App & PWA Installation */}
         <div className="bg-surface-container p-4 rounded-xl border border-secondary/40 flex flex-col gap-3 relative overflow-hidden">
           <div className="flex items-center gap-3">
             <img
@@ -97,9 +97,9 @@ export const SettingsModal = () => {
             />
             <div>
               <h3 className="font-bold text-sm text-on-surface flex items-center gap-1.5">
-                <Smartphone className="w-4 h-4 text-secondary" /> Android Mobilní Aplikace
+                <Smartphone className="w-4 h-4 text-secondary" /> Mobilní aplikace
               </h3>
-              <p className="text-xs text-outline">Nativní PWA / APK prostředí bez lišty prohlížeče s filmovou ikonou</p>
+              <p className="text-xs text-outline">Nativní PWA prostředí bez lišty prohlížeče</p>
             </div>
           </div>
 
@@ -108,41 +108,27 @@ export const SettingsModal = () => {
             className="w-full py-2.5 px-4 bg-secondary text-on-secondary-container font-mono font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow hover:opacity-90"
           >
             <Download className="w-4 h-4" />
-            {isInstalled ? 'Aplikace je Nainstalována v Telefonu' : '📲 Nainstalovat Aplikaci na Android / Mobil'}
+            {isInstalled ? 'Aplikace je nainstalována' : '📲 Nainstalovat na mobil'}
           </button>
-
-          <p className="text-[11px] text-outline font-mono text-center">
-            V prohlížeči Chrome na Androidu stačí dát menu <strong>(⋮) ➔ Přidat na domovskou obrazovku</strong>.
-          </p>
         </div>
 
-        {/* Cloud Sync Manual Action */}
+        {/* Cloud Sync */}
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-mono text-outline uppercase font-bold">Cloud Databáze Firebase</label>
+          <label className="text-xs font-mono text-outline uppercase font-bold">Cloud synchronizace</label>
           <button
             onClick={handleManualCloudPush}
             disabled={loading}
             className="w-full py-3 px-4 bg-primary text-on-primary-container font-mono font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md hover:opacity-95 disabled:opacity-50"
           >
             <CloudUpload className="w-4 h-4" />
-            {loading ? 'Nahrávám do Firebase...' : '🔥 Nahrát Všechna Data do Firebase Databáze'}
+            {loading ? 'Nahrávám...' : '🔥 Vynutit nahrání dat do Firebase'}
           </button>
         </div>
 
-        {/* Theme Settings */}
+        {/* Theme */}
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-mono text-outline uppercase font-bold">Vzhled Aplikace (Theme)</label>
+          <label className="text-xs font-mono text-outline uppercase font-bold">Vzhled</label>
           <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => setThemeMode('dark')}
-              className={`py-3 px-3 rounded-xl border text-xs font-bold font-mono flex items-center justify-center gap-2 transition-all ${
-                themeMode === 'dark'
-                  ? 'bg-primary-container text-on-primary-container border-primary shadow'
-                  : 'bg-surface-container text-outline border-outline-variant hover:border-outline'
-              }`}
-            >
-              <Moon className="w-4 h-4 text-primary" /> Industrial Dark
-            </button>
             <button
               onClick={() => setThemeMode('light')}
               className={`py-3 px-3 rounded-xl border text-xs font-bold font-mono flex items-center justify-center gap-2 transition-all ${
@@ -151,52 +137,27 @@ export const SettingsModal = () => {
                   : 'bg-surface-container text-outline border-outline-variant hover:border-outline'
               }`}
             >
-              <Sun className="w-4 h-4 text-tertiary" /> Industrial Light
+              <Sun className="w-4 h-4 text-tertiary" /> Light
+            </button>
+            <button
+              onClick={() => setThemeMode('dark')}
+              className={`py-3 px-3 rounded-xl border text-xs font-bold font-mono flex items-center justify-center gap-2 transition-all ${
+                themeMode === 'dark'
+                  ? 'bg-primary-container text-on-primary-container border-primary shadow'
+                  : 'bg-surface-container text-outline border-outline-variant hover:border-outline'
+              }`}
+            >
+              <Moon className="w-4 h-4 text-primary" /> Dark
             </button>
           </div>
-        </div>
-
-        {/* Network connection simulation */}
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-mono text-outline uppercase font-bold">Stav Síťového Připojení</label>
-          <button
-            onClick={() => setIsOffline(!isOffline)}
-            className={`w-full py-3 px-4 rounded-xl border text-xs font-mono font-bold flex items-center justify-between transition-all ${
-              isOffline
-                ? 'bg-error-container text-on-error-container border-error'
-                : 'bg-secondary-container/20 text-secondary border-secondary/40'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              {isOffline ? <WifiOff className="w-4 h-4 text-error" /> : <Wifi className="w-4 h-4 text-secondary" />}
-              {isOffline ? 'Offline Režim (Simulace výpadku signálu)' : 'Online Režim (Synchronizace Aktivní)'}
-            </span>
-            <span className="text-[10px] bg-background/50 px-2 py-0.5 rounded font-normal uppercase">Přepnout</span>
-          </button>
-        </div>
-
-        {/* Reset Data */}
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-mono text-outline uppercase font-bold">Správa Lokálních Dat</label>
-          <button
-            onClick={() => {
-              if (window.confirm('Opravdu chcete vymazat provedené změny a obnovit původní demo data?')) {
-                resetDemoData();
-                setIsSettingsModalOpen(false);
-              }
-            }}
-            className="w-full py-3 px-4 bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface text-xs font-mono font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
-          >
-            <RotateCcw className="w-4 h-4 text-tertiary" /> Obnovit Výchozí Demo Data
-          </button>
         </div>
 
         {/* System Info */}
         <div className="bg-surface-container p-3 rounded-xl border border-outline-variant text-xs font-mono text-outline flex items-center justify-between">
           <span className="flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-secondary" /> BLP INVENTORY Engine
+            <ShieldCheck className="w-4 h-4 text-secondary" /> BLP INVENTORY
           </span>
-          <span className="font-bold text-on-surface">v2.0.0 (Android PWA / APK)</span>
+          <span className="font-bold text-on-surface">v2.0.0</span>
         </div>
 
         <button
@@ -204,7 +165,7 @@ export const SettingsModal = () => {
           onClick={() => setIsSettingsModalOpen(false)}
           className="w-full py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-sm"
         >
-          Zavřít Nastavení
+          Zavřít
         </button>
       </div>
     </div>
