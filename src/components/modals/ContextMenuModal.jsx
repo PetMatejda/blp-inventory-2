@@ -84,16 +84,8 @@ export const ContextMenuModal = () => {
               <Copy className="w-4 h-4 text-secondary" /> Použít jako vzor (Kopírovat)
             </button>
 
-            <button
-              onClick={() => {
-                setCurrentJobId(target.id);
-                setIsProtocolModalOpen(true);
-                handleClose();
-              }}
-              className="w-full px-3 py-2.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-xs font-semibold text-on-surface flex items-center gap-2.5 transition-colors"
-            >
-              <FileText className="w-4 h-4 text-tertiary" /> Vygenerovat PDF Protokol
-            </button>
+
+
 
             {target.status === 'ARCHIVED' ? (
               <button

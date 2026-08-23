@@ -295,6 +295,7 @@ export const storageService = {
       name: jobData.name,
       client: jobData.client || '',
       assignedGaffer: jobData.assignedGaffer || 'Petr M.',
+      blpResponsible: jobData.blpResponsible || 'Marek Radolf',
       riggingDate: jobData.riggingDate || new Date().toISOString().split('T')[0],
       deriggingDate: jobData.deriggingDate || new Date().toISOString().split('T')[0],
       vehicleIds: jobData.vehicleIds || ['v1'],
@@ -303,7 +304,7 @@ export const storageService = {
     };
 
     jobs.unshift(newJob);
-    this.addAuditLog(user, newJob.id, 'Nová zakázka', `Vytvořena zakázka: ${newJob.name} (${newJob.client || 'Bez klienta'})`, 'add');
+    this.addAuditLog(user, newJob.id, 'Nová zakázka', `Vytvořena zakázka: ${newJob.name} (BLP: ${newJob.blpResponsible}, Gaffer: ${newJob.assignedGaffer})`, 'add');
     this.saveJobs(jobs);
     this.setCurrentJobId(newJob.id);
 
@@ -311,13 +312,12 @@ export const storageService = {
   },
 
   updateJob(jobId, jobData, user) {
-
     const jobs = this.getJobs();
     const index = jobs.findIndex(j => j.id === jobId);
     if (index === -1) return null;
 
     jobs[index] = { ...jobs[index], ...jobData };
-    this.addAuditLog(user, jobId, 'Úprava zakázky', `Upraveny údaje zakázky ${jobs[index].name} (Rigging: ${jobData.riggingDate}, Derigging: ${jobData.deriggingDate})`, 'update');
+    this.addAuditLog(user, jobId, 'Úprava zakázky', `Upraveny údaje zakázky ${jobs[index].name} (BLP: ${jobs[index].blpResponsible || 'BLP Tým'}, Gaffer: ${jobs[index].assignedGaffer})`, 'update');
     this.saveJobs(jobs);
 
     return jobs[index];
@@ -343,7 +343,6 @@ export const storageService = {
     return true;
   },
 
-
   duplicateJobAsTemplate(sourceJobId, newJobData, user) {
     const jobs = this.getJobs();
     const sourceJob = jobs.find(j => j.id === sourceJobId);
@@ -354,12 +353,14 @@ export const storageService = {
       name: newJobData.name || `${sourceJob.name} (Kopie)`,
       client: newJobData.client || sourceJob.client,
       assignedGaffer: newJobData.assignedGaffer || sourceJob.assignedGaffer,
+      blpResponsible: newJobData.blpResponsible || sourceJob.blpResponsible || 'Marek Radolf',
       riggingDate: newJobData.riggingDate || new Date().toISOString().split('T')[0],
       deriggingDate: newJobData.deriggingDate || new Date().toISOString().split('T')[0],
       vehicleIds: sourceJob.vehicleIds || ['v1'],
       status: 'ACTIVE',
       mode: 'LOADING',
     };
+
 
     jobs.unshift(newJob);
 

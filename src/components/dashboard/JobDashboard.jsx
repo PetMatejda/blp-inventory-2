@@ -66,10 +66,13 @@ const JobCardItem = ({ job, isSelected }) => {
             </div>
             <p className="text-xs text-primary font-medium">{job.client}</p>
 
-            {/* Info badges: Gaffer & Rigging/Derigging Dates */}
+            {/* Info badges: BLP Responsible, Gaffer & Rigging/Derigging Dates */}
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-xs text-on-surface-variant">
+              <span className="flex items-center gap-1.5 font-semibold text-primary">
+                <User className="w-3.5 h-3.5" /> BLP: {job.blpResponsible || 'Marek Radolf'}
+              </span>
               <span className="flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-outline" /> Gaffer: {job.assignedGaffer}
+                <User className="w-3.5 h-3.5 text-outline" /> Gaffer: {job.assignedGaffer || 'Nezadáno'}
               </span>
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-secondary" /> Rigging: {job.riggingDate || job.date}
@@ -114,7 +117,6 @@ const JobCardItem = ({ job, isSelected }) => {
             <span className="text-on-surface font-bold">
               {currentDoneCount} / {totalReq} ks ({currentDoneRows} / {totalRows} položek) • {progress} %
             </span>
-
           </div>
 
           {/* High-Contrast Progress Bar */}
@@ -138,79 +140,64 @@ const JobCardItem = ({ job, isSelected }) => {
       {/* Card Footer Actions */}
       <div className="p-3 border-t border-outline-variant bg-surface-container flex flex-wrap gap-2 justify-between items-center">
         <div className="flex gap-2">
-          {isAdmin() && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setTemplateJob(job);
-              }}
-              className="h-10 px-3 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-            >
-              <Copy className="w-4 h-4 text-secondary" />
-              <span>Použít jako vzor</span>
-            </button>
-          )}
-
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setCurrentJobId(job.id);
-              setIsProtocolModalOpen(true);
+              setTemplateJob(job);
             }}
-            className="h-10 px-3 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+            className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm active:scale-95"
           >
-            <FileText className="w-4 h-4 text-primary" />
-            <span className="hidden sm:inline">PDF Protokol</span>
+            <Copy className="w-4 h-4 text-secondary" />
+            <span>Použít jako vzor</span>
           </button>
         </div>
 
         <div className="flex gap-2">
-          {isAdmin() && (
-            <>
-              {isArchived ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    reactivateJob(job.id);
-                  }}
-                  className="h-10 px-4 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-primary font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
-                >
-                  <Unlock className="w-4 h-4 text-secondary" />
-                  <span>Obnovit</span>
-                </button>
-              ) : (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (window.confirm(`Chcete dokončit zakázku "${job.name}"?`)) {
-                      finishJob(job.id);
-                    }
-                  }}
-                  className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:border-error/40 hover:bg-error-container/20 text-on-surface hover:text-error font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
-                >
-                  <Lock className="w-4 h-4" />
-                  <span>Ukončit</span>
-                </button>
-              )}
-            </>
+          {isArchived ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                reactivateJob(job.id);
+              }}
+              className="h-10 px-4 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-primary font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+            >
+              <Unlock className="w-4 h-4 text-secondary" />
+              <span>Obnovit</span>
+            </button>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm(`Chcete dokončit zakázku "${job.name}" a přesunout ji do archivu?`)) {
+                  finishJob(job.id);
+                }
+              }}
+              className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:border-error/40 hover:bg-error-container/20 text-on-surface hover:text-error font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+            >
+              <Lock className="w-4 h-4" />
+              <span>Ukončit</span>
+            </button>
           )}
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentJobId(job.id);
-              setActiveTab('packing');
-            }}
-            className="h-10 px-5 rounded-xl bg-secondary text-on-secondary-container hover:opacity-90 text-sm font-semibold flex items-center gap-2 justify-center transition-all active:scale-95 shadow"
-          >
-            <FolderOpen className="w-4 h-4" />
-            {isArchived ? 'Zobrazit' : 'Otevřít Packaging'}
-          </button>
         </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setCurrentJobId(job.id);
+            setActiveTab('packing');
+          }}
+          className="h-10 px-5 rounded-xl bg-secondary text-on-secondary-container hover:opacity-90 text-sm font-semibold flex items-center gap-2 justify-center transition-all active:scale-95 shadow"
+        >
+          <FolderOpen className="w-4 h-4" />
+          {isArchived ? 'Zobrazit' : 'Otevřít Packaging'}
+        </button>
       </div>
     </article>
   );
 };
+
+
+
 
 export const JobDashboard = () => {
   const { jobs, currentJobId, setIsNewJobModalOpen, isAdmin } = useInventory();

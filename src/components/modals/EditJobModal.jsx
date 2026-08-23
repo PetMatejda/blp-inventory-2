@@ -7,6 +7,7 @@ export const EditJobModal = () => {
 
   const [name, setName] = useState('');
   const [client, setClient] = useState('');
+  const [blpResponsible, setBlpResponsible] = useState('');
   const [gaffer, setGaffer] = useState('');
   const [riggingDate, setRiggingDate] = useState('');
   const [deriggingDate, setDeriggingDate] = useState('');
@@ -15,6 +16,7 @@ export const EditJobModal = () => {
     if (editingJob) {
       setName(editingJob.name || '');
       setClient(editingJob.client || '');
+      setBlpResponsible(editingJob.blpResponsible || '');
       setGaffer(editingJob.assignedGaffer || '');
       setRiggingDate(editingJob.riggingDate || editingJob.date || new Date().toISOString().split('T')[0]);
       setDeriggingDate(editingJob.deriggingDate || new Date().toISOString().split('T')[0]);
@@ -30,11 +32,13 @@ export const EditJobModal = () => {
     updateJob(editingJob.id, {
       name,
       client,
+      blpResponsible,
       assignedGaffer: gaffer,
       riggingDate,
       deriggingDate,
     });
   };
+
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -73,15 +77,30 @@ export const EditJobModal = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-mono text-outline mb-1 uppercase">Odpovědný Gaffer</label>
-            <input
-              type="text"
-              value={gaffer}
-              onChange={(e) => setGaffer(e.target.value)}
-              className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface focus:border-primary focus:outline-none"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-mono text-outline mb-1 uppercase">Zodpovědný za BLP</label>
+              <input
+                type="text"
+                value={blpResponsible}
+                onChange={(e) => setBlpResponsible(e.target.value)}
+                placeholder="Např. Marek Radolf, Petr M."
+                className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono text-outline mb-1 uppercase">Odpovědný Gaffer (Štáb)</label>
+              <input
+                type="text"
+                value={gaffer}
+                onChange={(e) => setGaffer(e.target.value)}
+                placeholder="Např. Petr M."
+                className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface focus:border-primary focus:outline-none"
+              />
+            </div>
           </div>
+
 
           {/* Rigging & Derigging Dates */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

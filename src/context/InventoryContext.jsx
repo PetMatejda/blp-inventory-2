@@ -34,11 +34,11 @@ export const InventoryProvider = ({ children }) => {
   const [isAdHocModalOpen, setIsAdHocModalOpen] = useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [damageReportItem, setDamageReportItem] = useState(null);
-  const [isProtocolModalOpen, setIsProtocolModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isMasterCatalogModalOpen, setIsMasterCatalogModalOpen] = useState(false);
+
 
   // Job Editing & Template Modals
   const [editingJob, setEditingJob] = useState(null);
@@ -300,12 +300,8 @@ export const InventoryProvider = ({ children }) => {
     return 'Petr M. (Lead Gaffer)';
   };
 
-  // Job Status & Template Operations (Restricted to ADMIN)
+  // Job Status & Template Operations
   const finishJob = (jobId) => {
-    if (!isAdmin()) {
-      alert('Ukončení a archivace zakázky vyžaduje oprávnění ADMIN (Lead Gaffer).');
-      return;
-    }
     setSyncStatus('syncing');
     const actorName = getActorName();
     storageService.finishJob(jobId, actorName);
@@ -313,10 +309,6 @@ export const InventoryProvider = ({ children }) => {
   };
 
   const reactivateJob = (jobId) => {
-    if (!isAdmin()) {
-      alert('Obnovení zakázky vyžaduje oprávnění ADMIN (Lead Gaffer).');
-      return;
-    }
     setSyncStatus('syncing');
     const actorName = getActorName();
     storageService.reactivateJob(jobId, actorName);
@@ -324,10 +316,6 @@ export const InventoryProvider = ({ children }) => {
   };
 
   const updateJob = (jobId, jobData) => {
-    if (!isAdmin()) {
-      alert('Úprava zakázky vyžaduje oprávnění ADMIN (Lead Gaffer).');
-      return;
-    }
     setSyncStatus('syncing');
     const actorName = getActorName();
     storageService.updateJob(jobId, jobData, actorName);
@@ -336,17 +324,17 @@ export const InventoryProvider = ({ children }) => {
   };
 
   const duplicateJobAsTemplate = (sourceJobId, newJobData) => {
-    if (!isAdmin()) {
-      alert('Vytváření kopií zakázky vyžaduje oprávnění ADMIN (Lead Gaffer).');
-      return;
-    }
     setSyncStatus('syncing');
     const actorName = getActorName();
     const newJob = storageService.duplicateJobAsTemplate(sourceJobId, newJobData, actorName);
     afterMutation();
-    setCurrentJobId(newJob.id);
+    if (newJob) {
+      setCurrentJobId(newJob.id);
+    }
     setTemplateJob(null);
+    setActiveTab('packing');
   };
+
 
   // Master Catalog CRUD (Restricted to ADMIN)
   const createCatalogItem = (itemData) => {
@@ -509,10 +497,9 @@ export const InventoryProvider = ({ children }) => {
         setIsScannerModalOpen,
         damageReportItem,
         setDamageReportItem,
-        isProtocolModalOpen,
-        setIsProtocolModalOpen,
         isRoleModalOpen,
         setIsRoleModalOpen,
+
         isAuthModalOpen,
         setIsAuthModalOpen,
         isSettingsModalOpen,
