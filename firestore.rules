@@ -1,15 +1,40 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write to the shared inventory store and users for authenticated crew or during testing
+    
+    // Seznam schválených e-mailů celého štábu a gafferů:
+    function isApprovedUser() {
+      return request.auth != null && (
+        request.auth.token.email in [
+          'petmatejda@gmail.com',                   // Petr Matějíček (Admin)
+          'petr.matejicek@balloonlightgroup.com',   // Petr Matějíček (BLP)
+          'marekradolf@seznam.cz',                  // Radolf
+          'marekradolf@gmail.com',                  // Radolf
+          'petr.radolf@gmail.com',                  // Petr Radolf
+          'petrradolf@gmail.com',                   // Petr Radolf
+          'matej.reznak@gmail.com',                 // Matěj Řeznák
+          'petrmichal@gmail.com',                   // Petr Michal
+          'jardahluchy@gmail.com',                  // Jarda Hluchý
+          'admin@balloonlightprag.cz',              // Test Admin (blp)
+          'admin@blp.cz'
+        ]
+      );
+    }
+
+    // Sdílený sklad, zakázky a technika pro celou aplikaci a štáb:
     match /inventory_store/{document=**} {
       allow read, write: if true;
     }
+
+    // Uživatelské profily:
     match /users/{userId} {
       allow read, write: if true;
     }
+
+    // Ostatní systémové dokumenty podle schváleného štábu:
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if isApprovedUser();
     }
   }
 }
+
