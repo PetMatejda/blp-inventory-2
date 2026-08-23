@@ -152,8 +152,11 @@ export const firebaseAuth = {
       const cleanEmail = (email || '').trim().toLowerCase();
       const cleanPass = (password || '').trim();
 
-      // Generic test login requested for testing phase (aaaa / bbbb)
-      if ((cleanEmail === 'aaaa' || cleanEmail === 'admin' || cleanEmail === 'test') && cleanPass === 'bbbb') {
+      // Generic test login requested for testing phase (blp / blpblp)
+      if (
+        (cleanEmail === 'blp' || cleanEmail === 'aaaa' || cleanEmail === 'admin' || cleanEmail === 'test') &&
+        (cleanPass === 'blpblp' || cleanPass === 'bbbb')
+      ) {
         try {
           if (!auth.currentUser) {
             await signInAnonymously(auth);
@@ -163,9 +166,9 @@ export const firebaseAuth = {
         }
 
         const testAdminUser = {
-          id: auth.currentUser?.uid || 'test-admin-aaaa',
-          name: 'Tester Admin (aaaa)',
-          email: 'admin@blp.cz',
+          id: auth.currentUser?.uid || 'test-admin-blp',
+          name: 'BLP Admin',
+          email: 'admin@balloonlightprag.cz',
           role: 'ADMIN',
           avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin_blp_test',
           provider: 'test_auth',
@@ -173,6 +176,7 @@ export const firebaseAuth = {
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(testAdminUser));
         return { success: true, user: testAdminUser };
       }
+
 
 
       const result = await signInWithEmailAndPassword(auth, email.trim(), password);

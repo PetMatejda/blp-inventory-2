@@ -382,7 +382,7 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="E-mail nebo uživatel (např. aaaa)"
+                  placeholder="E-mail nebo uživatel (např. blp)"
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none font-mono"
                 />
                 <input
@@ -390,7 +390,7 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Heslo (např. bbbb)"
+                  placeholder="Heslo (např. blpblp)"
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none font-mono"
                 />
                 <button
@@ -405,18 +405,19 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
                 <button
                   type="button"
                   onClick={() => {
-                    setLoginEmail('aaaa');
-                    setLoginPassword('bbbb');
-                    firebaseAuth.loginWithEmail('aaaa', 'bbbb').then(res => {
-                      if (res.success) onLoginSuccess(res.user, 'Test Admin');
+                    setLoginEmail('blp');
+                    setLoginPassword('blpblp');
+                    firebaseAuth.loginWithEmail('blp', 'blpblp').then(res => {
+                      if (res.success) onLoginSuccess(res.user, 'BLP Admin');
                     });
                   }}
                   className="mt-1 py-1.5 px-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-emerald-300 text-[11px] font-mono rounded-lg transition-colors text-center active:scale-95"
                 >
-                  ⚡ Rychlý test login: <strong className="text-white">aaaa</strong> / <strong className="text-white">bbbb</strong> (Admin)
+                  ⚡ Rychlý test login: <strong className="text-white">blp</strong> / <strong className="text-white">blpblp</strong> (Admin)
                 </button>
               </form>
             )}
+
 
 
             {/* Register form */}
