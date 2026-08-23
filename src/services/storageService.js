@@ -114,26 +114,42 @@ export const storageService = {
   },
 
   init() {
-    // Auto-migrate to Master Catalog v3 with comprehensive film equipment & sets
-    if (!localStorage.getItem('blp_data_version_v3')) {
-      const migratedJobs = INITIAL_JOBS.map(j => ({
-        ...j,
-        riggingDate: j.riggingDate || j.date || new Date().toISOString().split('T')[0],
-        deriggingDate: j.deriggingDate || j.date || new Date().toISOString().split('T')[0],
-      }));
-      localStorage.setItem(KEYS.JOBS, JSON.stringify(migratedJobs));
-      const consolidatedInitial = this.consolidateItems(INITIAL_JOB_ITEMS);
-      localStorage.setItem(KEYS.JOB_ITEMS, JSON.stringify(consolidatedInitial));
-      localStorage.setItem(KEYS.VEHICLES, JSON.stringify(INITIAL_VEHICLES));
-      localStorage.setItem(KEYS.CONSUMABLES, JSON.stringify(INITIAL_CONSUMABLES));
-      localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(INITIAL_AUDIT_LOGS));
-      localStorage.setItem(KEYS.CATALOG, JSON.stringify(INITIAL_CATALOG));
-      localStorage.setItem(KEYS.CURRENT_JOB_ID, 'job-101');
-      localStorage.setItem(KEYS.CURRENT_USER_ROLE, 'Lead Gaffer');
-      localStorage.setItem('blp_data_version_v3', '3.0');
-      this.syncToCloud();
+    // Local fallback data initialization (NO cloud push on init!)
+    if (!localStorage.getItem('blp_data_version_v4')) {
+      if (!localStorage.getItem(KEYS.JOBS)) {
+        const migratedJobs = INITIAL_JOBS.map(j => ({
+          ...j,
+          riggingDate: j.riggingDate || j.date || new Date().toISOString().split('T')[0],
+          deriggingDate: j.deriggingDate || j.date || new Date().toISOString().split('T')[0],
+        }));
+        localStorage.setItem(KEYS.JOBS, JSON.stringify(migratedJobs));
+      }
+      if (!localStorage.getItem(KEYS.JOB_ITEMS)) {
+        const consolidatedInitial = this.consolidateItems(INITIAL_JOB_ITEMS);
+        localStorage.setItem(KEYS.JOB_ITEMS, JSON.stringify(consolidatedInitial));
+      }
+      if (!localStorage.getItem(KEYS.VEHICLES)) {
+        localStorage.setItem(KEYS.VEHICLES, JSON.stringify(INITIAL_VEHICLES));
+      }
+      if (!localStorage.getItem(KEYS.CONSUMABLES)) {
+        localStorage.setItem(KEYS.CONSUMABLES, JSON.stringify(INITIAL_CONSUMABLES));
+      }
+      if (!localStorage.getItem(KEYS.AUDIT_LOGS)) {
+        localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(INITIAL_AUDIT_LOGS));
+      }
+      if (!localStorage.getItem(KEYS.CATALOG)) {
+        localStorage.setItem(KEYS.CATALOG, JSON.stringify(INITIAL_CATALOG));
+      }
+      if (!localStorage.getItem(KEYS.CURRENT_JOB_ID)) {
+        localStorage.setItem(KEYS.CURRENT_JOB_ID, 'job-101');
+      }
+      if (!localStorage.getItem(KEYS.CURRENT_USER_ROLE)) {
+        localStorage.setItem(KEYS.CURRENT_USER_ROLE, 'Lead Gaffer');
+      }
+      localStorage.setItem('blp_data_version_v4', '4.0');
       return;
     }
+
 
     if (!localStorage.getItem(KEYS.JOBS)) {
       const migratedJobs = INITIAL_JOBS.map(j => ({
