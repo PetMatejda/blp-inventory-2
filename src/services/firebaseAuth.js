@@ -45,38 +45,19 @@ const resolveRole = (email) => {
 };
 
 
-const syncUserProfile = async (firebaseUser, fallbackRole) => {
+const syncUserProfile = (firebaseUser, fallbackRole) => {
   try {
     const userRef = doc(db, 'users', firebaseUser.uid);
-    const snap = await getDoc(userRef);
-    if (snap.exists()) {
-      const d = snap.data();
-      return {
-        role: d.role || fallbackRole,
-        name: d.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Uživatel',
-        avatar: d.avatar || firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(firebaseUser.email || 'user')}`,
-      };
-    } else {
-      const role = fallbackRole;
-      const name = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Uživatel';
-      const avatar = firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(firebaseUser.email || 'user')}`;
-      await setDoc(userRef, {
-        uid: firebaseUser.uid,
-        name,
-        email: firebaseUser.email || '',
-        role,
-        avatar,
-        updatedAt: new Date().toISOString(),
-      });
-      return { role, name, avatar };
-    }
-  } catch (dbErr) {
-    console.warn('[FirebaseAuth] Non-fatal Firestore profile sync error:', dbErr.message);
-    return {
-      role: fallbackRole,
+    setDoc(userRef, {
+      uid: firebaseUser.uid,
       name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Uživatel',
+      email: firebaseUser.email || '',
+      role: fallbackRole,
       avatar: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(firebaseUser.email || 'user')}`,
-    };
+      updatedAt: new Date().toISOString(),
+    }, { merge: true }).catch(() => {});
+  } catch (err) {
+    // Non-fatal
   }
 };
 
@@ -88,20 +69,17 @@ export const firebaseAuth = {
    */
   async loginWithGoogle() {
     try {
-      // Genuine webviews (Instagram, Facebook in-app browser) can't do popups at all
       if (isGenuineWebview()) {
         console.log('[FirebaseAuth] Genuine webview detected, using redirect flow');
         await signInWithRedirect(auth, googleProvider);
         return { success: false, pending: true, error: 'Přesměrovávám na Google přihlášení...' };
       }
 
-      // Default: try popup (works on desktop, mobile Chrome, PWA)
       let result = null;
       try {
         result = await signInWithPopup(auth, googleProvider);
       } catch (popupErr) {
         console.warn('[FirebaseAuth] Google Popup failed:', popupErr.code, popupErr.message);
-        // If popup was blocked/closed/unsupported → fall back to redirect
         const redirectCodes = [
           'auth/popup-blocked',
           'auth/popup-closed-by-user',
@@ -121,9 +99,9 @@ export const firebaseAuth = {
         return { success: false, error: 'Google nezadal přihlašovací údaje.' };
       }
 
-      const fallbackRole = resolveRole(result.user.email);
-      const profile = await syncUserProfile(result.user, fallbackRole);
-      const userObj = buildUserObj(result.user, profile.role, profile.name, profile.avatar);
+      const role = resolveRole(result.user.email);
+      const userObj = buildUserObj(result.user, role, result.user.displayName, result.user.photoURL);
+      syncUserProfile(result.user, role);
 
       localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
       return { success: true, user: userObj };
@@ -142,6 +120,7 @@ export const firebaseAuth = {
       return { success: false, error: message };
     }
   },
+
 
 
   /**
@@ -186,9 +165,9 @@ export const firebaseAuth = {
       }
 
       const result = await signInWithEmailAndPassword(auth, email.trim(), password);
-      const fallbackRole = resolveRole(result.user.email);
-      const profile = await syncUserProfile(result.user, fallbackRole);
-      const userObj = buildUserObj(result.user, profile.role, profile.name, profile.avatar);
+      const role = resolveRole(result.user.email);
+      syncUserProfile(result.user, role);
+      const userObj = buildUserObj(result.user, role, result.user.displayName, result.user.photoURL);
 
       localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
       return { success: true, user: userObj };
@@ -224,19 +203,7 @@ export const firebaseAuth = {
         provider: 'email',
       };
 
-      try {
-        await setDoc(doc(db, 'users', result.user.uid), {
-          uid: result.user.uid,
-          name,
-          email: result.user.email,
-          role: assignedRole,
-          avatar,
-          createdAt: new Date().toISOString(),
-        });
-      } catch (dbErr) {
-        console.warn('[FirebaseAuth] Non-fatal user doc creation warning:', dbErr.message);
-      }
-
+      syncUserProfile(result.user, assignedRole);
       localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
       return { success: true, user: userObj };
     } catch (err) {
@@ -272,11 +239,11 @@ export const firebaseAuth = {
    */
   onAuthChange(callback) {
     // Check for redirect result when returning from Google Auth redirect
-    getRedirectResult(auth).then(async (result) => {
+    getRedirectResult(auth).then((result) => {
       if (result?.user) {
-        const fallbackRole = resolveRole(result.user.email);
-        const profile = await syncUserProfile(result.user, fallbackRole);
-        const userObj = buildUserObj(result.user, profile.role, profile.name, profile.avatar);
+        const role = resolveRole(result.user.email);
+        syncUserProfile(result.user, role);
+        const userObj = buildUserObj(result.user, role, result.user.displayName, result.user.photoURL);
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
         callback(userObj);
       }
@@ -286,15 +253,14 @@ export const firebaseAuth = {
       }
     });
 
-    return onAuthStateChanged(auth, async (firebaseUser) => {
+    return onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        const fallbackRole = resolveRole(firebaseUser.email);
-        const profile = await syncUserProfile(firebaseUser, fallbackRole);
-        const userObj = buildUserObj(firebaseUser, profile.role, profile.name, profile.avatar);
+        const role = resolveRole(firebaseUser.email);
+        syncUserProfile(firebaseUser, role);
+        const userObj = buildUserObj(firebaseUser, role, firebaseUser.displayName, firebaseUser.photoURL);
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
         callback(userObj);
       } else {
-        // If not logged in via Firebase Auth, check if test user session exists in localStorage
         const localUserRaw = localStorage.getItem('blp_auth_user_v2');
         if (localUserRaw) {
           try {
@@ -310,8 +276,7 @@ export const firebaseAuth = {
         }
         callback(null);
       }
-
     });
   }
-
 };
+

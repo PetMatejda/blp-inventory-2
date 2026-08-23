@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { storageService } from '../services/storageService';
-import { cloudSyncService } from '../services/cloudSyncService';
 import { firebaseDb } from '../services/firebaseDb';
 import { firebaseAuth } from '../services/firebaseAuth';
 
@@ -39,7 +38,6 @@ export const InventoryProvider = ({ children }) => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isMasterCatalogModalOpen, setIsMasterCatalogModalOpen] = useState(false);
 
-
   // Job Editing & Template Modals
   const [editingJob, setEditingJob] = useState(null);
   const [templateJob, setTemplateJob] = useState(null);
@@ -47,7 +45,7 @@ export const InventoryProvider = ({ children }) => {
   // Global Context Menu state (Long Press)
   const [contextMenu, setContextMenu] = useState(null);
 
-  // Read local cache into React state (WITHOUT triggering cloud push loop)
+  // Read local cache into React state
   const refreshDataFromLocal = useCallback(() => {
     setJobs(storageService.getJobs());
     const savedJobId = storageService.getCurrentJobId();
@@ -61,34 +59,25 @@ export const InventoryProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Step 1: Initialize from local defaults (if first run)
-    // Does NOT push to cloud — avoids overwriting remote changes on startup
+    // Step 1: Initialize local fallback storage (version v5 ensures clean cache)
     storageService.init();
-
-    // Step 1b: IMMEDIATELY populate React state from local cache.
-    // This ensures dashboard shows cached counts right away (not 0/0)
-    // even before the cloud pull completes.
     refreshDataFromLocal();
 
-    // Step 2: Pull latest from cloud and refresh again with fresh data
+    // Step 2: Real-time Firestore subscription (instant multi-device sync)
+    const unsubscribeCloud = firebaseDb.subscribeToCloud(() => {
+      console.log('[Context] 🔔 Realtime remote update received from Firestore.');
+      setSyncStatus('synced');
+      refreshDataFromLocal();
+    });
+
+    // Step 3: Pull fresh state from cloud on startup
     setSyncStatus('syncing');
     firebaseDb.pullFromCloud().then((res) => {
       if (res.success) {
-        console.log('[Context] Startup cloud pull OK, refreshing UI.');
-      } else {
-        console.warn('[Context] Startup cloud pull failed (offline?), using local cache.');
+        console.log('[Context] Startup cloud pull OK.');
       }
-      // Refresh again — local cache now contains cloud data if pull succeeded
       refreshDataFromLocal();
       setSyncStatus(res.success ? 'synced' : 'offline');
-    });
-
-    // Step 3: Subscribe to real-time Firestore updates
-    // Only fires for changes from OTHER devices (echo prevention in firebaseDb.js)
-    const unsubscribeCloud = firebaseDb.subscribeToCloud(() => {
-      console.log('[Context] Remote update received, refreshing UI.');
-      setSyncStatus('synced');
-      refreshDataFromLocal();
     });
 
     // Step 4: Subscribe to Firebase Auth state
@@ -96,55 +85,30 @@ export const InventoryProvider = ({ children }) => {
       if (user) {
         setCurrentUserState(user);
         storageService.setUserRole(user.role);
-        setIsAuthModalOpen(false); // Close login modal on successful auth
+        setIsAuthModalOpen(false);
       } else {
         setCurrentUserState(null);
         setIsAuthModalOpen(true);
       }
-      setAuthLoading(false); // Auth has resolved — safe to render
+      setAuthLoading(false);
     });
 
-    // Step 5: Pull fresh data when user switches back to the app (fast 100ms)
-    let visibilityTimeout = null;
+    // Step 5: Refresh on tab visibility / focus
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        if (visibilityTimeout) clearTimeout(visibilityTimeout);
-        visibilityTimeout = setTimeout(async () => {
-          setSyncStatus('syncing');
-          await storageService.flushPendingSync();
-          const res = await firebaseDb.pullFromCloud();
+        firebaseDb.pullFromCloud().then((res) => {
           if (res.success) refreshDataFromLocal();
           setSyncStatus(res.success ? 'synced' : 'offline');
-        }, 100);
+        });
       }
     };
-
-    // Step 6: Background Heartbeat (every 6 seconds) to keep multi-device state strictly synchronized
-    const heartbeatInterval = setInterval(async () => {
-      if (navigator.onLine && document.visibilityState === 'visible') {
-        await storageService.flushPendingSync();
-        const res = await firebaseDb.pullFromCloud();
-        if (res.success) {
-          refreshDataFromLocal();
-          setSyncStatus('synced');
-        }
-      }
-    }, 6000);
 
     const handleOnline = () => {
       setIsOffline(false);
       setSyncStatus('syncing');
-      storageService.flushPendingSync().then(() => {
-        firebaseDb.pullFromCloud().then((pullRes) => {
-          if (pullRes.success) refreshDataFromLocal();
-          cloudSyncService.syncPendingChanges().then(res => {
-            setSyncStatus('synced');
-            if (res.synced > 0) {
-              setSyncNotice(`Synchronizováno ${res.synced} offline změn s Firebase cloudem.`);
-              setTimeout(() => setSyncNotice(null), 3500);
-            }
-          });
-        });
+      firebaseDb.pullFromCloud().then((res) => {
+        if (res.success) refreshDataFromLocal();
+        setSyncStatus(res.success ? 'synced' : 'offline');
       });
     };
 
@@ -155,22 +119,20 @@ export const InventoryProvider = ({ children }) => {
 
     window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
-    window.addEventListener('pageshow', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
       unsubscribeCloud();
       unsubscribeAuth();
-      clearInterval(heartbeatInterval);
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleVisibilityChange);
-      window.removeEventListener('pageshow', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
 
   }, [refreshDataFromLocal]);
+
 
   useEffect(() => {
     const root = document.documentElement;

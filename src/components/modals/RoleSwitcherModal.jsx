@@ -1,19 +1,44 @@
 import React from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { UserCheck, X, Shield, User, LogIn } from 'lucide-react';
-import { authService } from '../../services/authService';
+
+const TEAM_MEMBERS = [
+  {
+    id: 'usr-petr-m',
+    name: 'Petr M. (Lead Gaffer)',
+    email: 'petmatejda@gmail.com',
+    role: 'ADMIN',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=petmatejda',
+  },
+  {
+    id: 'usr-marek-r',
+    name: 'Marek Radolf (BLP)',
+    email: 'marekradolf@seznam.cz',
+    role: 'ADMIN',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=marekradolf',
+  },
+  {
+    id: 'usr-jan-k',
+    name: 'Jan K. (Gaffer)',
+    email: 'jan@blp.cz',
+    role: 'ADMIN',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=jank',
+  }
+];
 
 export const RoleSwitcherModal = () => {
   const { isRoleModalOpen, setIsRoleModalOpen, currentUser, setCurrentUser, setIsAuthModalOpen } = useInventory();
 
   if (!isRoleModalOpen) return null;
 
-  const users = authService.getUsers();
+  const users = TEAM_MEMBERS;
 
   const handleSelectUser = (user) => {
     setCurrentUser(user);
+    localStorage.setItem('blp_auth_user_v2', JSON.stringify(user));
     setIsRoleModalOpen(false);
   };
+
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">

@@ -57,23 +57,9 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 
-// Initialize Firestore safely with offline persistent cache fallback
-let firestoreInstance;
-try {
-  if (typeof window !== 'undefined' && 'indexedDB' in window) {
-    firestoreInstance = initializeFirestore(app, {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager(),
-      }),
-    });
-  } else {
-    firestoreInstance = getFirestore(app);
-  }
-} catch (e) {
-  firestoreInstance = getFirestore(app);
-}
+// Initialize Firestore safely
+export const db = getFirestore(app);
 
-export const db = firestoreInstance;
 
 export {
   GoogleAuthProvider,

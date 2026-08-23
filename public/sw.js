@@ -1,9 +1,10 @@
-const CACHE_NAME = 'blp-inventory-v6-purge';
+const CACHE_NAME = 'blp-inventory-v7-final';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json'
 ];
+
 
 
 // Install Event - Force activate immediately
