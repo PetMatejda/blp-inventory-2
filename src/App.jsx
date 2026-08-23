@@ -75,34 +75,7 @@ const MainContent = () => {
  * to the Google OAuth redirect page.
  */
 const AuthGate = ({ children }) => {
-  const { authLoading, currentUser, activeTab, setActiveTab } = useInventory();
-
-  // ── Android back button guard ──
-  // Push a dummy history entry so pressing back lands here instead of the
-  // Google OAuth redirect URL that Firebase left in browser history.
-  useEffect(() => {
-    // Push a state so we have something to intercept
-    window.history.pushState({ blp: true }, '', window.location.href);
-
-    const handlePopState = (e) => {
-      // Always push state back to prevent further back navigation
-      window.history.pushState({ blp: true }, '', window.location.href);
-
-      if (!currentUser) {
-        // Not logged in — back does nothing (auth modal is already shown)
-        return;
-      }
-
-      // Navigate between tabs: packing → dashboard, others → dashboard
-      if (activeTab === 'packing' || activeTab === 'catalog' || activeTab === 'bracha' || activeTab === 'history') {
-        setActiveTab('dashboard');
-      }
-      // On dashboard: back is a no-op (prevents accidental exit)
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [currentUser, activeTab, setActiveTab]);
+  const { authLoading } = useInventory();
 
   // Show branded loading screen while Firebase checks session
   if (authLoading) {
@@ -118,6 +91,7 @@ const AuthGate = ({ children }) => {
 
   return children;
 };
+
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
