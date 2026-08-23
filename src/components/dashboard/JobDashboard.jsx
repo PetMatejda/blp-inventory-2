@@ -38,12 +38,15 @@ const JobCardItem = ({ job, isSelected }) => {
 
   return (
     <article
-      {...longPressProps}
-      className={`bg-card-bg rounded-2xl border transition-all overflow-hidden flex flex-col shadow-md relative cursor-pointer select-none ${
+      className={`bg-card-bg rounded-2xl border transition-all overflow-hidden flex flex-col shadow-md relative select-none ${
         isSelected ? 'border-primary ring-1 ring-primary/40' : 'border-outline-variant hover:border-outline'
       }`}
     >
-      <div className="p-5 flex flex-col gap-4">
+      {/* Clickable Card Body — opens packaging or long press context menu */}
+      <div
+        {...longPressProps}
+        className="p-5 flex flex-col gap-4 cursor-pointer hover:bg-surface-container/30 transition-colors"
+      >
         <div className="flex justify-between items-start">
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -95,6 +98,7 @@ const JobCardItem = ({ job, isSelected }) => {
             </span>
 
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setContextMenu({ type: 'JOB', target: job });
@@ -137,15 +141,17 @@ const JobCardItem = ({ job, isSelected }) => {
         </div>
       </div>
 
-      {/* Card Footer Actions */}
-      <div className="p-3 border-t border-outline-variant bg-surface-container flex flex-wrap gap-2 justify-between items-center">
+      {/* Card Footer Actions — isolated from card click/long press */}
+      <div className="p-3 border-t border-outline-variant bg-surface-container flex flex-wrap gap-2 justify-between items-center z-10">
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               setTemplateJob(job);
             }}
-            className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm active:scale-95"
+            className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm active:scale-95 cursor-pointer"
           >
             <Copy className="w-4 h-4 text-secondary" />
             <span>Použít jako vzor</span>
@@ -155,24 +161,28 @@ const JobCardItem = ({ job, isSelected }) => {
         <div className="flex gap-2">
           {isArchived ? (
             <button
+              type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 reactivateJob(job.id);
               }}
-              className="h-10 px-4 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-primary font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+              className="h-10 px-4 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-primary font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
             >
               <Unlock className="w-4 h-4 text-secondary" />
               <span>Obnovit</span>
             </button>
           ) : (
             <button
+              type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 if (window.confirm(`Chcete dokončit zakázku "${job.name}" a přesunout ji do archivu?`)) {
                   finishJob(job.id);
                 }
               }}
-              className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:border-error/40 hover:bg-error-container/20 text-on-surface hover:text-error font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+              className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:border-error/40 hover:bg-error-container/20 text-on-surface hover:text-error font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
             >
               <Lock className="w-4 h-4" />
               <span>Ukončit</span>
@@ -181,12 +191,14 @@ const JobCardItem = ({ job, isSelected }) => {
         </div>
 
         <button
+          type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             setCurrentJobId(job.id);
             setActiveTab('packing');
           }}
-          className="h-10 px-5 rounded-xl bg-secondary text-on-secondary-container hover:opacity-90 text-sm font-semibold flex items-center gap-2 justify-center transition-all active:scale-95 shadow"
+          className="h-10 px-5 rounded-xl bg-secondary text-on-secondary-container hover:opacity-90 text-sm font-semibold flex items-center gap-2 justify-center transition-all active:scale-95 shadow cursor-pointer"
         >
           <FolderOpen className="w-4 h-4" />
           {isArchived ? 'Zobrazit' : 'Otevřít Packaging'}
@@ -195,6 +207,7 @@ const JobCardItem = ({ job, isSelected }) => {
     </article>
   );
 };
+
 
 
 
