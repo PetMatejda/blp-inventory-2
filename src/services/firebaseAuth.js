@@ -157,25 +157,28 @@ export const firebaseAuth = {
         (cleanEmail === 'blp' || cleanEmail === 'aaaa' || cleanEmail === 'admin' || cleanEmail === 'test') &&
         (cleanPass === 'blpblp' || cleanPass === 'bbbb')
       ) {
-        try {
-          if (!auth.currentUser) {
-            await signInAnonymously(auth);
+        let authUser = auth.currentUser;
+        if (!authUser) {
+          try {
+            const authResult = await signInWithEmailAndPassword(auth, 'blp_system_admin@blp.cz', 'blpblp2026!');
+            authUser = authResult.user;
+          } catch (authErr) {
+            console.warn('[FirebaseAuth] Auto test admin auth note:', authErr?.message);
           }
-        } catch (anonErr) {
-          console.warn('[FirebaseAuth] Anonymous auth session note:', anonErr?.message);
         }
 
         const testAdminUser = {
-          id: auth.currentUser?.uid || 'test-admin-blp',
+          id: authUser?.uid || 'test-admin-blp',
           name: 'BLP Admin',
           email: 'admin@balloonlightprag.cz',
           role: 'ADMIN',
           avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin_blp_test',
-          provider: 'test_auth',
+          provider: 'firebase_email',
         };
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(testAdminUser));
         return { success: true, user: testAdminUser };
       }
+
 
 
 
