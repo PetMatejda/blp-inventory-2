@@ -15,15 +15,16 @@ import {
 } from './firebase';
 
 /**
- * Determines if we're running in a context where popups are unreliable
- * (Android WebView, iOS WKWebView, some in-app browsers)
+ * Determines if we're running in a genuine embedded WebView
+ * (Android WebView, iOS WKWebView, in-app browsers like Instagram/Facebook).
+ * NOTE: PWA (display-mode: standalone) is NOT a webview — popups work fine there.
  */
-const isMobileWebview = () => {
+const isGenuineWebview = () => {
   const ua = navigator.userAgent || '';
   return (
     /wv|WebView/i.test(ua) ||
     (/Android/i.test(ua) && !/Chrome/i.test(ua)) ||
-    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+    /FBAN|FBAV|Instagram|Line\//i.test(ua)
   );
 };
 
@@ -79,32 +80,35 @@ const syncUserProfile = async (firebaseUser, fallbackRole) => {
 
 export const firebaseAuth = {
   /**
-   * Real Google OAuth Login
-   * Uses redirect on mobile webviews, popup on desktop browsers
+   * Google OAuth Login
+   * Strategy: ALWAYS try popup first (works on desktop, mobile Chrome, PWA).
+   * Only fall back to redirect on genuine embedded webviews where popups fail.
    */
   async loginWithGoogle() {
     try {
-      // On mobile webviews/PWA use redirect (more reliable)
-      if (isMobileWebview()) {
-        console.log('[FirebaseAuth] Mobile context detected, using redirect flow');
+      // Genuine webviews (Instagram, Facebook in-app browser) can't do popups at all
+      if (isGenuineWebview()) {
+        console.log('[FirebaseAuth] Genuine webview detected, using redirect flow');
         await signInWithRedirect(auth, googleProvider);
-        // This will redirect and come back via onAuthChange -> getRedirectResult
         return { success: false, pending: true, error: 'Přesměrovávám na Google přihlášení...' };
       }
 
-      // Desktop: try popup first
+      // Default: try popup (works on desktop, mobile Chrome, PWA)
       let result = null;
       try {
         result = await signInWithPopup(auth, googleProvider);
       } catch (popupErr) {
-        console.warn('[FirebaseAuth] Google Popup failed, trying redirect...', popupErr.code);
+        console.warn('[FirebaseAuth] Google Popup failed:', popupErr.code, popupErr.message);
+        // If popup was blocked/closed/unsupported → fall back to redirect
         const redirectCodes = [
           'auth/popup-blocked',
           'auth/popup-closed-by-user',
           'auth/cancelled-popup-request',
           'auth/operation-not-supported-in-this-environment',
+          'auth/internal-error',
         ];
         if (redirectCodes.includes(popupErr.code)) {
+          console.log('[FirebaseAuth] Falling back to redirect flow');
           await signInWithRedirect(auth, googleProvider);
           return { success: false, pending: true, error: 'Přesměrovávám na bezpečné Google přihlášení...' };
         }
@@ -136,6 +140,7 @@ export const firebaseAuth = {
       return { success: false, error: message };
     }
   },
+
 
   /**
    * Real Email & Password Login
