@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Settings, RefreshCw, WifiOff, User, LogOut } from 'lucide-react';
+import { Settings, RefreshCw, WifiOff, User, LogOut, ChevronDown } from 'lucide-react';
 import { firebaseAuth } from '../../services/firebaseAuth';
 
 export const TopAppBar = () => {
   const {
+    jobs,
+    currentJobId,
+    setCurrentJobId,
     currentJob,
     currentUser,
     setCurrentUser,
@@ -29,10 +32,11 @@ export const TopAppBar = () => {
   };
 
   const isSyncing = syncStatus === 'syncing';
+  const activeJobs = jobs.filter(j => j.status === 'ACTIVE');
 
   return (
     <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-md border-b border-outline-variant h-14 flex items-center justify-between px-3 shadow-sm">
-      {/* LEFT: Avatar + Job name (or user name) */}
+      {/* LEFT: Avatar + Job dropdown (or title) */}
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <button
           onClick={handleAvatarClick}
@@ -57,12 +61,35 @@ export const TopAppBar = () => {
           />
         </button>
 
-        {/* Context-aware title: show job name when selected, else generic */}
+        {/* Dropdown with ACTIVE jobs only */}
         <div className="min-w-0 flex-1">
           {currentJob ? (
-            <h1 className="font-bold text-sm text-on-surface truncate leading-tight">
-              {currentJob.name}
-            </h1>
+            <div className="relative inline-flex items-center max-w-full">
+              <select
+                value={currentJob.id}
+                onChange={(e) => setCurrentJobId(e.target.value)}
+                className={`font-bold text-xs sm:text-sm rounded-lg pl-2 pr-6 py-1 border appearance-none truncate leading-tight focus:outline-none cursor-pointer max-w-[200px] sm:max-w-xs transition-colors ${
+                  currentJob.status === 'ARCHIVED'
+                    ? 'bg-surface-container-high border-outline-variant text-outline'
+                    : 'bg-surface-container border-outline-variant text-on-surface hover:border-primary/50'
+                }`}
+                title="Aktivní zakázky"
+              >
+                {/* If viewing an archived job from Dashboard, show read-only option */}
+                {currentJob.status === 'ARCHIVED' && (
+                  <option value={currentJob.id} className="bg-surface-container text-on-surface font-normal">
+                    📁 {currentJob.name} (Archiv — pouze pro čtení)
+                  </option>
+                )}
+                {/* ONLY ACTIVE JOBS ARE LISTED */}
+                {activeJobs.map((j) => (
+                  <option key={j.id} value={j.id} className="bg-surface-container text-on-surface font-semibold">
+                    {j.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 absolute right-1.5 pointer-events-none text-outline" />
+            </div>
           ) : (
             <h1 className="font-bold text-sm text-on-surface leading-tight">
               BLP Film
@@ -76,6 +103,7 @@ export const TopAppBar = () => {
           )}
         </div>
       </div>
+
 
       {/* RIGHT: Sync + Settings + Logout — compact */}
       <div className="flex items-center gap-1 shrink-0">
