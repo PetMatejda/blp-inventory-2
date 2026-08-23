@@ -414,17 +414,17 @@ export const InventoryProvider = ({ children }) => {
 
   const forceSyncAll = async () => {
     setSyncStatus('syncing');
-    const pushRes = await storageService.syncToCloudManual();
-    const pullRes = await storageService.syncFromCloudManual();
+    const pullRes = await firebaseDb.pullFromCloud();
     refreshDataFromLocal();
-    setSyncStatus('synced');
-    if (pushRes.success && pullRes.success) {
-      setSyncNotice('🔥 Cloud plně synchronizován s databází Firebase!');
+    setSyncStatus(pullRes.success ? 'synced' : 'offline');
+    if (pullRes.success) {
+      setSyncNotice('🔥 Data byla úspěšně stažena a synchronizována s cloudem!');
     } else {
-      setSyncNotice(`⚠️ Pozor: ${pushRes.error || pullRes.error || 'Zkontrolujte připojení k internetu'}`);
+      setSyncNotice(`⚠️ Chyba synchronizace: ${pullRes.error || 'Zkontrolujte připojení'}`);
     }
     setTimeout(() => setSyncNotice(null), 4000);
   };
+
 
   const resetDemoData = () => {
     storageService.resetDemoData();

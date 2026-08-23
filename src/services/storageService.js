@@ -75,9 +75,9 @@ export const storageService = {
   },
 
   async syncFromCloudManual() {
-    await this.flushPendingSync();
     return await firebaseDb.pullFromCloud();
   },
+
 
 
   consolidateItems(items) {
