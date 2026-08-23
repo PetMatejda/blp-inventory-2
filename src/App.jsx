@@ -120,28 +120,72 @@ const AuthGate = ({ children }) => {
   return children;
 };
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('[ErrorBoundary caught error]:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 mb-4">
+            <span className="text-2xl font-bold">!</span>
+          </div>
+          <h2 className="text-xl font-bold mb-2">Nastala neočekávaná chyba</h2>
+          <p className="text-sm text-slate-400 max-w-md mb-6 font-mono text-xs bg-black/40 p-3 rounded-xl border border-white/10 overflow-auto">
+            {this.state.error?.message || 'Neznámá chyba'}
+          </p>
+          <button
+            onClick={() => {
+              localStorage.clear();
+              window.location.reload();
+            }}
+            className="px-5 py-2.5 bg-emerald-500 text-black font-bold text-sm rounded-xl active:scale-95 shadow"
+          >
+            Obnovit a resetovat data
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function App() {
   return (
-    <InventoryProvider>
-      <AuthGate>
-        <div className="min-h-screen flex flex-col bg-background text-on-surface">
-          {/* Fixed Top Bar — h-14 (56px) */}
-          <TopAppBar />
+    <ErrorBoundary>
+      <InventoryProvider>
+        <AuthGate>
+          <div className="min-h-screen flex flex-col bg-background text-on-surface">
+            {/* Fixed Top Bar — h-14 (56px) */}
+            <TopAppBar />
 
-          {/* Main Dynamic View — fills space between TopAppBar and BottomNavBar */}
-          <main className="flex-1 w-full max-w-5xl mx-auto overflow-x-hidden">
-            <MainContent />
-          </main>
+            {/* Main Dynamic View — fills space between TopAppBar and BottomNavBar */}
+            <main className="flex-1 w-full max-w-5xl mx-auto overflow-x-hidden">
+              <MainContent />
+            </main>
 
-          {/* Bottom Mobile & Desktop Navigation — fixed, h-16 */}
-          <BottomNavBar />
+            {/* Bottom Mobile & Desktop Navigation — fixed, h-16 */}
+            <BottomNavBar />
 
-          {/* Dialog & Modal Layer */}
-          <ModalLayer />
-        </div>
-      </AuthGate>
-    </InventoryProvider>
+            {/* Dialog & Modal Layer */}
+            <ModalLayer />
+          </div>
+        </AuthGate>
+      </InventoryProvider>
+    </ErrorBoundary>
   );
 }
+
 
 export default App;
