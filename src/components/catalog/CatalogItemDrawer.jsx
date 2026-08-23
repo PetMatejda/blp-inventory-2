@@ -3,8 +3,9 @@ import { useInventory } from '../../context/InventoryContext';
 import { CATEGORIES } from '../../utils/categoryIcons';
 import {
   X, Check, Plus, Trash2, Layers, Upload, Image as ImageIcon,
-  Weight, Zap, Package, ChevronDown, Camera, Search
+  Weight, Zap, Package, ChevronDown, Camera, Search, QrCode
 } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const PRESET_PHOTOS = [
   { label: 'SkyPanel', url: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80' },
@@ -20,27 +21,23 @@ const EMPTY_FORM = {
   category: 'Lights',
   weight: '',
   power: '',
+  barcode: '',
+  serialPrefix: 'EQP',
   image: PRESET_PHOTOS[0].url,
   availableCount: 1,
   isBundle: false,
   bundleItems: [],
 };
 
-/**
- * CatalogItemDrawer
- * 
- * A slide-in side panel (right on desktop, bottom sheet on mobile) for
- * creating or editing a catalog item.
- *
- * Props:
- *   item  — null (hidden) | 'NEW' | catalogItemObject
- *   onClose — callback to hide the drawer
- */
 export const CatalogItemDrawer = ({ item, onClose }) => {
   const { createCatalogItem, updateCatalogItem, catalog } = useInventory();
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [showPresets, setShowPresets] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Barcode Camera Scanner state
+  const [isScanningBarcode, setIsScanningBarcode] = useState(false);
+  const barcodeScannerRef = useRef(null);
 
   // Bundle item picker state
   const [showBundlePicker, setShowBundlePicker] = useState(false);
@@ -60,6 +57,8 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
         category: item.category || 'Lights',
         weight: item.weight || '',
         power: item.power || '',
+        barcode: item.barcode || '',
+        serialPrefix: item.serialPrefix || 'EQP',
         image: item.image || PRESET_PHOTOS[0].url,
         availableCount: parseInt(item.availableCount) || 1,
         isBundle: !!item.isBundle,
@@ -70,6 +69,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
     setShowPresets(false);
     setShowBundlePicker(false);
     setBundleSearch('');
+    stopBarcodeScanner();
   }, [item]);
 
   const set = (patch) => {
@@ -93,8 +93,55 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
     reader.readAsDataURL(file);
   };
 
+  // Barcode Scanner in Drawer
+  const startBarcodeScanner = async () => {
+    setIsScanningBarcode(true);
+    setTimeout(async () => {
+      try {
+        const scannerId = "drawer-barcode-reader";
+        const scanner = new Html5Qrcode(scannerId);
+        barcodeScannerRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            qrbox: { width: 220, height: 160 },
+            aspectRatio: 1.333,
+          },
+          (decodedText) => {
+            set({ barcode: decodedText });
+            stopBarcodeScanner();
+          },
+          () => {}
+        );
+      } catch (err) {
+        console.warn('Barcode scan error in drawer:', err);
+        setIsScanningBarcode(false);
+      }
+    }, 100);
+  };
+
+  const stopBarcodeScanner = () => {
+    if (barcodeScannerRef.current) {
+      try {
+        if (barcodeScannerRef.current.isScanning) {
+          barcodeScannerRef.current.stop().then(() => {
+            barcodeScannerRef.current?.clear();
+            barcodeScannerRef.current = null;
+          }).catch(() => {});
+        } else {
+          barcodeScannerRef.current.clear();
+          barcodeScannerRef.current = null;
+        }
+      } catch (e) {}
+    }
+    setIsScanningBarcode(false);
+  };
+
   const handleSave = (e) => {
     e.preventDefault();
+    stopBarcodeScanner();
     if (isNew) {
       createCatalogItem(formData);
     } else if (isEditing) {
@@ -104,15 +151,15 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
   };
 
   const handleClose = () => {
+    stopBarcodeScanner();
     if (isDirty && !window.confirm('Máte neuložené změny. Zavřít bez uložení?')) return;
     onClose();
   };
 
-  // ── Bundle sub-item helpers — reference existing catalog items ──
+  // Bundle sub-item helpers
   const addBundleItemFromCatalog = (catalogItem) => {
     const existing = formData.bundleItems.find(b => b.catalogId === catalogItem.id);
     if (existing) {
-      // Increment qty instead of adding duplicate
       const updated = formData.bundleItems.map(b =>
         b.catalogId === catalogItem.id ? { ...b, qty: b.qty + 1 } : b
       );
@@ -140,18 +187,16 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
 
   const removeBundleItem = (idx) => set({ bundleItems: formData.bundleItems.filter((_, i) => i !== idx) });
 
-  // Filter catalog for picker — exclude self and nested bundles
   const currentItemId = isEditing ? item.id : null;
   const bundleCatalogIds = new Set(formData.bundleItems.map(b => b.catalogId));
   const availableForBundle = (catalog || []).filter(c => {
-    if (c.id === currentItemId) return false; // can't add self
-    if (c.isBundle) return false; // can't nest bundles
+    if (c.id === currentItemId) return false;
+    if (c.isBundle) return false;
     const search = bundleSearch.toLowerCase();
     if (search && !c.name.toLowerCase().includes(search) && !(c.category || '').toLowerCase().includes(search)) return false;
     return true;
   });
 
-  // Close picker on outside click
   useEffect(() => {
     if (!showBundlePicker) return;
     const handler = (e) => {
@@ -191,8 +236,8 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
           </button>
         </div>
 
-        {/* Form body — scrollable */}
-        <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        {/* Form body */}
+        <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* Photo */}
           <div className="flex gap-4 items-start">
             <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-outline-variant bg-surface-container shrink-0 group">
@@ -212,7 +257,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                 <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
               </label>
               <label className="flex items-center gap-1.5 text-xs text-secondary font-bold cursor-pointer">
-                <Camera className="w-3.5 h-3.5" /> Vyfotit
+                <Camera className="w-3.5 h-3.5" /> Vyfotit techniku
                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCameraCapture} />
               </label>
               <button
@@ -220,7 +265,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                 onClick={() => setShowPresets(!showPresets)}
                 className="flex items-center gap-1 text-[10px] text-outline hover:text-on-surface"
               >
-                <ChevronDown className="w-3 h-3" /> Předvolby
+                <ChevronDown className="w-3 h-3" /> Předvolby fotek
               </button>
               {showPresets && (
                 <div className="flex flex-wrap gap-1.5 mt-1">
@@ -239,16 +284,16 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
             </div>
           </div>
 
-          {/* Fields */}
-          <div className="space-y-4">
+          {/* Basic Fields */}
+          <div className="space-y-3.5">
             <div>
-              <label className="block text-xs font-bold text-outline mb-1 uppercase">Název</label>
+              <label className="block text-xs font-bold text-outline mb-1 uppercase">Název položky</label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => set({ name: e.target.value })}
-                placeholder="Název položky..."
+                placeholder="např. SkyPanel S60-C nebo Aputure 600d"
                 className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary"
               />
             </div>
@@ -262,6 +307,56 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
               >
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+            </div>
+
+            {/* Barcode / EAN / QR input with Camera Scan capability */}
+            <div className="bg-surface-container/60 border border-outline-variant/80 rounded-2xl p-3">
+              <label className="block text-xs font-bold text-outline mb-1 uppercase flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <QrCode className="w-3.5 h-3.5 text-secondary" /> Čárový kód / Barcode (nepovinný)
+                </span>
+                {formData.barcode && (
+                  <span className="text-[10px] text-secondary font-mono">Uloženo</span>
+                )}
+              </label>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.barcode}
+                  onChange={(e) => set({ barcode: e.target.value })}
+                  placeholder="Zadejte EAN / čárový kód..."
+                  className="flex-1 h-10 px-3 bg-card-bg border border-outline-variant rounded-xl text-xs font-mono text-on-surface focus:outline-none focus:border-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isScanningBarcode) {
+                      stopBarcodeScanner();
+                    } else {
+                      startBarcodeScanner();
+                    }
+                  }}
+                  className={`px-3 h-10 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow ${
+                    isScanningBarcode
+                      ? 'bg-error text-white'
+                      : 'bg-primary text-on-primary-container'
+                  }`}
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  {isScanningBarcode ? 'Zavřít kameru' : 'Vyfotit / Sken'}
+                </button>
+              </div>
+
+              {/* Inline Camera Reader for Barcode */}
+              {isScanningBarcode && (
+                <div className="mt-2.5 rounded-xl overflow-hidden border border-primary/50 bg-black relative">
+                  <div id="drawer-barcode-reader" className="w-full min-h-[160px]" />
+                  <div className="p-2 bg-black/80 text-center text-[11px] text-secondary font-mono">
+                    Zaměřte kameru na čárový kód techniky...
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-3">
@@ -339,10 +434,8 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                         <Plus className="w-3 h-3" /> Přidat z katalogu
                       </button>
 
-                      {/* Catalog picker dropdown */}
                       {showBundlePicker && (
                         <div className="absolute right-0 top-full mt-1 w-72 max-h-64 bg-card-bg border border-outline-variant rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
-                          {/* Search */}
                           <div className="p-2 border-b border-outline-variant flex items-center gap-2">
                             <Search className="w-3.5 h-3.5 text-outline shrink-0" />
                             <input
@@ -354,7 +447,6 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                               autoFocus
                             />
                           </div>
-                          {/* Item list */}
                           <div className="overflow-y-auto flex-1">
                             {availableForBundle.length === 0 ? (
                               <p className="text-xs text-outline text-center py-4 italic">
@@ -435,7 +527,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
           </div>
         </form>
 
-        {/* Footer — sticky save/cancel */}
+        {/* Footer */}
         <div className="flex gap-3 px-5 py-4 border-t border-outline-variant bg-surface-container shrink-0">
           <button
             type="button"

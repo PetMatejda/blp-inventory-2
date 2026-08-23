@@ -378,20 +378,20 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
             {activeTab === 'login' && (
               <form onSubmit={handleLoginSubmit} className="flex flex-col gap-2.5">
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="E-mail"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none"
+                  placeholder="E-mail nebo uživatel (např. aaaa)"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none font-mono"
                 />
                 <input
                   type="password"
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Heslo"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none"
+                  placeholder="Heslo (např. bbbb)"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none font-mono"
                 />
                 <button
                   type="submit"
@@ -400,8 +400,24 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
                 >
                   {loading ? 'Přihlašuji...' : 'Přihlásit se'}
                 </button>
+
+                {/* Quick 1-click Test Login helper for testing phase */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginEmail('aaaa');
+                    setLoginPassword('bbbb');
+                    firebaseAuth.loginWithEmail('aaaa', 'bbbb').then(res => {
+                      if (res.success) onLoginSuccess(res.user, 'Test Admin');
+                    });
+                  }}
+                  className="mt-1 py-1.5 px-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-emerald-300 text-[11px] font-mono rounded-lg transition-colors text-center active:scale-95"
+                >
+                  ⚡ Rychlý test login: <strong className="text-white">aaaa</strong> / <strong className="text-white">bbbb</strong> (Admin)
+                </button>
               </form>
             )}
+
 
             {/* Register form */}
             {activeTab === 'register' && (

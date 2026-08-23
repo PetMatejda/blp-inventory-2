@@ -337,14 +337,16 @@ export const storageService = {
       id: 'cat-' + Date.now(),
       name: itemData.name,
       category: itemData.category || 'Lights',
-      weight: itemData.weight || '10 lbs',
-      power: itemData.power || 'N/A',
+      weight: itemData.weight || '',
+      power: itemData.power || '',
       image: itemData.image || '',
       serialPrefix: itemData.serialPrefix || 'EQP',
+      barcode: itemData.barcode || '',
       availableCount: parseInt(itemData.availableCount) || 10,
       isBundle: !!itemData.isBundle,
       bundleItems: itemData.bundleItems || [],
     };
+
 
     catalog.unshift(newItem);
     this.addAuditLog(user, '', 'Katalog Přidání', `Vytvořena nová položka v katalogu: ${newItem.name}`, 'add');
@@ -688,6 +690,7 @@ export const storageService = {
           quantityLoaded: 0,
           status: 'PENDING',
           serialNumber: `${catalogItem.serialPrefix}-${Math.floor(100 + Math.random() * 900)}`,
+          barcode: catalogItem.barcode || '',
           isAdHoc: false,
           isBundle: false,
           damageNotes: '',
