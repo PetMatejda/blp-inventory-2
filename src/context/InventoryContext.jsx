@@ -110,12 +110,14 @@ export const InventoryProvider = ({ children }) => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         if (visibilityTimeout) clearTimeout(visibilityTimeout);
-        visibilityTimeout = setTimeout(() => {
+        visibilityTimeout = setTimeout(async () => {
           setSyncStatus('syncing');
-          firebaseDb.pullFromCloud().then((res) => {
-            if (res.success) refreshDataFromLocal();
-            setSyncStatus(res.success ? 'synced' : 'offline');
-          });
+          // Flush any pending local changes before pulling remote data
+          // to prevent stale cloud state from overwriting new local items
+          await storageService.flushPendingSync();
+          const res = await firebaseDb.pullFromCloud();
+          if (res.success) refreshDataFromLocal();
+          setSyncStatus(res.success ? 'synced' : 'offline');
         }, 800); // Delay prevents auth modal flash on quick tab switch
       }
     };
@@ -123,18 +125,21 @@ export const InventoryProvider = ({ children }) => {
     const handleOnline = () => {
       setIsOffline(false);
       setSyncStatus('syncing');
-      // On coming back online: pull first, then push our pending changes
-      firebaseDb.pullFromCloud().then((pullRes) => {
-        if (pullRes.success) refreshDataFromLocal();
-        cloudSyncService.syncPendingChanges().then(res => {
-          setSyncStatus('synced');
-          if (res.synced > 0) {
-            setSyncNotice(`Synchronizováno ${res.synced} offline změn s Firebase cloudem.`);
-            setTimeout(() => setSyncNotice(null), 3500);
-          }
+      // On coming back online: flush pending local changes first, then pull
+      storageService.flushPendingSync().then(() => {
+        firebaseDb.pullFromCloud().then((pullRes) => {
+          if (pullRes.success) refreshDataFromLocal();
+          cloudSyncService.syncPendingChanges().then(res => {
+            setSyncStatus('synced');
+            if (res.synced > 0) {
+              setSyncNotice(`Synchronizováno ${res.synced} offline změn s Firebase cloudem.`);
+              setTimeout(() => setSyncNotice(null), 3500);
+            }
+          });
         });
       });
     };
+
     const handleOffline = () => {
       setIsOffline(true);
       setSyncStatus('offline');

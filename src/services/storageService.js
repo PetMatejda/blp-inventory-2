@@ -22,22 +22,49 @@ const KEYS = {
 // Debounce helper — 800ms window prevents rapid-fire pushes
 // that can race each other and corrupt cloud state
 let syncTimeout = null;
+// Guard: tracks whether we have local changes waiting to be pushed
+let hasPendingPush = false;
 
 export const storageService = {
   syncToCloud() {
+    hasPendingPush = true;
     if (syncTimeout) clearTimeout(syncTimeout);
-    syncTimeout = setTimeout(() => {
-      firebaseDb.pushPayload({
+    syncTimeout = setTimeout(async () => {
+      await firebaseDb.pushPayload({
         jobs: this.getJobs(),
         jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
         catalog: this.getCatalog(),
         consumables: this.getConsumables(),
         auditLogs: this.getAuditLogs(),
       });
+      hasPendingPush = false;
     }, 800);
   },
 
+  /**
+   * Flush any pending debounced push immediately (used before pulling from cloud).
+   * Ensures local changes are pushed before remote data overwrites them.
+   */
+  async flushPendingSync() {
+    if (!hasPendingPush) return;
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+      syncTimeout = null;
+    }
+    await firebaseDb.pushPayload({
+      jobs: this.getJobs(),
+      jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
+      catalog: this.getCatalog(),
+      consumables: this.getConsumables(),
+      auditLogs: this.getAuditLogs(),
+    });
+    hasPendingPush = false;
+    console.log('[StorageService] Flushed pending sync before pull');
+  },
+
   async syncToCloudManual() {
+    hasPendingPush = false;
+    if (syncTimeout) { clearTimeout(syncTimeout); syncTimeout = null; }
     return await firebaseDb.pushPayload({
       jobs: this.getJobs(),
       jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
@@ -48,8 +75,10 @@ export const storageService = {
   },
 
   async syncFromCloudManual() {
+    await this.flushPendingSync();
     return await firebaseDb.pullFromCloud();
   },
+
 
   consolidateItems(items) {
     const map = new Map();
