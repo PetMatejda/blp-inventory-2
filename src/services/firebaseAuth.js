@@ -40,10 +40,10 @@ const buildUserObj = (firebaseUser, role, name, avatar) => ({
 });
 
 const resolveRole = (email) => {
-  const e = (email || '').toLowerCase();
-  if (e === 'petmatejda@gmail.com' || e.includes('gaffer') || e.includes('admin')) return 'ADMIN';
-  return 'USER';
+  // All team members have full ADMIN (Lead Gaffer) access
+  return 'ADMIN';
 };
+
 
 const syncUserProfile = async (firebaseUser, fallbackRole) => {
   try {

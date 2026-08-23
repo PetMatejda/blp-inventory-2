@@ -2,24 +2,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Seznam schválených e-mailů štábu, gafferů a administrátorů:
-    function isApprovedUser() {
+    // Seznam všech oprávněných uživatelů a administrátorů BLP:
+    function isApprovedAdmin() {
       return request.auth != null && (
         request.auth.token.email in [
-          // Hlavní administrátoři a systém:
-          'petmatejda@gmail.com',                   // Petr Matějíček (Admin)
-          'petr.matejicek@balloonlightgroup.com',   // Petr Matějíček (BLP)
-          'admin@balloonlightprag.cz',              // Test Admin (blp)
-          'admin@blp.cz',                           // Test Admin (blp)
-          
-          // Klíčový tým a gaffeři:
-          'marekradolf@seznam.cz',                  // Marek Radolf
-          'petrradolf@seznam.cz',                   // Petr Radolf
-          'jaroslav.hluchy@gmail.com',              // Jarda Hluchý
-          'matejus.reznak@seznam.cz',               // Matěj Rezňák
-          'kate@k-international.cz',                // Kateřina Ulrichová (Koordinátor)
-          
-          // Členové štábu a technici:
+          'petmatejda@gmail.com',
+          'petr.matejicek@balloonlightgroup.com',
+          'admin@balloonlightprag.cz',
+          'admin@blp.cz',
+          'marekradolf@seznam.cz',
+          'petrradolf@seznam.cz',
+          'jaroslav.hluchy@gmail.com',
+          'matejus.reznak@seznam.cz',
+          'kate@k-international.cz',
           'koleczko66@gmail.com',
           'malypavel5@email.cz',
           'blazek.jarous@seznam.cz',
@@ -34,7 +29,7 @@ service cloud.firestore {
       );
     }
 
-    // Sdílený sklad, zakázky a technika pro celou aplikaci a štáb:
+    // Sdílený sklad, zakázky a technika:
     match /inventory_store/{document=**} {
       allow read, write: if true;
     }
@@ -44,9 +39,9 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Ostatní systémové dokumenty podle schváleného štábu:
+    // Ostatní systémové dokumenty:
     match /{document=**} {
-      allow read, write: if isApprovedUser();
+      allow read, write: if isApprovedAdmin();
     }
   }
 }
