@@ -3,9 +3,9 @@ import { useInventory } from '../../context/InventoryContext';
 import { ItemSwipeCard } from './ItemSwipeCard';
 import {
   Search, QrCode, Plus, Package, Lock, Unlock,
-  Truck, Copy, X,
-  AlertTriangle
+  Truck, Copy, X, AlertTriangle, BookOpen
 } from 'lucide-react';
+
 
 export const PackingList = () => {
   const {
