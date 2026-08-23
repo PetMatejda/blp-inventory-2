@@ -6,9 +6,10 @@
 export const INITIAL_JOBS = [
   {
     id: 'job-101',
-    name: 'Granilla Reklama (Noční Exteriér)',
+    name: 'Granilla',
     client: 'Bistro Films / Granilla',
-    assignedGaffer: 'Petr M. (Lead Gaffer)',
+    blpResponsible: 'Marek Radolf',
+    assignedGaffer: 'Petr M.',
     riggingDate: '2026-08-24',
     deriggingDate: '2026-08-25',
     status: 'ACTIVE',
@@ -16,8 +17,9 @@ export const INITIAL_JOBS = [
   },
   {
     id: 'job-102',
-    name: 'Reklama Škoda – Den 2 (Hala & Plac)',
-    client: 'Škoda Auto / Stillking',
+    name: 'Velká Amerika',
+    client: 'Stillking Films',
+    blpResponsible: 'Marek Radolf',
     assignedGaffer: 'Petr M.',
     riggingDate: '2026-08-24',
     deriggingDate: '2026-08-24',
@@ -26,8 +28,9 @@ export const INITIAL_JOBS = [
   },
   {
     id: 'job-103',
-    name: 'Film: Shadows of Prague (Podvodní scéna)',
+    name: 'Shadows of Prague',
     client: 'Barrandov Studios',
+    blpResponsible: 'Marek Radolf',
     assignedGaffer: 'Jan K.',
     riggingDate: '2026-08-28',
     deriggingDate: '2026-08-28',
@@ -36,8 +39,9 @@ export const INITIAL_JOBS = [
   },
   {
     id: 'job-104',
-    name: 'Vodafone TV Spot - Archiv',
+    name: 'Vodafone TV Spot',
     client: 'Vodafone CZ',
+    blpResponsible: 'Marek Radolf',
     assignedGaffer: 'Petr M.',
     riggingDate: '2026-08-10',
     deriggingDate: '2026-08-11',
@@ -45,6 +49,7 @@ export const INITIAL_JOBS = [
     mode: 'LOADING',
   }
 ];
+
 
 export const INITIAL_VEHICLES = [
   { id: 'v1', name: 'Iveco Daily (Grip & Světla)', plate: '2AT 8891' },

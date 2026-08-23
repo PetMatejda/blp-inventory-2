@@ -160,8 +160,16 @@ export const firebaseAuth = {
           return { success: false, error: 'Nesprávné heslo pro účet blp. (Správné heslo: blpblp)' };
         }
 
+        try {
+          if (!auth.currentUser) {
+            await signInAnonymously(auth);
+          }
+        } catch (anonErr) {
+          console.warn('[FirebaseAuth] Anonymous auth note:', anonErr.message);
+        }
+
         const testAdminUser = {
-          id: 'test-admin-blp',
+          id: auth.currentUser?.uid || 'test-admin-blp',
           name: 'BLP Admin (Test)',
           email: 'admin@balloonlightprag.cz',
           role: 'ADMIN',
@@ -171,6 +179,7 @@ export const firebaseAuth = {
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(testAdminUser));
         return { success: true, user: testAdminUser };
       }
+
 
       if (!cleanPass) {
         return { success: false, error: 'Zadejte prosím heslo.' };
@@ -291,6 +300,9 @@ export const firebaseAuth = {
           try {
             const localUser = JSON.parse(localUserRaw);
             if (localUser?.provider === 'test_auth') {
+              if (!auth.currentUser) {
+                signInAnonymously(auth).catch(() => {});
+              }
               callback(localUser);
               return;
             }
@@ -298,6 +310,7 @@ export const firebaseAuth = {
         }
         callback(null);
       }
+
     });
   }
 
