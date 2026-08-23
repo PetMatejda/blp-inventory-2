@@ -87,7 +87,7 @@ export const EditJobModal = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-mono text-outline mb-1 uppercase flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-secondary" /> Datum Rigging (Nakládka)
+                <Calendar className="w-3.5 h-3.5 text-secondary" /> Datum Rigging
               </label>
               <input
                 type="date"

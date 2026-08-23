@@ -55,7 +55,7 @@ const JobCardItem = ({ job, isSelected }) => {
               )}
               {!isArchived && !isModeDerigging && (
                 <span className="px-2.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-mono text-[11px] font-bold rounded border border-emerald-500/40 flex items-center gap-1">
-                  <Package className="w-3 h-3" /> REŽIM NAKLÁDKA
+                  <Package className="w-3 h-3" /> REŽIM RIGGING
                 </span>
               )}
             </div>

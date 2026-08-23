@@ -127,7 +127,7 @@ export const PackingList = () => {
                       : 'text-on-surface-variant'
                   }`}
                 >
-                  <Package className="w-3 h-3" /> Nakládka
+                  <Package className="w-3 h-3" /> Rigging
                 </button>
                 <button
                   onClick={() => !isModeDerigging && toggleJobMode()}

@@ -713,7 +713,7 @@ export const storageService = {
       user,
       jobId,
       'Přepnutí režimu zakázky',
-      `Režim zakázky přepnut na: ${newMode === 'DERIGGING' ? 'DERIGGING (Vracení z placu)' : 'NAKLÁDKA (Ze skladu)'}`,
+      `Režim zakázky přepnut na: ${newMode === 'DERIGGING' ? 'DERIGGING (Vracení z placu)' : 'RIGGING (Ze skladu na plac)'}`,
       'update'
     );
     this.saveJobs(jobs);

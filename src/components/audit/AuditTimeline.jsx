@@ -83,7 +83,7 @@ export const AuditTimeline = () => {
                 : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-outline'
             }`}
           >
-            Nakládka / Změny stavu
+            Rigging / Změny stavu
           </button>
           <button
             onClick={() => setTypeFilter('add')}
