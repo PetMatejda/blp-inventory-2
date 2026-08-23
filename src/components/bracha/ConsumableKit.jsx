@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { ConsumableSwipeCard } from './ConsumableSwipeCard';
-import { Package, RefreshCw, Printer, AlertTriangle, CheckCircle, Search } from 'lucide-react';
+import { Package, AlertTriangle, CheckCircle, Search } from 'lucide-react';
 
 export const ConsumableKit = () => {
   const { consumables } = useInventory();
@@ -22,33 +22,13 @@ export const ConsumableKit = () => {
   const refillItems = consumables.filter(c => c.state === 2);
   const halfItems = consumables.filter(c => c.state === 1);
 
-  const handlePrintRefillList = () => {
-    window.print();
-  };
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6 pb-28">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-on-surface tracking-tight">Brácha</h1>
-            <span className="px-2.5 py-0.5 bg-primary-container text-on-primary-container font-mono text-xs font-bold rounded-full">
-              SPOTŘEBNÍ MATERIÁL
-            </span>
-          </div>
-          <p className="text-sm text-outline">← Swipe doleva = zhoršit stav &nbsp;|&nbsp; Swipe doprava = zlepšit →</p>
-        </div>
-
-        {/* Print Shopping Order CTA */}
-        <button
-          onClick={handlePrintRefillList}
-          className="h-11 px-4 bg-tertiary-container text-on-tertiary-container border border-tertiary font-bold text-xs rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow shrink-0"
-        >
-          <Printer className="w-4 h-4" />
-          <span>Tisk Nákupního Lístku ({refillItems.length + halfItems.length} ks)</span>
-        </button>
+    <div className="max-w-4xl mx-auto px-4 py-4 flex flex-col gap-4 pb-28">
+      {/* Header */}
+      <div>
+        <p className="text-xs text-outline">← Swipe doleva = zhoršit stav  |  Swipe doprava = zlepšit →</p>
       </div>
+
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-3 gap-3">

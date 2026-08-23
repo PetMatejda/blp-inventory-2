@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { ItemSwipeCard } from './ItemSwipeCard';
 import {
-  Search, QrCode, Plus, Package, BookOpen, Lock, Unlock,
-  Calendar, Truck, Copy, Repeat, X, ChevronDown, ChevronUp,
-  CheckCircle, AlertTriangle
+  Search, QrCode, Plus, Package, Lock, Unlock,
+  Truck, Copy, X,
+  AlertTriangle
 } from 'lucide-react';
 
 export const PackingList = () => {
@@ -25,22 +25,7 @@ export const PackingList = () => {
     setEditingJob,
   } = useInventory();
 
-  const [jobHeaderCollapsed, setJobHeaderCollapsed] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
-  const jobHeaderRef = useRef(null);
-  const sentinelRef = useRef(null);
-
-  // Collapse job header automatically when scrolled past sentinel
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setJobHeaderCollapsed(!entry.isIntersecting),
-      { threshold: 0, rootMargin: '-56px 0px 0px 0px' }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, []);
 
   // Close FAB when scrolling
   useEffect(() => {
@@ -101,187 +86,86 @@ export const PackingList = () => {
   return (
     <div className="max-w-4xl mx-auto pb-32">
 
-      {/* Sentinel for IntersectionObserver */}
-      <div ref={sentinelRef} className="h-0 w-full" />
-
-      {/* ════════════════════════════════════════════
-          STICKY COMMAND BAR (single sticky layer)
-          top-14 = height of TopAppBar (56px)
-      ════════════════════════════════════════════ */}
+      {/* ── STICKY COMMAND BAR ── */}
       <div className="sticky top-14 z-30">
 
-        {/* Archived banner — above command bar */}
+        {/* Archived banner */}
         {isArchived && (
-          <div className="bg-surface-container border-b border-outline px-4 py-3 flex flex-wrap justify-between items-center gap-2 text-xs">
+          <div className="bg-surface-container border-b border-outline px-4 py-2 flex justify-between items-center gap-2 text-xs">
             <div className="flex items-center gap-2 text-outline">
-              <Lock className="w-4 h-4 text-tertiary shrink-0" />
+              <Lock className="w-3.5 h-3.5 text-tertiary shrink-0" />
               <span><strong className="text-on-surface">Archivováno</strong> — pouze pro čtení</span>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setTemplateJob(currentJob)}
-                className="px-3 py-1.5 bg-surface-variant text-on-surface font-semibold rounded-lg flex items-center gap-1 border border-outline-variant active:scale-95"
+                className="px-2.5 py-1 bg-surface-variant text-on-surface font-semibold rounded-lg flex items-center gap-1 border border-outline-variant active:scale-95"
               >
-                <Copy className="w-3.5 h-3.5 text-secondary" /> Vzor
+                <Copy className="w-3 h-3 text-secondary" /> Vzor
               </button>
               <button
                 onClick={() => reactivateJob(currentJob.id)}
-                className="px-3 py-1.5 bg-secondary text-on-secondary-container font-bold rounded-lg flex items-center gap-1 active:scale-95"
+                className="px-2.5 py-1 bg-secondary text-on-secondary-container font-bold rounded-lg flex items-center gap-1 active:scale-95"
               >
-                <Unlock className="w-3.5 h-3.5" /> Obnovit
+                <Unlock className="w-3 h-3" /> Obnovit
               </button>
             </div>
           </div>
         )}
 
-        {/* Job summary strip — collapses on scroll */}
-        <div
-          ref={jobHeaderRef}
-          className={`bg-surface-container backdrop-blur-md border-b border-outline-variant transition-all duration-200 ${
-            jobHeaderCollapsed ? 'py-1.5 px-4' : 'px-4 pt-3 pb-2'
-          }`}
-        >
-          {jobHeaderCollapsed ? (
-            /* MINI STRIP: single line with key info + mode toggle */
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                    isModeDerigging ? 'bg-cyan-400' : 'bg-secondary'
-                  }`}
-                />
-                <span className="font-bold text-sm text-on-surface truncate">{currentJob.name}</span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${
-                    isModeDerigging
-                      ? 'bg-blue-500/20 text-blue-500 dark:bg-blue-400/15 dark:text-blue-400'
-                      : 'bg-secondary-container/30 text-secondary'
-                  }`}
-                >
-                  {isModeDerigging ? 'DERIG' : 'NAKLÁDKA'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-xs font-mono text-on-surface-variant">{doneCount}/{totalCount}</span>
-                {!isArchived && (
-                  <button
-                    onClick={toggleJobMode}
-                    className="p-1.5 bg-surface-container border border-outline-variant rounded-lg text-primary active:scale-90 transition-transform"
-                    title="Přepnout režim"
-                  >
-                    <Repeat className="w-4 h-4" />
-                  </button>
-                )}
+        {/* Compact mode strip: mode switcher + progress — single line */}
+        <div className="bg-surface-container backdrop-blur-md border-b border-outline-variant px-3 py-1.5">
+          <div className="flex items-center gap-2">
+            {/* Mode switcher — inline pills */}
+            {!isArchived && (
+              <div className="flex bg-surface-container-high rounded-lg p-0.5 border border-outline-variant gap-0.5 shrink-0">
                 <button
-                  onClick={() => setJobHeaderCollapsed(false)}
-                  className="p-1.5 text-outline hover:text-on-surface rounded-lg border border-transparent active:scale-90 transition-transform"
+                  onClick={() => isModeDerigging && toggleJobMode()}
+                  className={`py-1 px-2 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 ${
+                    !isModeDerigging
+                      ? 'bg-secondary text-on-secondary-container shadow-sm'
+                      : 'text-on-surface-variant'
+                  }`}
                 >
-                  <ChevronDown className="w-4 h-4" />
+                  <Package className="w-3 h-3" /> Nakládka
+                </button>
+                <button
+                  onClick={() => !isModeDerigging && toggleJobMode()}
+                  className={`py-1 px-2 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 ${
+                    isModeDerigging
+                      ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-on-surface-variant'
+                  }`}
+                >
+                  <Truck className="w-3 h-3" /> Derigging
                 </button>
               </div>
-            </div>
-          ) : (
-            /* EXPANDED: mode switcher + progress bar */
-            <div className="flex flex-col gap-2.5">
-              {/* Job name row */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <h1 className="font-bold text-base text-on-surface truncate leading-tight">{currentJob.name}</h1>
-                  <p className="text-[11px] text-outline mt-0.5 leading-tight">{currentJob.client} · {currentJob.assignedGaffer}</p>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {!isArchived && (
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Ukončit zakázku „${currentJob.name}"?`)) finishJob(currentJob.id);
-                      }}
-                      className="px-2.5 py-1.5 bg-surface-container border border-outline-variant text-outline hover:text-error hover:border-error/40 text-xs font-semibold rounded-xl flex items-center gap-1 transition-colors active:scale-95"
-                    >
-                      <Lock className="w-3.5 h-3.5" /> Ukončit
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setJobHeaderCollapsed(true)}
-                    className="p-1.5 text-outline rounded-lg border border-transparent active:scale-90 transition-transform"
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+            )}
 
-              {/* Dates */}
-              <div className="flex gap-3 text-[11px] font-mono text-on-surface-variant">
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-secondary" />
-                  Rigging: <strong>{currentJob.riggingDate || currentJob.date}</strong>
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-tertiary" />
-                  Derig: <strong>{currentJob.deriggingDate || currentJob.date}</strong>
-                </span>
-                {!isArchived && (
-                  <button onClick={() => setEditingJob(currentJob)} className="text-primary hover:underline">
-                    Upravit
-                  </button>
-                )}
+            {/* Progress bar — fills remaining space */}
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <div className="flex-1 h-2 bg-surface-container-highest rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    isModeDerigging ? 'bg-blue-500 dark:bg-blue-400' : 'bg-secondary'
+                  }`}
+                  style={{ width: `${progress}%` }}
+                />
               </div>
-
-              {/* Mode switcher — segmented control */}
-              {!isArchived && (
-                <div className="flex bg-surface-container rounded-xl p-1 border border-outline-variant gap-1">
-                  <button
-                    onClick={() => isModeDerigging && toggleJobMode()}
-                    className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                      !isModeDerigging
-                        ? 'bg-secondary text-on-secondary-container shadow'
-                        : 'text-on-surface-variant hover:text-on-surface'
-                    }`}
-                  >
-                    <Package className="w-3.5 h-3.5" />
-                    <span className="hidden xs:inline">1. </span>Nakládka
-                  </button>
-                  <button
-                    onClick={() => !isModeDerigging && toggleJobMode()}
-                    className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                      isModeDerigging
-                        ? 'bg-blue-500/20 border border-blue-500/40 text-blue-600 dark:bg-blue-400/15 dark:text-blue-400 dark:border-blue-400/30 shadow'
-                        : 'text-on-surface-variant hover:text-on-surface'
-                    }`}
-                  >
-                    <Truck className="w-3.5 h-3.5" />
-                    <span className="hidden xs:inline">2. </span>Derigging
-                  </button>
-                </div>
+              <span className="text-[11px] font-mono font-bold text-on-surface-variant shrink-0">
+                {doneCount}/{totalCount}
+              </span>
+              {damagedCount > 0 && (
+                <span className="text-[10px] text-error flex items-center gap-0.5 shrink-0">
+                  <AlertTriangle className="w-3 h-3" /> {damagedCount}
+                </span>
               )}
-
-              {/* Progress bar */}
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center text-[11px] font-mono">
-                  <span className={isModeDerigging ? 'text-blue-600 dark:text-blue-400' : 'text-secondary'}>
-                    {isModeDerigging ? '📦 Sbaleno k odvozu' : '✅ Na place / Naloženo'}
-                  </span>
-                  <span className="text-on-surface font-bold">{doneCount}/{totalCount} ks · {progress}%</span>
-                </div>
-                <div className="w-full h-2.5 bg-surface-container-highest rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      isModeDerigging ? 'bg-blue-500 dark:bg-blue-400' : 'bg-secondary'
-                    }`}
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                {damagedCount > 0 && (
-                  <span className="text-[11px] text-error flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3" /> {damagedCount} poškozeno
-                  </span>
-                )}
-              </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Search bar + Scanner — always visible below job strip */}
-        <div className="bg-surface-container backdrop-blur-md border-b border-outline-variant px-3 py-2 flex items-center gap-2">
+        {/* Search bar + Scanner */}
+        <div className="bg-surface-container backdrop-blur-md border-b border-outline-variant px-3 py-1.5 flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
             <input
@@ -289,7 +173,7 @@ export const PackingList = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Hledat techniku, SN..."
-              className="w-full h-11 pl-9 pr-9 bg-surface-container border border-outline-variant rounded-xl text-on-surface text-sm focus:border-primary focus:outline-none placeholder:text-outline"
+              className="w-full h-10 pl-9 pr-9 bg-surface-container border border-outline-variant rounded-xl text-on-surface text-sm focus:border-primary focus:outline-none placeholder:text-outline"
             />
             {searchQuery && (
               <button
@@ -303,15 +187,15 @@ export const PackingList = () => {
           <button
             onClick={() => setIsScannerModalOpen(true)}
             disabled={isArchived}
-            className="w-11 h-11 bg-surface-container border border-outline-variant rounded-xl flex items-center justify-center text-primary disabled:opacity-40 active:scale-90 transition-transform shrink-0"
+            className="w-10 h-10 bg-surface-container border border-outline-variant rounded-xl flex items-center justify-center text-primary disabled:opacity-40 active:scale-90 transition-transform shrink-0"
             title="QR / Barcode Skener"
           >
             <QrCode className="w-5 h-5 text-secondary" />
           </button>
         </div>
 
-        {/* Status filter pills — horizontal scroll */}
-        <div className="bg-surface-container backdrop-blur-md px-3 py-2 border-b border-outline-variant/50">
+        {/* Status filter pills */}
+        <div className="bg-surface-container backdrop-blur-md px-3 py-1.5 border-b border-outline-variant/50">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {statusFilters.map((f) => {
               const isActive = selectedStatusFilter === f.id;
@@ -319,7 +203,7 @@ export const PackingList = () => {
                 <button
                   key={f.id}
                   onClick={() => setSelectedStatusFilter(f.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all shrink-0 active:scale-95 ${
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap border transition-all shrink-0 active:scale-95 ${
                     isActive
                       ? f.activeClass
                       : 'bg-surface-container text-on-surface-variant border-outline-variant'
@@ -327,13 +211,13 @@ export const PackingList = () => {
                 >
                   {f.dot && (
                     <span
-                      className="w-2 h-2 rounded-full shrink-0"
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
                       style={{ backgroundColor: f.dot }}
                     />
                   )}
                   {f.label}
                   <span
-                    className={`font-mono font-bold text-[11px] px-1 py-0.5 rounded ${
+                    className={`font-mono font-bold text-[10px] px-1 rounded ${
                       isActive ? 'bg-black/20' : 'bg-surface-container-high'
                     }`}
                   >
@@ -345,7 +229,8 @@ export const PackingList = () => {
           </div>
         </div>
       </div>
-      {/* ════ END STICKY ════ */}
+      {/* ── END STICKY ── */}
+
 
       {/* Item List */}
       <div className="flex flex-col gap-2.5 px-3 pt-3">
