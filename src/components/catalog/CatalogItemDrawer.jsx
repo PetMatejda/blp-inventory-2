@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { CATEGORIES } from '../../utils/categoryIcons';
 import {
   X, Check, Plus, Trash2, Layers, Upload, Image as ImageIcon,
-  Weight, Zap, Package, ChevronDown, Camera
+  Weight, Zap, Package, ChevronDown, Camera, Search
 } from 'lucide-react';
 
 const PRESET_PHOTOS = [
@@ -30,43 +30,47 @@ const EMPTY_FORM = {
  * CatalogItemDrawer
  * 
  * A slide-in side panel (right on desktop, bottom sheet on mobile) for
- * creating or editing a catalog item. Replaces the old MasterCatalogModal.
+ * creating or editing a catalog item.
  *
  * Props:
  *   item  — null (hidden) | 'NEW' | catalogItemObject
  *   onClose — callback to hide the drawer
  */
 export const CatalogItemDrawer = ({ item, onClose }) => {
-  const { createCatalogItem, updateCatalogItem } = useInventory();
+  const { createCatalogItem, updateCatalogItem, catalog } = useInventory();
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [showPresets, setShowPresets] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
-  const isNew = item === 'NEW';
-  const isOpen = item !== null;
+  // Bundle item picker state
+  const [showBundlePicker, setShowBundlePicker] = useState(false);
+  const [bundleSearch, setBundleSearch] = useState('');
+  const pickerRef = useRef(null);
 
-  // Populate form when item changes
+  const isNew = item === 'NEW';
+  const isEditing = item && item !== 'NEW';
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!item) return;
     if (isNew) {
       setFormData({ ...EMPTY_FORM, bundleItems: [] });
-    } else if (item && item.id) {
+    } else {
       setFormData({
         name: item.name || '',
         category: item.category || 'Lights',
         weight: item.weight || '',
         power: item.power || '',
         image: item.image || PRESET_PHOTOS[0].url,
-        availableCount: item.availableCount || 1,
+        availableCount: parseInt(item.availableCount) || 1,
         isBundle: !!item.isBundle,
         bundleItems: item.bundleItems ? [...item.bundleItems] : [],
       });
     }
     setIsDirty(false);
     setShowPresets(false);
+    setShowBundlePicker(false);
+    setBundleSearch('');
   }, [item]);
-
-  if (!isOpen) return null;
 
   const set = (patch) => {
     setFormData(prev => ({ ...prev, ...patch }));
@@ -74,22 +78,26 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
   };
 
   const handleFileUpload = (e) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => set({ image: reader.result });
     reader.readAsDataURL(file);
   };
 
-  // Same handler for camera capture — reused for both inputs
-  const handleCameraCapture = handleFileUpload;
+  const handleCameraCapture = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => set({ image: reader.result });
+    reader.readAsDataURL(file);
+  };
 
-  const handleSubmit = (e) => {
+  const handleSave = (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
     if (isNew) {
       createCatalogItem(formData);
-    } else {
+    } else if (isEditing) {
       updateCatalogItem(item.id, formData);
     }
     onClose();
@@ -100,14 +108,63 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
     onClose();
   };
 
-  // Bundle sub-item helpers
-  const addBundleItem = () => set({ bundleItems: [...formData.bundleItems, { name: '', qty: 1 }] });
-  const updateBundleItem = (idx, field, value) => {
+  // ── Bundle sub-item helpers — reference existing catalog items ──
+  const addBundleItemFromCatalog = (catalogItem) => {
+    const existing = formData.bundleItems.find(b => b.catalogId === catalogItem.id);
+    if (existing) {
+      // Increment qty instead of adding duplicate
+      const updated = formData.bundleItems.map(b =>
+        b.catalogId === catalogItem.id ? { ...b, qty: b.qty + 1 } : b
+      );
+      set({ bundleItems: updated });
+    } else {
+      set({
+        bundleItems: [...formData.bundleItems, {
+          catalogId: catalogItem.id,
+          name: catalogItem.name,
+          category: catalogItem.category,
+          image: catalogItem.image,
+          qty: 1,
+        }],
+      });
+    }
+    setShowBundlePicker(false);
+    setBundleSearch('');
+  };
+
+  const updateBundleItemQty = (idx, qty) => {
     const updated = [...formData.bundleItems];
-    updated[idx] = { ...updated[idx], [field]: value };
+    updated[idx] = { ...updated[idx], qty: Math.max(1, qty) };
     set({ bundleItems: updated });
   };
+
   const removeBundleItem = (idx) => set({ bundleItems: formData.bundleItems.filter((_, i) => i !== idx) });
+
+  // Filter catalog for picker — exclude self and nested bundles
+  const currentItemId = isEditing ? item.id : null;
+  const bundleCatalogIds = new Set(formData.bundleItems.map(b => b.catalogId));
+  const availableForBundle = (catalog || []).filter(c => {
+    if (c.id === currentItemId) return false; // can't add self
+    if (c.isBundle) return false; // can't nest bundles
+    const search = bundleSearch.toLowerCase();
+    if (search && !c.name.toLowerCase().includes(search) && !(c.category || '').toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!showBundlePicker) return;
+    const handler = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        setShowBundlePicker(false);
+        setBundleSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showBundlePicker]);
+
+  if (!item) return null;
 
   return (
     <>
@@ -117,182 +174,131 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
         onClick={handleClose}
       />
 
-      {/* Drawer — slides from right on md+, from bottom on mobile */}
+      {/* Drawer */}
       <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-md bg-card-bg border-l border-outline-variant shadow-2xl
-                      animate-in slide-in-from-right duration-300
+                      overflow-hidden animate-in slide-in-from-right duration-300
                       max-sm:inset-x-0 max-sm:inset-y-auto max-sm:bottom-0 max-sm:rounded-t-3xl max-sm:border-t max-sm:border-l-0
-                      max-sm:slide-in-from-bottom">
-
-        {/* Drag handle (mobile) */}
-        <div className="flex justify-center pt-3 pb-1 sm:hidden">
-          <div className="w-10 h-1 bg-outline-variant rounded-full" />
-        </div>
-
+                      max-sm:max-h-[92vh] max-sm:animate-in max-sm:slide-in-from-bottom"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-          <div>
-            <p className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider">
-              {isNew ? 'Nová položka' : 'Upravit položku'}
-            </p>
-            <h2 className="text-lg font-bold text-on-surface mt-0.5 leading-tight">
-              {isNew ? 'Přidat do katalogu' : (formData.name || 'Bez názvu')}
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="p-2 text-outline hover:text-on-surface hover:bg-surface-container rounded-xl transition-all active:scale-90"
-          >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0 bg-surface-container">
+          <h2 className="font-bold text-base text-on-surface flex items-center gap-2">
+            <Package className="w-5 h-5 text-primary" />
+            {isNew ? 'Nová Položka Katalogu' : `Upravit: ${formData.name}`}
+          </h2>
+          <button onClick={handleClose} className="p-2 hover:bg-surface-variant rounded-full text-outline">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form — scrollable body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="px-5 py-4 flex flex-col gap-5">
-
-            {/* ── Image picker ── */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-mono font-bold text-outline uppercase tracking-wide">Obrázek</label>
-
-              {/* Preview + upload */}
-              <div className="flex gap-3 items-center">
-                <div className="w-20 h-20 rounded-2xl border-2 border-outline-variant overflow-hidden bg-surface-container-lowest shrink-0 flex items-center justify-center">
-                  {formData.image ? (
-                    <img
-                      src={formData.image}
-                      alt="Náhled"
-                      className="w-full h-full object-contain p-1"
-                      onError={(e) => { e.target.src = PRESET_PHOTOS[0].url; }}
-                    />
-                  ) : (
-                    <ImageIcon className="w-7 h-7 text-outline/40" />
-                  )}
-                </div>
-                <div className="flex flex-col gap-2 flex-1">
-                  {/* Upload from gallery */}
-                  <label className="px-3 py-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface text-xs font-semibold rounded-xl cursor-pointer flex items-center gap-2 transition-all active:scale-95">
-                    <Upload className="w-3.5 h-3.5" /> Nahrát z galerie
-                    <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                  </label>
-                  {/* Camera capture — opens rear camera directly on mobile */}
-                  <label className="px-3 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs font-semibold rounded-xl cursor-pointer flex items-center gap-2 transition-all active:scale-95">
-                    <Camera className="w-3.5 h-3.5" /> Vyfotit kamerou
-                    <input type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} className="hidden" />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowPresets(!showPresets)}
-                    className="px-3 py-2 bg-surface-container border border-outline-variant text-outline text-xs font-semibold rounded-xl flex items-center gap-2 active:scale-95"
-                  >
-                    <ImageIcon className="w-3.5 h-3.5" /> Vzorové foto
-                    <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${showPresets ? 'rotate-180' : ''}`} />
-                  </button>
-                </div>
-              </div>
-
-              {/* URL input */}
-              <input
-                type="text"
-                value={formData.image}
-                onChange={(e) => set({ image: e.target.value })}
-                placeholder="https://... URL obrázku"
-                className="w-full h-10 px-3 bg-surface-container border border-outline-variant rounded-xl text-xs text-on-surface font-mono focus:border-primary focus:outline-none"
+        {/* Form body — scrollable */}
+        <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {/* Photo */}
+          <div className="flex gap-4 items-start">
+            <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-outline-variant bg-surface-container shrink-0 group">
+              <img
+                src={formData.image}
+                alt="Preview"
+                className="w-full h-full object-cover"
+                onError={(e) => { e.target.src = PRESET_PHOTOS[0].url; }}
               />
-
-              {/* Preset grid */}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <ImageIcon className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5 flex-1">
+              <label className="flex items-center gap-1.5 text-xs text-primary font-bold cursor-pointer">
+                <Upload className="w-3.5 h-3.5" /> Nahrát foto
+                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-secondary font-bold cursor-pointer">
+                <Camera className="w-3.5 h-3.5" /> Vyfotit
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCameraCapture} />
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPresets(!showPresets)}
+                className="flex items-center gap-1 text-[10px] text-outline hover:text-on-surface"
+              >
+                <ChevronDown className="w-3 h-3" /> Předvolby
+              </button>
               {showPresets && (
-                <div className="grid grid-cols-3 gap-1.5">
-                  {PRESET_PHOTOS.map((p, i) => (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {PRESET_PHOTOS.map((p) => (
                     <button
-                      key={i}
+                      key={p.label}
                       type="button"
                       onClick={() => { set({ image: p.url }); setShowPresets(false); }}
-                      className={`relative rounded-xl overflow-hidden border-2 aspect-square transition-all ${
-                        formData.image === p.url ? 'border-primary' : 'border-outline-variant'
-                      }`}
+                      className="w-10 h-10 rounded-lg overflow-hidden border border-outline-variant hover:border-primary transition-colors"
                     >
                       <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
-                      <span className="absolute bottom-0 inset-x-0 text-[9px] font-mono font-bold text-center bg-black/60 text-white py-0.5 truncate px-1">
-                        {p.label}
-                      </span>
-                      {formData.image === p.url && (
-                        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                          <Check className="w-5 h-5 text-primary drop-shadow" />
-                        </div>
-                      )}
                     </button>
                   ))}
                 </div>
               )}
             </div>
+          </div>
 
-            {/* ── Name ── */}
+          {/* Fields */}
+          <div className="space-y-4">
             <div>
-              <label className="text-xs font-mono font-bold text-outline uppercase tracking-wide block mb-1.5">
-                Název <span className="text-error">*</span>
-              </label>
+              <label className="block text-xs font-bold text-outline mb-1 uppercase">Název</label>
               <input
                 type="text"
+                required
                 value={formData.name}
                 onChange={(e) => set({ name: e.target.value })}
-                placeholder="Např. ARRI SkyPanel S60-C"
-                required
-                autoFocus
-                className="w-full h-12 px-4 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface font-bold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                placeholder="Název položky..."
+                className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary"
               />
             </div>
 
-            {/* ── Category + Count ── */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-mono font-bold text-outline uppercase tracking-wide block mb-1.5">Kategorie</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => set({ category: e.target.value })}
-                  className="w-full h-12 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface font-semibold focus:outline-none focus:border-primary"
-                >
-                  {CATEGORIES.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-mono font-bold text-outline uppercase tracking-wide block mb-1.5">Počet ks</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.availableCount}
-                  onChange={(e) => set({ availableCount: parseInt(e.target.value) || 1 })}
-                  className="w-full h-12 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface font-mono font-bold text-center focus:outline-none focus:border-primary"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-outline mb-1 uppercase">Kategorie</label>
+              <select
+                value={formData.category}
+                onChange={(e) => set({ category: e.target.value })}
+                className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface font-bold focus:outline-none focus:border-primary"
+              >
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
 
-            {/* ── Weight + Power ── */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-mono font-bold text-outline uppercase tracking-wide flex items-center gap-1 mb-1.5">
+                <label className="block text-xs font-bold text-outline mb-1 uppercase flex items-center gap-1">
                   <Weight className="w-3 h-3" /> Hmotnost
                 </label>
                 <input
                   type="text"
                   value={formData.weight}
                   onChange={(e) => set({ weight: e.target.value })}
-                  placeholder="25 lbs"
-                  className="w-full h-12 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface font-mono focus:outline-none focus:border-primary"
+                  placeholder="5 kg"
+                  className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary"
                 />
               </div>
               <div>
-                <label className="text-xs font-mono font-bold text-outline uppercase tracking-wide flex items-center gap-1 mb-1.5">
-                  <Zap className="w-3 h-3 text-tertiary" /> Příkon
+                <label className="block text-xs font-bold text-outline mb-1 uppercase flex items-center gap-1">
+                  <Zap className="w-3 h-3" /> Příkon
                 </label>
                 <input
                   type="text"
                   value={formData.power}
                   onChange={(e) => set({ power: e.target.value })}
-                  placeholder="400W"
-                  className="w-full h-12 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface font-mono focus:outline-none focus:border-primary"
+                  placeholder="800W"
+                  className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-outline mb-1 uppercase flex items-center gap-1">
+                  <Package className="w-3 h-3" /> Ks sklad
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.availableCount}
+                  onChange={(e) => set({ availableCount: parseInt(e.target.value) || 0 })}
+                  className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm font-mono font-bold text-on-surface focus:outline-none focus:border-primary text-center"
                 />
               </div>
             </div>
@@ -316,7 +322,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                   <span className="font-bold text-sm text-on-surface flex items-center gap-1.5">
                     <Layers className="w-4 h-4 text-primary" /> Jedná se o Set / Balíček
                   </span>
-                  <span className="text-xs text-outline">Obsahuje více dílů vkládaných najednou</span>
+                  <span className="text-xs text-outline">Složení z existujících položek katalogu</span>
                 </div>
               </label>
 
@@ -324,44 +330,101 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                 <div className="mt-4 flex flex-col gap-2 pt-3 border-t border-primary/20">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-mono font-bold text-primary uppercase">Složení setu</span>
-                    <button
-                      type="button"
-                      onClick={addBundleItem}
-                      className="px-2.5 py-1 bg-primary text-on-primary-container text-xs font-bold rounded-lg flex items-center gap-1 active:scale-90"
-                    >
-                      <Plus className="w-3 h-3" /> Přidat díl
-                    </button>
+                    <div className="relative" ref={pickerRef}>
+                      <button
+                        type="button"
+                        onClick={() => { setShowBundlePicker(!showBundlePicker); setBundleSearch(''); }}
+                        className="px-2.5 py-1 bg-primary text-on-primary-container text-xs font-bold rounded-lg flex items-center gap-1 active:scale-90"
+                      >
+                        <Plus className="w-3 h-3" /> Přidat z katalogu
+                      </button>
+
+                      {/* Catalog picker dropdown */}
+                      {showBundlePicker && (
+                        <div className="absolute right-0 top-full mt-1 w-72 max-h-64 bg-card-bg border border-outline-variant rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+                          {/* Search */}
+                          <div className="p-2 border-b border-outline-variant flex items-center gap-2">
+                            <Search className="w-3.5 h-3.5 text-outline shrink-0" />
+                            <input
+                              type="text"
+                              value={bundleSearch}
+                              onChange={(e) => setBundleSearch(e.target.value)}
+                              placeholder="Hledat v katalogu..."
+                              className="flex-1 text-xs bg-transparent text-on-surface outline-none placeholder:text-outline"
+                              autoFocus
+                            />
+                          </div>
+                          {/* Item list */}
+                          <div className="overflow-y-auto flex-1">
+                            {availableForBundle.length === 0 ? (
+                              <p className="text-xs text-outline text-center py-4 italic">
+                                {bundleSearch ? 'Žádná shoda' : 'Žádné dostupné položky'}
+                              </p>
+                            ) : (
+                              availableForBundle.map(c => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => addBundleItemFromCatalog(c)}
+                                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-container transition-colors ${
+                                    bundleCatalogIds.has(c.id) ? 'bg-primary/5' : ''
+                                  }`}
+                                >
+                                  <img
+                                    src={c.image}
+                                    alt={c.name}
+                                    className="w-8 h-8 rounded-lg object-cover border border-outline-variant shrink-0"
+                                    onError={(e) => { e.target.src = PRESET_PHOTOS[0].url; }}
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-bold text-on-surface truncate">{c.name}</div>
+                                    <div className="text-[10px] text-outline">{c.category}</div>
+                                  </div>
+                                  {bundleCatalogIds.has(c.id) && (
+                                    <span className="text-[10px] font-mono text-primary font-bold shrink-0">✓ v setu</span>
+                                  )}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {formData.bundleItems.length === 0 ? (
                     <p className="text-xs text-outline italic text-center py-3">
-                      Zatím žádné díly. Klikněte „Přidat díl".
+                      Zatím žádné díly. Klikněte „Přidat z katalogu".
                     </p>
                   ) : (
                     formData.bundleItems.map((sub, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={sub.name}
-                          onChange={(e) => updateBundleItem(idx, 'name', e.target.value)}
-                          placeholder="Název dílu..."
-                          className="flex-1 h-10 px-3 bg-card-bg border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary"
-                          required
-                        />
+                      <div key={sub.catalogId || idx} className="flex items-center gap-2 bg-surface-container/50 rounded-xl px-2 py-1.5">
+                        {sub.image && (
+                          <img
+                            src={sub.image}
+                            alt={sub.name}
+                            className="w-8 h-8 rounded-lg object-cover border border-outline-variant shrink-0"
+                            onError={(e) => { e.target.src = PRESET_PHOTOS[0].url; }}
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-on-surface truncate">{sub.name}</div>
+                          {sub.category && <div className="text-[10px] text-outline">{sub.category}</div>}
+                        </div>
                         <input
                           type="number"
                           min="1"
                           value={sub.qty}
-                          onChange={(e) => updateBundleItem(idx, 'qty', parseInt(e.target.value) || 1)}
-                          className="w-14 h-10 px-2 bg-card-bg border border-outline-variant rounded-xl text-xs font-mono font-bold text-center focus:outline-none"
+                          onChange={(e) => updateBundleItemQty(idx, parseInt(e.target.value) || 1)}
+                          className="w-12 h-8 px-1 bg-card-bg border border-outline-variant rounded-lg text-xs font-mono font-bold text-center focus:outline-none"
                         />
-                        <span className="text-xs text-outline shrink-0">ks</span>
+                        <span className="text-[10px] text-outline shrink-0">ks</span>
                         <button
                           type="button"
                           onClick={() => removeBundleItem(idx)}
-                          className="p-2 text-outline hover:text-error hover:bg-error-container/20 rounded-xl transition-colors active:scale-90"
+                          className="p-1.5 text-outline hover:text-error hover:bg-error-container/20 rounded-lg transition-colors active:scale-90"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))
@@ -373,23 +436,21 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
         </form>
 
         {/* Footer — sticky save/cancel */}
-        <div className="px-5 py-4 border-t border-outline-variant bg-card-bg shrink-0 flex gap-2">
+        <div className="flex gap-3 px-5 py-4 border-t border-outline-variant bg-surface-container shrink-0">
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-2xl text-sm active:scale-95 transition-all"
+            className="flex-1 py-3 bg-surface-variant text-on-surface-variant font-bold rounded-xl text-sm border border-outline-variant active:scale-95"
           >
             Zrušit
           </button>
           <button
             type="submit"
-            form="catalog-form"
-            onClick={handleSubmit}
-            className="flex-1 py-3 bg-primary text-on-primary-container font-bold rounded-2xl text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all disabled:opacity-50"
+            onClick={handleSave}
             disabled={!formData.name.trim()}
+            className="flex-1 py-3 bg-primary text-on-primary-container font-bold rounded-xl text-sm shadow flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
           >
-            <Check className="w-4 h-4" />
-            {isNew ? 'Vytvořit' : 'Uložit změny'}
+            <Check className="w-4 h-4" /> {isNew ? 'Vytvořit' : 'Uložit'}
           </button>
         </div>
       </div>
