@@ -305,8 +305,13 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                 onChange={(e) => set({ category: e.target.value })}
                 className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface font-bold focus:outline-none focus:border-primary"
               >
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {CATEGORIES.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
               </select>
+
             </div>
 
             {/* Barcode / EAN / QR input with Camera Scan capability */}
