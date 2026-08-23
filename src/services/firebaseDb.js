@@ -18,98 +18,30 @@ const SESSION_ID = `session_${Date.now()}_${Math.random().toString(36).slice(2, 
 const localPushTimestamps = new Set();
 
 const writeLocalCache = (data) => {
-  let hasNewLocalData = false;
+  if (!data) return false;
 
-  const localItems = JSON.parse(localStorage.getItem('blp_job_items_v2') || '[]');
-  const remoteItems = Array.isArray(data.jobItems) ? data.jobItems : [];
-  const remoteItemIds = new Set(remoteItems.map(i => i.id));
-  const pendingLocalItems = localItems.filter(li => !remoteItemIds.has(li.id));
-  if (pendingLocalItems.length > 0) hasNewLocalData = true;
-  const mergedItems = [...remoteItems, ...pendingLocalItems];
-  localStorage.setItem('blp_job_items_v2', JSON.stringify(mergedItems));
-
-  // Merge jobs with smart deduplication by name & id
-  if (data.jobs && Array.isArray(data.jobs) && data.jobs.length > 0) {
-    const localJobs = JSON.parse(localStorage.getItem('blp_jobs_v2') || '[]');
-    const remoteJobIds = new Set(data.jobs.map(j => j.id));
-
-    // Keep unique jobs
-    const finalJobs = [...data.jobs];
-    
-    for (const lj of localJobs) {
-      if (remoteJobIds.has(lj.id)) continue;
-
-      // Check if there is an existing remote job with the exact same name
-      const duplicateByNameIndex = finalJobs.findIndex(
-        j => j.name.trim().toLowerCase() === lj.name.trim().toLowerCase()
-      );
-
-      if (duplicateByNameIndex !== -1) {
-        const existingJob = finalJobs[duplicateByNameIndex];
-        const existingItems = mergedItems.filter(i => i.jobId === existingJob.id);
-        const localItemsForLj = mergedItems.filter(i => i.jobId === lj.id);
-
-        if (localItemsForLj.length > 0 && existingItems.length === 0) {
-          // Re-map items from lj to existingJob
-          mergedItems.forEach(i => {
-            if (i.jobId === lj.id) i.jobId = existingJob.id;
-          });
-          localStorage.setItem('blp_job_items_v2', JSON.stringify(mergedItems));
-          hasNewLocalData = true;
-          continue;
-        } else if (localItemsForLj.length === 0) {
-          // It was an empty duplicate, ignore it
-          continue;
-        }
-      }
-
-      finalJobs.push(lj);
-      hasNewLocalData = true;
-    }
-
-    // Deduplicate any exact duplicate job names in final list
-    const seenNames = new Map();
-    const dedupedJobs = [];
-    for (const j of finalJobs) {
-      const key = j.name.trim().toLowerCase();
-      if (!seenNames.has(key)) {
-        seenNames.set(key, j);
-        dedupedJobs.push(j);
-      } else {
-        const currentItems = mergedItems.filter(i => i.jobId === j.id);
-        const seenJob = seenNames.get(key);
-        if (currentItems.length > 0) {
-          mergedItems.forEach(i => {
-            if (i.jobId === j.id) i.jobId = seenJob.id;
-          });
-          localStorage.setItem('blp_job_items_v2', JSON.stringify(mergedItems));
-          hasNewLocalData = true;
-        }
-      }
-    }
-
-    localStorage.setItem('blp_jobs_v2', JSON.stringify(dedupedJobs));
+  if (Array.isArray(data.jobs)) {
+    localStorage.setItem('blp_jobs_v2', JSON.stringify(data.jobs));
   }
 
+  if (Array.isArray(data.jobItems)) {
+    localStorage.setItem('blp_job_items_v2', JSON.stringify(data.jobItems));
+  }
 
-  // Catalog: preserve rich 60+ Master Catalog
-  if (data.catalog && Array.isArray(data.catalog) && data.catalog.length >= 20) {
+  if (Array.isArray(data.catalog) && data.catalog.length >= 20) {
     localStorage.setItem('blp_catalog_v2', JSON.stringify(data.catalog));
-  } else {
-    const localCat = JSON.parse(localStorage.getItem('blp_catalog_v2') || '[]');
-    if (localCat.length < 20) {
-      localStorage.setItem('blp_catalog_v2', JSON.stringify(INITIAL_CATALOG));
-    }
+  } else if (!localStorage.getItem('blp_catalog_v2')) {
+    localStorage.setItem('blp_catalog_v2', JSON.stringify(INITIAL_CATALOG));
   }
 
-  if (data.consumables && Array.isArray(data.consumables)) {
+  if (Array.isArray(data.consumables)) {
     localStorage.setItem('blp_consumables_v2', JSON.stringify(data.consumables));
   }
-  if (data.auditLogs && Array.isArray(data.auditLogs)) {
+  if (Array.isArray(data.auditLogs)) {
     localStorage.setItem('blp_audit_logs_v2', JSON.stringify(data.auditLogs));
   }
 
-  return hasNewLocalData;
+  return true;
 };
 
 export const firebaseDb = {
@@ -161,20 +93,8 @@ export const firebaseDb = {
       const snap = await getDoc(mainRef);
       if (snap.exists()) {
         const data = snap.data();
-        const hasNewLocalData = writeLocalCache(data);
+        writeLocalCache(data);
         console.log('[FirebaseDb] ✅ Pull OK:', data.updatedAt, '| from:', data.pushedBy?.slice(0, 16));
-
-        if (hasNewLocalData) {
-          console.log('[FirebaseDb] Local device has items not yet in cloud. Auto-pushing to cloud...');
-          this.pushPayload({
-            jobs: JSON.parse(localStorage.getItem('blp_jobs_v2') || '[]'),
-            jobItems: JSON.parse(localStorage.getItem('blp_job_items_v2') || '[]'),
-            catalog: JSON.parse(localStorage.getItem('blp_catalog_v2') || '[]'),
-            consumables: JSON.parse(localStorage.getItem('blp_consumables_v2') || '[]'),
-            auditLogs: JSON.parse(localStorage.getItem('blp_audit_logs_v2') || '[]'),
-          });
-        }
-
         return { success: true, data };
       }
       console.warn('[FirebaseDb] Pull: document does not exist yet in Firestore.');
@@ -184,6 +104,7 @@ export const firebaseDb = {
       return { success: false, error: err.message };
     }
   },
+
 
   /**
    * Subscribes to realtime Firestore snapshots.
