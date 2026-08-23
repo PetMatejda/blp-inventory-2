@@ -86,8 +86,8 @@ export const PackingList = () => {
   return (
     <div className="max-w-4xl mx-auto pb-32">
 
-      {/* ── STICKY COMMAND BAR ── */}
-      <div className="sticky top-14 z-30">
+      {/* ── STICKY COMMAND BAR — sits directly below TopAppBar ── */}
+      <div className="sticky top-14 z-30 bg-background">
 
         {/* Archived banner */}
         {isArchived && (
@@ -114,7 +114,7 @@ export const PackingList = () => {
         )}
 
         {/* Compact mode strip: mode switcher + progress — single line */}
-        <div className="bg-surface-container backdrop-blur-md border-b border-outline-variant px-3 py-1.5">
+        <div className="bg-surface-container backdrop-blur-md border-b border-outline-variant px-3 py-1">
           <div className="flex items-center gap-2">
             {/* Mode switcher — inline pills */}
             {!isArchived && (
@@ -165,7 +165,7 @@ export const PackingList = () => {
         </div>
 
         {/* Search bar + Scanner */}
-        <div className="bg-surface-container backdrop-blur-md border-b border-outline-variant px-3 py-1.5 flex items-center gap-2">
+        <div className="bg-surface-container backdrop-blur-md border-b border-outline-variant px-3 py-1 flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
             <input
@@ -173,7 +173,7 @@ export const PackingList = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Hledat techniku, SN..."
-              className="w-full h-10 pl-9 pr-9 bg-surface-container border border-outline-variant rounded-xl text-on-surface text-sm focus:border-primary focus:outline-none placeholder:text-outline"
+              className="w-full h-9 pl-9 pr-9 bg-surface-container border border-outline-variant rounded-xl text-on-surface text-sm focus:border-primary focus:outline-none placeholder:text-outline"
             />
             {searchQuery && (
               <button
@@ -187,7 +187,7 @@ export const PackingList = () => {
           <button
             onClick={() => setIsScannerModalOpen(true)}
             disabled={isArchived}
-            className="w-10 h-10 bg-surface-container border border-outline-variant rounded-xl flex items-center justify-center text-primary disabled:opacity-40 active:scale-90 transition-transform shrink-0"
+            className="w-9 h-9 bg-surface-container border border-outline-variant rounded-xl flex items-center justify-center text-primary disabled:opacity-40 active:scale-90 transition-transform shrink-0"
             title="QR / Barcode Skener"
           >
             <QrCode className="w-5 h-5 text-secondary" />
@@ -195,7 +195,7 @@ export const PackingList = () => {
         </div>
 
         {/* Status filter pills */}
-        <div className="bg-surface-container backdrop-blur-md px-3 py-1.5 border-b border-outline-variant/50">
+        <div className="bg-surface-container backdrop-blur-md px-3 py-1 border-b border-outline-variant/50">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {statusFilters.map((f) => {
               const isActive = selectedStatusFilter === f.id;
@@ -233,7 +233,8 @@ export const PackingList = () => {
 
 
       {/* Item List */}
-      <div className="flex flex-col gap-2.5 px-3 pt-3">
+      <div className="flex flex-col gap-2.5 px-3 pt-2">
+
         {filteredItems.length === 0 ? (
           <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-outline flex flex-col items-center gap-2">
             <Package className="w-10 h-10 text-outline/40" />
