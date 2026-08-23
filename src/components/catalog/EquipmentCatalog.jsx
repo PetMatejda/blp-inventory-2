@@ -220,19 +220,22 @@ export const EquipmentCatalog = () => {
           </div>
           <div className="flex-1 min-w-0">
             <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider block">
-              Přidávat do zakázky
+              Přidávat do zakázky (pouze aktivní)
             </span>
             <select
               value={currentJob?.id || ''}
               onChange={(e) => setCurrentJobId(e.target.value)}
               className="w-full bg-transparent text-on-surface font-bold text-sm focus:outline-none cursor-pointer truncate mt-0.5 border-none"
             >
-              {jobs.map((j) => (
-                <option key={j.id} value={j.id}>{j.name} ({j.client})</option>
+              {jobs.filter(j => j.status === 'ACTIVE').map((j) => (
+                <option key={j.id} value={j.id} className="bg-surface-container text-on-surface font-semibold">
+                  {j.name} ({j.client})
+                </option>
               ))}
             </select>
           </div>
         </div>
+
         {currentJob && (
           <button
             onClick={() => setActiveTab('packing')}
