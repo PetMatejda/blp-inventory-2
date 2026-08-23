@@ -297,6 +297,28 @@
       color: #FFF;
     }
 
+    .step-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 6px 0;
+      padding: 6px 12px;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      color: #FFF;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .step-link:hover {
+      background: var(--primary);
+      color: #000;
+    }
+
     .apk-tag {
       display: inline-block;
       background: rgba(16, 185, 129, 0.15);
@@ -309,6 +331,7 @@
       border-radius: 6px;
       margin-top: 4px;
     }
+
 
     /* Login Box */
     .login-box {
@@ -451,7 +474,12 @@
           🍏 iPhone / iPad (Apple)
         </div>
         <ol class="step-list">
-          <li>Otevři odkaz v prohlížeči <strong>Safari</strong>.</li>
+          <li>
+            Otevři v prohlížeči <strong>Safari</strong> webovou adresu aplikace:
+            <div>
+              <a href="/" class="step-link inline-app-url">https://... (Klepni pro otevření) ➔</a>
+            </div>
+          </li>
           <li>Dole uprostřed klepni na tlačítko <strong>Sdílet</strong> (čtvereček se šipkou nahoru ⎋).</li>
           <li>Sjeď kousek dolů a zvol <strong>„Přidat na plochu“</strong> (Add to Home Screen).</li>
           <li>Hotovo! Appka se spustí na celou obrazovku jako samostatná aplikace s BLP ikonou.</li>
@@ -464,10 +492,17 @@
           🤖 Android (Samsung, Xiaomi, Pixel...)
         </div>
         <ol class="step-list">
-          <li><strong>Možnost A (Rychlá instalace přes Chrome):</strong> Otevři v prohlížeči <strong>Chrome</strong> ➔ klepni na hlášku <em>„Přidat na plochu / Instalovat aplikaci“</em> (nebo vpravo nahoře 3 tečky ➔ <em>Přidat na plochu</em>).</li>
-          <li><strong>Možnost B (Přímo APK balíček):</strong> V aplikaci klikni na ikonu <strong>Nastavení ⚙️</strong> a zvol <strong>Stáhnout APK</strong> pro přímou instalaci do Androidu. <span class="apk-tag">APK INSTALACE</span></li>
+          <li>
+            Otevři v prohlížeči <strong>Chrome</strong> webovou adresu aplikace:
+            <div>
+              <a href="/" class="step-link inline-app-url">https://... (Klepni pro otevření) ➔</a>
+            </div>
+          </li>
+          <li><strong>Možnost A (Přidat na plochu / PWA):</strong> V Chrome klepni na vyskakovací hlášku <em>„Přidat na plochu / Instalovat aplikaci“</em> (nebo vpravo nahoře 3 tečky ➔ <em>Přidat na plochu</em>).</li>
+          <li><strong>Možnost B (Nativní APK balíček):</strong> V aplikaci klikni na ikonu <strong>Nastavení ⚙️</strong> a zvol <strong>Stáhnout APK</strong> pro přímou instalaci do Androidu. <span class="apk-tag">APK INSTALACE</span></li>
         </ol>
       </div>
+
 
       <!-- Login Info -->
       <div class="login-box">
@@ -494,6 +529,12 @@
     const mainCta = document.getElementById('mainCta');
     if (urlInput) urlInput.value = appOrigin;
 
+    // Auto-fill inline links in Step 1
+    document.querySelectorAll('.inline-app-url').forEach(el => {
+      el.href = appOrigin;
+      el.innerText = `${appOrigin} (Klepni pro otevření) ➔`;
+    });
+
     function copyAppUrl() {
       const copyBtn = document.getElementById('copyBtn');
       navigator.clipboard.writeText(appOrigin).then(() => {
@@ -506,5 +547,6 @@
       });
     }
   </script>
+
 </body>
 </html>
