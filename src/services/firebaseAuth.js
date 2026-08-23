@@ -6,6 +6,7 @@ import {
   getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInAnonymously,
   signOut,
   onAuthStateChanged,
   db,
@@ -13,6 +14,7 @@ import {
   setDoc,
   getDoc,
 } from './firebase';
+
 
 /**
  * Determines if we're running in a genuine embedded WebView
@@ -152,8 +154,16 @@ export const firebaseAuth = {
 
       // Generic test login requested for testing phase (aaaa / bbbb)
       if ((cleanEmail === 'aaaa' || cleanEmail === 'admin' || cleanEmail === 'test') && cleanPass === 'bbbb') {
+        try {
+          if (!auth.currentUser) {
+            await signInAnonymously(auth);
+          }
+        } catch (anonErr) {
+          console.warn('[FirebaseAuth] Anonymous auth session note:', anonErr?.message);
+        }
+
         const testAdminUser = {
-          id: 'test-admin-aaaa',
+          id: auth.currentUser?.uid || 'test-admin-aaaa',
           name: 'Tester Admin (aaaa)',
           email: 'admin@blp.cz',
           role: 'ADMIN',
@@ -163,6 +173,7 @@ export const firebaseAuth = {
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(testAdminUser));
         return { success: true, user: testAdminUser };
       }
+
 
       const result = await signInWithEmailAndPassword(auth, email.trim(), password);
       const fallbackRole = resolveRole(result.user.email);

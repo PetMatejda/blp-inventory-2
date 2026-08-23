@@ -288,7 +288,30 @@ export const storageService = {
     return jobs[index];
   },
 
+  createJob(jobData, user) {
+    const jobs = this.getJobs();
+    const newJob = {
+      id: 'job-' + Date.now(),
+      name: jobData.name,
+      client: jobData.client || '',
+      assignedGaffer: jobData.assignedGaffer || 'Petr M.',
+      riggingDate: jobData.riggingDate || new Date().toISOString().split('T')[0],
+      deriggingDate: jobData.deriggingDate || new Date().toISOString().split('T')[0],
+      vehicleIds: jobData.vehicleIds || ['v1'],
+      status: 'ACTIVE',
+      mode: 'LOADING',
+    };
+
+    jobs.unshift(newJob);
+    this.addAuditLog(user, newJob.id, 'Nová zakázka', `Vytvořena zakázka: ${newJob.name} (${newJob.client || 'Bez klienta'})`, 'add');
+    this.saveJobs(jobs);
+    this.setCurrentJobId(newJob.id);
+
+    return newJob;
+  },
+
   updateJob(jobId, jobData, user) {
+
     const jobs = this.getJobs();
     const index = jobs.findIndex(j => j.id === jobId);
     if (index === -1) return null;

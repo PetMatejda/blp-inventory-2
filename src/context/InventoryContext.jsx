@@ -281,6 +281,13 @@ export const InventoryProvider = ({ children }) => {
     afterMutation();
   };
 
+  const getActorName = () => {
+    if (currentUser?.name) {
+      return `${currentUser.name} (${currentUser.role || 'USER'})`;
+    }
+    return 'Petr M. (Lead Gaffer)';
+  };
+
   // Job Status & Template Operations (Restricted to ADMIN)
   const finishJob = (jobId) => {
     if (!isAdmin()) {
@@ -288,7 +295,7 @@ export const InventoryProvider = ({ children }) => {
       return;
     }
     setSyncStatus('syncing');
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = getActorName();
     storageService.finishJob(jobId, actorName);
     afterMutation();
   };
@@ -299,7 +306,7 @@ export const InventoryProvider = ({ children }) => {
       return;
     }
     setSyncStatus('syncing');
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = getActorName();
     storageService.reactivateJob(jobId, actorName);
     afterMutation();
   };
@@ -310,7 +317,7 @@ export const InventoryProvider = ({ children }) => {
       return;
     }
     setSyncStatus('syncing');
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = getActorName();
     storageService.updateJob(jobId, jobData, actorName);
     afterMutation();
     setEditingJob(null);
@@ -322,7 +329,7 @@ export const InventoryProvider = ({ children }) => {
       return;
     }
     setSyncStatus('syncing');
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = getActorName();
     const newJob = storageService.duplicateJobAsTemplate(sourceJobId, newJobData, actorName);
     afterMutation();
     setCurrentJobId(newJob.id);
@@ -336,7 +343,7 @@ export const InventoryProvider = ({ children }) => {
       return;
     }
     setSyncStatus('syncing');
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = getActorName();
     storageService.createCatalogItem(itemData, actorName);
     afterMutation();
   };
@@ -347,7 +354,7 @@ export const InventoryProvider = ({ children }) => {
       return;
     }
     setSyncStatus('syncing');
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = getActorName();
     storageService.updateCatalogItem(catalogId, itemData, actorName);
     afterMutation();
   };
@@ -358,14 +365,14 @@ export const InventoryProvider = ({ children }) => {
       return;
     }
     setSyncStatus('syncing');
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = getActorName();
     storageService.deleteCatalogItem(catalogId, actorName);
     afterMutation();
   };
 
   const updateConsumableState = (consumableId, newState) => {
     setSyncStatus('syncing');
-    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
+    const actorName = getActorName();
     storageService.updateConsumableState(consumableId, newState, actorName);
     afterMutation();
   };
@@ -373,7 +380,7 @@ export const InventoryProvider = ({ children }) => {
   const toggleJobMode = () => {
     if (!currentJobId || currentJob?.status === 'ARCHIVED') return;
     setSyncStatus('syncing');
-    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
+    const actorName = getActorName();
     storageService.toggleJobMode(currentJobId, actorName);
     afterMutation();
   };
@@ -384,12 +391,14 @@ export const InventoryProvider = ({ children }) => {
       return;
     }
     setSyncStatus('syncing');
-    const actorName = `${currentUser.name} (${currentUser.role})`;
+    const actorName = getActorName();
     const newJob = storageService.createJob(jobData, actorName);
     afterMutation();
     setCurrentJobId(newJob.id);
+    setActiveTab('packing');
     setIsNewJobModalOpen(false);
   };
+
 
   const forceSyncAll = async () => {
     setSyncStatus('syncing');

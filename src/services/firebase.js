@@ -7,9 +7,11 @@ import {
   getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInAnonymously,
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth';
+
 import {
   getFirestore,
   initializeFirestore,
@@ -80,6 +82,7 @@ export {
   getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInAnonymously,
   signOut,
   onAuthStateChanged,
   doc,
@@ -90,3 +93,4 @@ export {
   updateDoc,
   deleteDoc,
 };
+
