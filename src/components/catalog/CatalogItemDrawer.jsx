@@ -3,7 +3,7 @@ import { useInventory } from '../../context/InventoryContext';
 import { CATEGORIES } from '../../utils/categoryIcons';
 import {
   X, Check, Plus, Trash2, Layers, Upload, Image as ImageIcon,
-  Weight, Zap, Package, ChevronDown
+  Weight, Zap, Package, ChevronDown, Camera
 } from 'lucide-react';
 
 const PRESET_PHOTOS = [
@@ -80,6 +80,9 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
     reader.onloadend = () => set({ image: reader.result });
     reader.readAsDataURL(file);
   };
+
+  // Same handler for camera capture — reused for both inputs
+  const handleCameraCapture = handleFileUpload;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -167,9 +170,15 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                   )}
                 </div>
                 <div className="flex flex-col gap-2 flex-1">
+                  {/* Upload from gallery */}
                   <label className="px-3 py-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface text-xs font-semibold rounded-xl cursor-pointer flex items-center gap-2 transition-all active:scale-95">
-                    <Upload className="w-3.5 h-3.5" /> Nahrát z mobilu / PC
+                    <Upload className="w-3.5 h-3.5" /> Nahrát z galerie
                     <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                  </label>
+                  {/* Camera capture — opens rear camera directly on mobile */}
+                  <label className="px-3 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs font-semibold rounded-xl cursor-pointer flex items-center gap-2 transition-all active:scale-95">
+                    <Camera className="w-3.5 h-3.5" /> Vyfotit kamerou
+                    <input type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} className="hidden" />
                   </label>
                   <button
                     type="button"

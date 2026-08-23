@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { InventoryProvider, useInventory } from './context/InventoryContext';
 import { TopAppBar } from './components/layout/TopAppBar';
 import { BottomNavBar } from './components/layout/BottomNavBar';
@@ -72,9 +72,38 @@ const MainContent = () => {
 /**
  * AuthGate — renders a loading splash until Firebase resolves auth state.
  * Prevents the dashboard from being visible (even briefly) before auth check.
+ * Also installs a back-button interceptor so Android PWA back doesn't navigate
+ * to the Google OAuth redirect page.
  */
 const AuthGate = ({ children }) => {
-  const { authLoading, currentUser } = useInventory();
+  const { authLoading, currentUser, activeTab, setActiveTab } = useInventory();
+
+  // ── Android back button guard ──
+  // Push a dummy history entry so pressing back lands here instead of the
+  // Google OAuth redirect URL that Firebase left in browser history.
+  useEffect(() => {
+    // Push a state so we have something to intercept
+    window.history.pushState({ blp: true }, '', window.location.href);
+
+    const handlePopState = (e) => {
+      // Always push state back to prevent further back navigation
+      window.history.pushState({ blp: true }, '', window.location.href);
+
+      if (!currentUser) {
+        // Not logged in — back does nothing (auth modal is already shown)
+        return;
+      }
+
+      // Navigate between tabs: packing → dashboard, others → dashboard
+      if (activeTab === 'packing' || activeTab === 'catalog' || activeTab === 'bracha' || activeTab === 'history') {
+        setActiveTab('dashboard');
+      }
+      // On dashboard: back is a no-op (prevents accidental exit)
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentUser, activeTab, setActiveTab]);
 
   // Show branded loading screen while Firebase checks session
   if (authLoading) {
