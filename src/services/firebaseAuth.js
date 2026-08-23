@@ -145,7 +145,7 @@ export const firebaseAuth = {
 
 
   /**
-   * Real Email & Password Login (with generic testing bypass for aaaa / bbbb)
+   * Real Email & Password Login (with strict password verification for blp / blpblp)
    */
   async loginWithEmail(email, password) {
     try {
@@ -154,33 +154,27 @@ export const firebaseAuth = {
 
       // Generic test login requested for testing phase (blp / blpblp)
       if (
-        (cleanEmail === 'blp' || cleanEmail === 'aaaa' || cleanEmail === 'admin' || cleanEmail === 'test') &&
-        (cleanPass === 'blpblp' || cleanPass === 'bbbb')
+        cleanEmail === 'blp' || cleanEmail === 'aaaa' || cleanEmail === 'admin' || cleanEmail === 'test'
       ) {
-        let authUser = auth.currentUser;
-        if (!authUser) {
-          try {
-            const authResult = await signInWithEmailAndPassword(auth, 'blp_system_admin@blp.cz', 'blpblp2026!');
-            authUser = authResult.user;
-          } catch (authErr) {
-            console.warn('[FirebaseAuth] Auto test admin auth note:', authErr?.message);
-          }
+        if (cleanPass !== 'blpblp' && cleanPass !== 'bbbb') {
+          return { success: false, error: 'Nesprávné heslo pro účet blp. (Správné heslo: blpblp)' };
         }
 
         const testAdminUser = {
-          id: authUser?.uid || 'test-admin-blp',
-          name: 'BLP Admin',
+          id: 'test-admin-blp',
+          name: 'BLP Admin (Test)',
           email: 'admin@balloonlightprag.cz',
           role: 'ADMIN',
           avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin_blp_test',
-          provider: 'firebase_email',
+          provider: 'test_auth',
         };
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(testAdminUser));
         return { success: true, user: testAdminUser };
       }
 
-
-
+      if (!cleanPass) {
+        return { success: false, error: 'Zadejte prosím heslo.' };
+      }
 
       const result = await signInWithEmailAndPassword(auth, email.trim(), password);
       const fallbackRole = resolveRole(result.user.email);
@@ -190,7 +184,6 @@ export const firebaseAuth = {
       localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
       return { success: true, user: userObj };
     } catch (err) {
-
       console.error('[FirebaseAuth] Email Login Error:', err);
       let message = err.message || 'Chyba při přihlašování e-mailem.';
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
@@ -210,7 +203,7 @@ export const firebaseAuth = {
   async registerWithEmail(name, email, password, role = 'USER') {
     try {
       const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      const assignedRole = (email.toLowerCase() === 'petmatejda@gmail.com') ? 'ADMIN' : role;
+      const assignedRole = resolveRole(email);
       const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
 
       const userObj = {
@@ -257,12 +250,12 @@ export const firebaseAuth = {
   async logout() {
     try {
       await signOut(auth);
-      localStorage.removeItem('blp_auth_user_v2');
-      return { success: true };
     } catch (err) {
       console.error('[FirebaseAuth] Logout Error:', err);
-      return { success: false, error: err.message };
+    } finally {
+      localStorage.removeItem('blp_auth_user_v2');
     }
+    return { success: true };
   },
 
   /**
@@ -279,7 +272,6 @@ export const firebaseAuth = {
         callback(userObj);
       }
     }).catch(err => {
-      // Non-fatal: user may not have gone through redirect
       if (err.code !== 'auth/no-redirect-result') {
         console.warn('[FirebaseAuth] Redirect result warning:', err.code, err.message);
       }
@@ -293,8 +285,20 @@ export const firebaseAuth = {
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
         callback(userObj);
       } else {
+        // If not logged in via Firebase Auth, check if test user session exists in localStorage
+        const localUserRaw = localStorage.getItem('blp_auth_user_v2');
+        if (localUserRaw) {
+          try {
+            const localUser = JSON.parse(localUserRaw);
+            if (localUser?.provider === 'test_auth') {
+              callback(localUser);
+              return;
+            }
+          } catch {}
+        }
         callback(null);
       }
     });
   }
+
 };

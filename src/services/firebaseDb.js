@@ -4,8 +4,6 @@ import {
   setDoc,
   getDoc,
   onSnapshot,
-  auth,
-  signInWithEmailAndPassword,
 } from './firebase';
 import { INITIAL_CATALOG, INITIAL_JOBS } from '../mockData/initialData';
 
@@ -19,20 +17,8 @@ const SESSION_ID = `session_${Date.now()}_${Math.random().toString(36).slice(2, 
 // We skip snapshots where pushedBy === SESSION_ID
 const localPushTimestamps = new Set();
 
-const ensureAuth = async () => {
-  if (!auth.currentUser) {
-    try {
-      await signInWithEmailAndPassword(auth, 'blp_system_admin@blp.cz', 'blpblp2026!');
-      console.log('[FirebaseDb] Auto-authenticated system user:', auth.currentUser?.uid);
-    } catch (e) {
-      console.warn('[FirebaseDb] Auto-auth note:', e?.message);
-    }
-  }
-};
-
 const writeLocalCache = (data) => {
   let hasNewLocalData = false;
-
 
   // Merge jobs: don't wipe newly created local jobs if remote snapshot is slightly older
   if (data.jobs && Array.isArray(data.jobs) && data.jobs.length > 0) {
@@ -82,7 +68,6 @@ export const firebaseDb = {
    */
   async pushPayload(payload) {
     try {
-      await ensureAuth();
       const updatedAt = new Date().toISOString();
       const mainRef = doc(db, 'inventory_store', GLOBAL_STORE_DOC_ID);
 
@@ -121,7 +106,6 @@ export const firebaseDb = {
    */
   async pullFromCloud() {
     try {
-      await ensureAuth();
       const mainRef = doc(db, 'inventory_store', GLOBAL_STORE_DOC_ID);
       const snap = await getDoc(mainRef);
       if (snap.exists()) {
@@ -150,7 +134,6 @@ export const firebaseDb = {
     }
   },
 
-
   /**
    * Subscribes to realtime Firestore snapshots.
    * Calls onUpdate ONLY when the change came from ANOTHER device/session.
@@ -160,8 +143,8 @@ export const firebaseDb = {
    */
   subscribeToCloud(onUpdate) {
     try {
-      ensureAuth();
       const mainRef = doc(db, 'inventory_store', GLOBAL_STORE_DOC_ID);
+
 
       const unsubscribe = onSnapshot(
         mainRef,
