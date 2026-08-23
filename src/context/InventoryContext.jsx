@@ -96,6 +96,7 @@ export const InventoryProvider = ({ children }) => {
       if (user) {
         setCurrentUserState(user);
         storageService.setUserRole(user.role);
+        setIsAuthModalOpen(false); // Close login modal on successful auth
       } else {
         setCurrentUserState(null);
         setIsAuthModalOpen(true);
