@@ -66,22 +66,27 @@ export const PackingList = () => {
     return true;
   });
 
-  const totalCount = jobItems.length;
-  const pendingCount = jobItems.filter(i => i.status === 'PENDING').length;
-  const loadedCount = jobItems.filter(i => i.status === 'LOADED').length;
-  const packedCount = jobItems.filter(i => i.status === 'PACKED').length;
+  const totalRows = jobItems.length;
+  const totalPcs = jobItems.reduce((sum, i) => sum + (i.quantityRequested || 1), 0);
+  const pendingRows = jobItems.filter(i => i.status === 'PENDING').length;
+  const loadedRows = jobItems.filter(i => i.status === 'LOADED').length;
+  const loadedPcs = jobItems.filter(i => i.status === 'LOADED').reduce((sum, i) => sum + (i.quantityLoaded || 0), 0);
+  const packedRows = jobItems.filter(i => i.status === 'PACKED').length;
+  const packedPcs = jobItems.filter(i => i.status === 'PACKED').reduce((sum, i) => sum + (i.quantityLoaded || 0), 0);
   const damagedCount = jobItems.filter(i => i.status === 'DAMAGED').length;
 
-  const doneCount = isModeDerigging ? packedCount : loadedCount;
-  const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+  const doneRows = isModeDerigging ? packedRows : loadedRows;
+  const donePcs = isModeDerigging ? packedPcs : loadedPcs;
+  const progress = totalPcs > 0 ? Math.round((donePcs / totalPcs) * 100) : (totalRows > 0 ? Math.round((doneRows / totalRows) * 100) : 0);
 
   const statusFilters = [
-    { id: 'ALL', label: 'Vše', count: totalCount, activeClass: 'bg-primary text-on-primary-container border-primary' },
-    { id: 'PENDING', label: 'K naložení', count: pendingCount, dot: '#475569', activeClass: 'bg-surface-variant text-on-surface border-outline' },
-    { id: 'LOADED', label: 'Na place', count: loadedCount, dot: '#10b981', activeClass: 'bg-secondary text-on-secondary-container border-secondary' },
-    { id: 'PACKED', label: 'K odvozu', count: packedCount, dot: '#06b6d4', activeClass: 'bg-tertiary-container text-on-tertiary-container border-tertiary' },
+    { id: 'ALL', label: 'Vše', count: totalRows, activeClass: 'bg-primary text-on-primary-container border-primary' },
+    { id: 'PENDING', label: 'K naložení', count: pendingRows, dot: '#475569', activeClass: 'bg-surface-variant text-on-surface border-outline' },
+    { id: 'LOADED', label: 'Na place', count: loadedRows, dot: '#10b981', activeClass: 'bg-secondary text-on-secondary-container border-secondary' },
+    { id: 'PACKED', label: 'K odvozu', count: packedRows, dot: '#06b6d4', activeClass: 'bg-tertiary-container text-on-tertiary-container border-tertiary' },
     { id: 'DAMAGED', label: 'Závada', count: damagedCount, dot: '#ef4444', activeClass: 'bg-error-container text-on-error-container border-error' },
   ];
+
 
   return (
     <div className="max-w-4xl mx-auto pb-32">
@@ -153,8 +158,9 @@ export const PackingList = () => {
                 />
               </div>
               <span className="text-[11px] font-mono font-bold text-on-surface-variant shrink-0">
-                {doneCount}/{totalCount}
+                {donePcs}/{totalPcs} ks ({doneRows}/{totalRows})
               </span>
+
               {damagedCount > 0 && (
                 <span className="text-[10px] text-error flex items-center gap-0.5 shrink-0">
                   <AlertTriangle className="w-3 h-3" /> {damagedCount}

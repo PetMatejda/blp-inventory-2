@@ -14,7 +14,9 @@ export const ContextMenuModal = () => {
     finishJob,
     reactivateJob,
     deleteJobItem,
+    deleteJob,
     setDamageReportItem,
+
     addCatalogItemToJob,
     setIsMasterCatalogModalOpen,
     deleteCatalogItem,
@@ -116,8 +118,22 @@ export const ContextMenuModal = () => {
                 <Lock className="w-4 h-4" /> Ukončit Zakázku (Archivovat)
               </button>
             )}
+
+            {/* Permanent Delete for Admins */}
+            <button
+              onClick={() => {
+                if (window.confirm(`OPRAVDU chcete trvale smazat zakázku "${target.name}" včetně všech jejích přiřazených položek?\nTato akce je nevratná.`)) {
+                  deleteJob(target.id);
+                  handleClose();
+                }
+              }}
+              className="w-full px-3 py-2.5 bg-error-container/20 hover:bg-error-container/40 rounded-xl text-xs font-semibold text-error flex items-center gap-2.5 transition-colors border border-error/30 mt-1"
+            >
+              <Trash2 className="w-4 h-4" /> Trvale Smazat Zakázku
+            </button>
           </div>
         )}
+
 
         {/* PACKING ITEM Context Menu */}
         {type === 'PACKING_ITEM' && (

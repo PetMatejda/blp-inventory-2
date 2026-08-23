@@ -20,26 +20,77 @@ const localPushTimestamps = new Set();
 const writeLocalCache = (data) => {
   let hasNewLocalData = false;
 
-  // Merge jobs: don't wipe newly created local jobs if remote snapshot is slightly older
+  const localItems = JSON.parse(localStorage.getItem('blp_job_items_v2') || '[]');
+  const remoteItems = Array.isArray(data.jobItems) ? data.jobItems : [];
+  const remoteItemIds = new Set(remoteItems.map(i => i.id));
+  const pendingLocalItems = localItems.filter(li => !remoteItemIds.has(li.id));
+  if (pendingLocalItems.length > 0) hasNewLocalData = true;
+  const mergedItems = [...remoteItems, ...pendingLocalItems];
+  localStorage.setItem('blp_job_items_v2', JSON.stringify(mergedItems));
+
+  // Merge jobs with smart deduplication by name & id
   if (data.jobs && Array.isArray(data.jobs) && data.jobs.length > 0) {
     const localJobs = JSON.parse(localStorage.getItem('blp_jobs_v2') || '[]');
     const remoteJobIds = new Set(data.jobs.map(j => j.id));
-    // Keep local jobs that aren't in remote yet (recently created)
-    const pendingLocalJobs = localJobs.filter(lj => !remoteJobIds.has(lj.id));
-    if (pendingLocalJobs.length > 0) hasNewLocalData = true;
-    const mergedJobs = [...data.jobs, ...pendingLocalJobs];
-    localStorage.setItem('blp_jobs_v2', JSON.stringify(mergedJobs));
+
+    // Keep unique jobs
+    const finalJobs = [...data.jobs];
+    
+    for (const lj of localJobs) {
+      if (remoteJobIds.has(lj.id)) continue;
+
+      // Check if there is an existing remote job with the exact same name
+      const duplicateByNameIndex = finalJobs.findIndex(
+        j => j.name.trim().toLowerCase() === lj.name.trim().toLowerCase()
+      );
+
+      if (duplicateByNameIndex !== -1) {
+        const existingJob = finalJobs[duplicateByNameIndex];
+        const existingItems = mergedItems.filter(i => i.jobId === existingJob.id);
+        const localItemsForLj = mergedItems.filter(i => i.jobId === lj.id);
+
+        if (localItemsForLj.length > 0 && existingItems.length === 0) {
+          // Re-map items from lj to existingJob
+          mergedItems.forEach(i => {
+            if (i.jobId === lj.id) i.jobId = existingJob.id;
+          });
+          localStorage.setItem('blp_job_items_v2', JSON.stringify(mergedItems));
+          hasNewLocalData = true;
+          continue;
+        } else if (localItemsForLj.length === 0) {
+          // It was an empty duplicate, ignore it
+          continue;
+        }
+      }
+
+      finalJobs.push(lj);
+      hasNewLocalData = true;
+    }
+
+    // Deduplicate any exact duplicate job names in final list
+    const seenNames = new Map();
+    const dedupedJobs = [];
+    for (const j of finalJobs) {
+      const key = j.name.trim().toLowerCase();
+      if (!seenNames.has(key)) {
+        seenNames.set(key, j);
+        dedupedJobs.push(j);
+      } else {
+        const currentItems = mergedItems.filter(i => i.jobId === j.id);
+        const seenJob = seenNames.get(key);
+        if (currentItems.length > 0) {
+          mergedItems.forEach(i => {
+            if (i.jobId === j.id) i.jobId = seenJob.id;
+          });
+          localStorage.setItem('blp_job_items_v2', JSON.stringify(mergedItems));
+          hasNewLocalData = true;
+        }
+      }
+    }
+
+    localStorage.setItem('blp_jobs_v2', JSON.stringify(dedupedJobs));
   }
 
-  // Merge jobItems
-  if (data.jobItems && Array.isArray(data.jobItems)) {
-    const localItems = JSON.parse(localStorage.getItem('blp_job_items_v2') || '[]');
-    const remoteItemIds = new Set(data.jobItems.map(i => i.id));
-    const pendingLocalItems = localItems.filter(li => !remoteItemIds.has(li.id));
-    if (pendingLocalItems.length > 0) hasNewLocalData = true;
-    const mergedItems = [...data.jobItems, ...pendingLocalItems];
-    localStorage.setItem('blp_job_items_v2', JSON.stringify(mergedItems));
-  }
 
   // Catalog: preserve rich 60+ Master Catalog
   if (data.catalog && Array.isArray(data.catalog) && data.catalog.length >= 20) {

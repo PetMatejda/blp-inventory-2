@@ -411,6 +411,18 @@ export const InventoryProvider = ({ children }) => {
     setIsNewJobModalOpen(false);
   };
 
+  const deleteJob = (jobId) => {
+    if (!isAdmin()) {
+      alert('Mazání zakázek vyžaduje oprávnění ADMIN.');
+      return;
+    }
+    setSyncStatus('syncing');
+    const actorName = getActorName();
+    storageService.deleteJob(jobId, actorName);
+    afterMutation();
+  };
+
+
 
   const forceSyncAll = async () => {
     setSyncStatus('syncing');
@@ -483,7 +495,9 @@ export const InventoryProvider = ({ children }) => {
         updateConsumableState,
         toggleJobMode,
         createJob,
+        deleteJob,
         forceSyncAll,
+
         resetDemoData,
 
         // Modals & Editing

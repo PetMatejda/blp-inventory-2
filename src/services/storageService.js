@@ -323,6 +323,27 @@ export const storageService = {
     return jobs[index];
   },
 
+  deleteJob(jobId, user) {
+    const jobs = this.getJobs();
+    const targetJob = jobs.find(j => j.id === jobId);
+    const updatedJobs = jobs.filter(j => j.id !== jobId);
+    this.saveJobs(updatedJobs);
+
+    // Remove all associated items for this job
+    const allJobItems = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
+    const remainingItems = allJobItems.filter(i => i.jobId !== jobId);
+    this.saveJobItems(remainingItems);
+
+    this.addAuditLog(user, jobId, 'Smazána zakázka', `Zakázka ${targetJob?.name || jobId} byla trvale smazána včetně položek`, 'delete');
+
+    if (this.getCurrentJobId() === jobId) {
+      this.setCurrentJobId(updatedJobs[0]?.id || null);
+    }
+
+    return true;
+  },
+
+
   duplicateJobAsTemplate(sourceJobId, newJobData, user) {
     const jobs = this.getJobs();
     const sourceJob = jobs.find(j => j.id === sourceJobId);
