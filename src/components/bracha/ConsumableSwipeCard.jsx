@@ -15,18 +15,21 @@ export const ConsumableSwipeCard = ({ item }) => {
       setContextMenu({ type: 'CONSUMABLE', target: item });
     },
     () => {
-      handleCycleForward();
+      // Tap = worsen state (intuitive: tap to mark as needing refill)
+      if (item.state < 2) updateConsumableState(item.id, item.state + 1);
     }
   );
 
-  const handleCycleForward = () => {
-    const nextState = (item.state + 1) % 3;
-    updateConsumableState(item.id, nextState);
+  // Swipe RIGHT = zlepšit stav (směrem k OK)
+  // Swipe LEFT  = zhoršit stav (směrem k REFILL)
+  // Žádné cyklické wrapping — na hranici (0 nebo 2) swipe nemá efekt
+
+  const handleImprove = () => {
+    if (item.state > 0) updateConsumableState(item.id, item.state - 1);
   };
 
-  const handleCycleBackward = () => {
-    const prevState = (item.state + 2) % 3;
-    updateConsumableState(item.id, prevState);
+  const handleWorsen = () => {
+    if (item.state < 2) updateConsumableState(item.id, item.state + 1);
   };
 
   const handleTouchStart = (e) => {
@@ -53,9 +56,9 @@ export const ConsumableSwipeCard = ({ item }) => {
     setIsDragging(false);
 
     if (dragOffset > 60) {
-      handleCycleForward();
+      handleImprove(); // Doprava = zlepšit
     } else if (dragOffset < -60) {
-      handleCycleBackward();
+      handleWorsen();  // Doleva = zhoršit
     } else {
       longPressProps.onMouseUp(e);
     }
@@ -102,11 +105,13 @@ export const ConsumableSwipeCard = ({ item }) => {
     <div className="swipe-card-container rounded-2xl overflow-hidden shadow-sm relative group select-none bg-surface-container">
       {/* Background action reveal layers */}
       <div className="absolute inset-0 flex justify-between z-0 pointer-events-none font-bold text-xs">
-        <div className="bg-secondary-container text-on-secondary-container w-1/2 flex items-center justify-start pl-4 gap-1">
-          <ChevronRight className="w-5 h-5 text-secondary" /> Posun stavu Vpřed
+        {/* Swipe RIGHT → Zlepšit (green) */}
+        <div className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 w-1/2 flex items-center justify-start pl-4 gap-1">
+          <ChevronRight className="w-5 h-5" /> Zlepšit (→ OK)
         </div>
-        <div className="bg-tertiary-container text-on-tertiary-container w-1/2 flex items-center justify-end pr-4 gap-1">
-          Posun Zpět <ChevronLeft className="w-5 h-5 text-tertiary" />
+        {/* Swipe LEFT → Zhoršit (red) */}
+        <div className="bg-rose-500/15 text-rose-700 dark:text-rose-300 w-1/2 flex items-center justify-end pr-4 gap-1">
+          Zhoršit (→ Refill) <ChevronLeft className="w-5 h-5" />
         </div>
       </div>
 

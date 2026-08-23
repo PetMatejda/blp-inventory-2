@@ -69,24 +69,48 @@ const MainContent = () => {
   }
 };
 
+/**
+ * AuthGate — renders a loading splash until Firebase resolves auth state.
+ * Prevents the dashboard from being visible (even briefly) before auth check.
+ */
+const AuthGate = ({ children }) => {
+  const { authLoading, currentUser } = useInventory();
+
+  // Show branded loading screen while Firebase checks session
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-2xl animate-pulse">
+          <span className="text-3xl font-black text-white">B</span>
+        </div>
+        <p className="text-outline text-sm font-mono">Načítám...</p>
+      </div>
+    );
+  }
+
+  return children;
+};
+
 export function App() {
   return (
     <InventoryProvider>
-      <div className="min-h-screen flex flex-col bg-background text-on-surface">
-        {/* Fixed Top Bar — h-14 (56px) */}
-        <TopAppBar />
+      <AuthGate>
+        <div className="min-h-screen flex flex-col bg-background text-on-surface">
+          {/* Fixed Top Bar — h-14 (56px) */}
+          <TopAppBar />
 
-        {/* Main Dynamic View — fills space between TopAppBar and BottomNavBar */}
-        <main className="flex-1 w-full max-w-5xl mx-auto overflow-x-hidden">
-          <MainContent />
-        </main>
+          {/* Main Dynamic View — fills space between TopAppBar and BottomNavBar */}
+          <main className="flex-1 w-full max-w-5xl mx-auto overflow-x-hidden">
+            <MainContent />
+          </main>
 
-        {/* Bottom Mobile & Desktop Navigation — fixed, h-16 */}
-        <BottomNavBar />
+          {/* Bottom Mobile & Desktop Navigation — fixed, h-16 */}
+          <BottomNavBar />
 
-        {/* Dialog & Modal Layer */}
-        <ModalLayer />
-      </div>
+          {/* Dialog & Modal Layer */}
+          <ModalLayer />
+        </div>
+      </AuthGate>
     </InventoryProvider>
   );
 }

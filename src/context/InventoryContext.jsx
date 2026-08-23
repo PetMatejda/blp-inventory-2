@@ -10,13 +10,15 @@ export const InventoryProvider = ({ children }) => {
   const [jobs, setJobs] = useState([]);
   const [currentJobId, setCurrentJobIdState] = useState('');
   const [jobItems, setJobItems] = useState([]);
+  const [allJobItems, setAllJobItems] = useState([]); // ALL items across ALL jobs — for dashboard counts
   const [vehicles, setVehicles] = useState([]);
   const [consumables, setConsumables] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [catalog, setCatalog] = useState([]);
   const [currentUser, setCurrentUserState] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true); // true until first Firebase auth response
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const [themeMode, setThemeMode] = useState('dark');
+  const [themeMode, setThemeMode] = useState('light');
 
   // Cloud Sync state & indicator
   const [syncStatus, setSyncStatus] = useState('synced'); // 'synced' | 'syncing' | 'offline' | 'error'
@@ -51,6 +53,7 @@ export const InventoryProvider = ({ children }) => {
     const savedJobId = storageService.getCurrentJobId();
     setCurrentJobIdState(savedJobId);
     setJobItems(storageService.getJobItems(savedJobId));
+    setAllJobItems(storageService.getJobItems(null)); // null = all jobs
     setVehicles(storageService.getVehicles());
     setConsumables(storageService.getConsumables());
     setAuditLogs(storageService.getAuditLogs());
@@ -93,18 +96,22 @@ export const InventoryProvider = ({ children }) => {
         setCurrentUserState(null);
         setIsAuthModalOpen(true);
       }
+      setAuthLoading(false); // Auth has resolved — safe to render
     });
 
     // Step 5: Pull fresh data when user switches back to the app
+    // Debounced to avoid login flash caused by rapid auth state checks
+    let visibilityTimeout = null;
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        setSyncStatus('syncing');
-        firebaseDb.pullFromCloud().then((res) => {
-          if (res.success) {
-            refreshDataFromLocal();
-          }
-          setSyncStatus(res.success ? 'synced' : 'offline');
-        });
+        if (visibilityTimeout) clearTimeout(visibilityTimeout);
+        visibilityTimeout = setTimeout(() => {
+          setSyncStatus('syncing');
+          firebaseDb.pullFromCloud().then((res) => {
+            if (res.success) refreshDataFromLocal();
+            setSyncStatus(res.success ? 'synced' : 'offline');
+          });
+        }, 800); // Delay prevents auth modal flash on quick tab switch
       }
     };
 
@@ -399,6 +406,8 @@ export const InventoryProvider = ({ children }) => {
         setCurrentJobId,
         currentJob,
         jobItems,
+        allJobItems,
+        authLoading,
         vehicles,
         consumables,
         auditLogs,

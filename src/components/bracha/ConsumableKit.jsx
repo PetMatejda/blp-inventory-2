@@ -37,7 +37,7 @@ export const ConsumableKit = () => {
               SPOTŘEBNÍ MATERIÁL
             </span>
           </div>
-          <p className="text-sm text-outline">Potažením doprava / doleva měňte stavy zásoby kufru Brácha</p>
+          <p className="text-sm text-outline">← Swipe doleva = zhoršit stav &nbsp;|&nbsp; Swipe doprava = zlepšit →</p>
         </div>
 
         {/* Print Shopping Order CTA */}

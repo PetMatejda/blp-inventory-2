@@ -4,10 +4,10 @@ import { useLongPress } from '../../hooks/useLongPress';
 import { Plus, FolderOpen, Calendar, User, FileText, AlertTriangle, CheckCircle, Lock, Unlock, Copy, Edit2, Archive, MoreVertical, Shield, Package, Truck } from 'lucide-react';
 
 const JobCardItem = ({ job, isSelected }) => {
-  const { jobItems, setCurrentJobId, setActiveTab, setEditingJob, setTemplateJob, setIsProtocolModalOpen, finishJob, reactivateJob, setContextMenu, isAdmin } = useInventory();
+  const { allJobItems, setCurrentJobId, setActiveTab, setEditingJob, setTemplateJob, setIsProtocolModalOpen, finishJob, reactivateJob, setContextMenu, isAdmin } = useInventory();
 
-  // Reactive job items state
-  const items = jobItems.filter(i => i.jobId === job.id);
+  // Use allJobItems so dashboard always shows correct counts regardless of active job
+  const items = allJobItems.filter(i => i.jobId === job.id);
   const totalReq = items.reduce((sum, i) => sum + i.quantityRequested, 0);
   const loadedCount = items.filter(i => i.status === 'LOADED').reduce((sum, i) => sum + i.quantityLoaded, 0);
   const packedCount = items.filter(i => i.status === 'PACKED').reduce((sum, i) => sum + i.quantityLoaded, 0);
@@ -49,13 +49,13 @@ const JobCardItem = ({ job, isSelected }) => {
                 </span>
               )}
               {!isArchived && isModeDerigging && (
-                <span className="px-2.5 py-0.5 bg-cyan-950 text-cyan-300 font-mono text-[11px] font-bold rounded border border-cyan-500/50 flex items-center gap-1">
-                  <Truck className="w-3 h-3 text-cyan-400" /> REŽIM DERIGGING
+                <span className="px-2.5 py-0.5 bg-blue-500/15 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-mono text-[11px] font-bold rounded border border-blue-500/40 flex items-center gap-1">
+                  <Truck className="w-3 h-3" /> REŽIM DERIGGING
                 </span>
               )}
               {!isArchived && !isModeDerigging && (
-                <span className="px-2.5 py-0.5 bg-emerald-950 text-emerald-300 font-mono text-[11px] font-bold rounded border border-emerald-500/50 flex items-center gap-1">
-                  <Package className="w-3 h-3 text-emerald-400" /> REŽIM NAKLÁDKA
+                <span className="px-2.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-mono text-[11px] font-bold rounded border border-emerald-500/40 flex items-center gap-1">
+                  <Package className="w-3 h-3" /> REŽIM NAKLÁDKA
                 </span>
               )}
             </div>
