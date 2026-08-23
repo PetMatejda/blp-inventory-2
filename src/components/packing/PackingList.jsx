@@ -76,8 +76,7 @@ export const PackingList = () => {
   const damagedCount = jobItems.filter(i => i.status === 'DAMAGED').length;
 
   const doneRows = isModeDerigging ? packedRows : loadedRows;
-  const donePcs = isModeDerigging ? packedPcs : loadedPcs;
-  const progress = totalPcs > 0 ? Math.round((donePcs / totalPcs) * 100) : (totalRows > 0 ? Math.round((doneRows / totalRows) * 100) : 0);
+  const progress = totalRows > 0 ? Math.round((doneRows / totalRows) * 100) : 0;
 
   const statusFilters = [
     { id: 'ALL', label: 'Vše', count: totalRows, activeClass: 'bg-primary text-on-primary-container border-primary' },
@@ -158,7 +157,7 @@ export const PackingList = () => {
                 />
               </div>
               <span className="text-xs font-mono font-bold text-on-surface shrink-0">
-                {donePcs}/{totalPcs} ks <span className="text-on-surface-variant font-normal">({doneRows}/{totalRows})</span>
+                {doneRows} / {totalRows} položek • {progress} %
               </span>
 
               {damagedCount > 0 && (
@@ -169,6 +168,7 @@ export const PackingList = () => {
             </div>
           </div>
         </div>
+
 
         {/* Row 2: Search bar + Scanner */}
         <div className="px-3 py-1.5 border-b border-outline-variant/60 flex items-center gap-2">

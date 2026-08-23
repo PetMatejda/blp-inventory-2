@@ -8,20 +8,17 @@ const JobCardItem = ({ job, isSelected }) => {
 
   // Use allJobItems so dashboard always shows correct counts regardless of active job
   const items = allJobItems.filter(i => i.jobId === job.id);
-  const totalReq = items.reduce((sum, i) => sum + (i.quantityRequested || 1), 0);
   const totalRows = items.length;
-  const loadedCount = items.filter(i => i.status === 'LOADED').reduce((sum, i) => sum + (i.quantityLoaded || 0), 0);
-  const packedCount = items.filter(i => i.status === 'PACKED').reduce((sum, i) => sum + (i.quantityLoaded || 0), 0);
   const loadedRows = items.filter(i => i.status === 'LOADED').length;
   const packedRows = items.filter(i => i.status === 'PACKED').length;
   const damagedCount = items.filter(i => i.status === 'DAMAGED').length;
   const isArchived = job.status === 'ARCHIVED';
   const isModeDerigging = job.mode === 'DERIGGING';
 
-  // Mode aware progress calculation
-  const currentDoneCount = isModeDerigging ? packedCount : loadedCount;
+  // Progress calculation strictly by item row count (položky)
   const currentDoneRows = isModeDerigging ? packedRows : loadedRows;
-  const progress = totalReq > 0 ? Math.round((currentDoneCount / totalReq) * 100) : (totalRows > 0 ? Math.round((currentDoneRows / totalRows) * 100) : 0);
+  const progress = totalRows > 0 ? Math.round((currentDoneRows / totalRows) * 100) : 0;
+
 
 
   // Attach tap & long press
@@ -119,8 +116,9 @@ const JobCardItem = ({ job, isSelected }) => {
               {isModeDerigging ? 'PRŮBĚH DERIGGINGU (SBALENO K ODVOZU)' : 'PRŮBĚH NAKLÁDKY (NA PLACE)'}
             </span>
             <span className="text-on-surface font-bold">
-              {currentDoneCount} / {totalReq} ks ({currentDoneRows} / {totalRows} položek) • {progress} %
+              {currentDoneRows} / {totalRows} položek • {progress} %
             </span>
+
           </div>
 
           {/* High-Contrast Progress Bar */}

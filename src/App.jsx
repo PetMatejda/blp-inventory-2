@@ -170,9 +170,10 @@ export function App() {
             <TopAppBar />
 
             {/* Main Dynamic View — fills space between TopAppBar and BottomNavBar */}
-            <main className="flex-1 w-full max-w-5xl mx-auto overflow-x-hidden">
+            <main className="flex-1 w-full max-w-5xl mx-auto">
               <MainContent />
             </main>
+
 
             {/* Bottom Mobile & Desktop Navigation — fixed, h-16 */}
             <BottomNavBar />
