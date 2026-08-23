@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BLP Inventory • Rychlý návod & Testování</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090D16;
+      --card-bg: #111827;
+      --card-border: #1F2937;
+      --primary: #F59E0B;
+      --primary-hover: #D97706;
+      --primary-glow: rgba(245, 158, 11, 0.15);
+      --secondary: #10B981;
+      --text: #F3F4F6;
+      --text-muted: #9CA3AF;
+      --accent-blue: #3B82F6;
+      --accent-purple: #8B5CF6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 24px 16px 60px;
+    }
+
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+      padding-top: 12px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 8px var(--primary);
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #FFFFFF 30%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .lead {
+      color: var(--text-muted);
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    /* Big Action Button */
+    .cta-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: #000;
+      font-size: 18px;
+      font-weight: 800;
+      padding: 16px 24px;
+      border-radius: 16px;
+      text-decoration: none;
+      box-shadow: 0 8px 24px var(--primary-glow);
+      transition: all 0.2s ease;
+      margin: 24px 0 36px;
+    }
+
+    .cta-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      color: #FFF;
+    }
+
+    .badge-icon {
+      font-size: 20px;
+    }
+
+    /* Flow Items */
+    .flow-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .flow-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      padding: 14px;
+      border-radius: 14px;
+    }
+
+    .flow-num {
+      width: 28px;
+      height: 28px;
+      background: var(--primary);
+      color: #000;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .flow-content strong {
+      display: block;
+      color: #FFF;
+      font-size: 15px;
+      margin-bottom: 2px;
+    }
+
+    .flow-content p {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* Install Tabs */
+    .platform-card {
+      border-left: 4px solid var(--primary);
+      margin-bottom: 16px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid var(--card-border);
+      border-left: 4px solid var(--primary);
+    }
+
+    .platform-card.apple {
+      border-left-color: var(--accent-blue);
+    }
+
+    .platform-card.android {
+      border-left-color: var(--secondary);
+    }
+
+    .platform-header {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .step-list {
+      padding-left: 20px;
+      color: var(--text-muted);
+      font-size: 13.5px;
+    }
+
+    .step-list li {
+      margin-bottom: 6px;
+    }
+
+    .step-list strong {
+      color: #FFF;
+    }
+
+    /* Login Box */
+    .login-box {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px dashed var(--primary);
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    .login-box span {
+      color: var(--text-muted);
+    }
+
+    .login-box strong {
+      color: var(--primary);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 36px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-badge">
+        <span class="logo-dot"></span>
+        BLP INVENTORY 2.0
+      </div>
+      <h1>Testovací manuál pro partu</h1>
+      <p class="lead">Čau lidi, testujeme novou appku na balení a evidenci techniky. Přečti si těch pár bodů níže a zkus to s náma otestovat.</p>
+    </header>
+
+    <!-- Main CTA -->
+    <a href="/" class="cta-btn">
+      🚀 Otevřít aplikaci BLP Inventory
+    </a>
+
+    <!-- 1. O co vlastně jde -->
+    <div class="card">
+      <div class="card-title">
+        <span class="badge-icon">🎯</span> O co jde (Cíl systému)
+      </div>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 14px;">
+        Abychom měli na place i ve skladu 100% přehled co kde je a neztrácely se nám drahý světla, kabely a stativy.
+      </p>
+      <div class="flow-grid">
+        <div class="flow-item">
+          <div class="flow-num">1</div>
+          <div class="flow-content">
+            <strong>Rigging (Nakládka & Příjezd)</strong>
+            <p>Ve skladu se nakládá do auta (Sklad ➔ Auto). Na place se auto vyloží a zkontroluje (Auto ➔ Plac).</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">2</div>
+          <div class="flow-content">
+            <strong>Derigging (Balení & Návrat)</strong>
+            <p>Po točení se balí z placu do auta (Plac ➔ Auto) a ve skladu se vyloží zpátky do regálů (Auto ➔ Sklad).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Jak to ovládat -->
+    <div class="card">
+      <div class="card-title">
+        <span class="badge-icon">⚡</span> Jak se to ovládá v rychlosti
+      </div>
+      <div class="flow-grid">
+        <div class="flow-item">
+          <div class="flow-num">👉</div>
+          <div class="flow-content">
+            <strong>Kliknutí / Swipe na položku</strong>
+            <p>Klepni na řádek s technikou (nebo přetáhni doprava) a stav se posune na <em>Naloženo / Vyloženo</em>.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">⏱️</div>
+          <div class="flow-content">
+            <strong>Dlouhé podržení (Long Press)</strong>
+            <p>Podrž prst na libovolný položce — vyskočí rychlý menu pro <strong>nahlášení poškození</strong> nebo rozbitýho kusu.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">➕</div>
+          <div class="flow-content">
+            <strong>Katalog & Přidávání techniky</strong>
+            <p>Dole v záložce <em>Katalog</em> můžeš vyhledat jakýkoli světlo nebo příslušenství a jedním klikem ho přihodit do aktivního jobu.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">🧰</div>
+          <div class="flow-content">
+            <strong>Brácha (Spotřební materiál)</strong>
+            <p>Gaffy, pásky, spreje, baterky, fólie. Můžeš jednoduše odepisovat spotřebovaný kusy.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Jak to hodit do telefonu -->
+    <div class="card">
+      <div class="card-title">
+        <span class="badge-icon">📲</span> Jak to zprovoznit na mobilu (10 vteřin)
+      </div>
+
+      <!-- iPhone -->
+      <div class="platform-card apple">
+        <div class="platform-header">
+          🍏 iPhone / iPad (Apple)
+        </div>
+        <ol class="step-list">
+          <li>Otevři odkaz v prohlížeči <strong>Safari</strong>.</li>
+          <li>Dole uprostřed klepni na tlačítko <strong>Sdílet</strong> (čtvereček se šipkou nahoru ⎋).</li>
+          <li>Sjeď kousek dolů a zvol <strong>„Přidat na plochu“</strong> (Add to Home Screen).</li>
+          <li>Hotovo! Appka se spustí na celou obrazovku jako nativní aplikace s vlastní BLP ikonou.</li>
+        </ol>
+      </div>
+
+      <!-- Android -->
+      <div class="platform-card android">
+        <div class="platform-header">
+          🤖 Android (Samsung, Xiaomi, Pixel...)
+        </div>
+        <ol class="step-list">
+          <li>Otevři odkaz v prohlížeči <strong>Chrome</strong>.</li>
+          <li>Vyskočí hláška <em>„Instalovat aplikaci“</em> nebo klepni vpravo nahoře na <strong>3 tečky ➔ Přidat na plochu / Instalovat</strong>.</li>
+          <li>Appka se ti uloží mezi ostatní aplikace v telefonu.</li>
+        </ol>
+      </div>
+
+      <!-- Login Info -->
+      <div class="login-box">
+        <div><strong>🔑 Přihlášení do aplikace:</strong></div>
+        <div>1. Buď jedním klikem přes svůj <strong>Google účet</strong></div>
+        <div>2. Nebo testovací login: <span>Login:</span> <strong>blp</strong> | <span>Heslo:</span> <strong>blpblp</strong></div>
+      </div>
+    </div>
+
+    <!-- Bottom Button -->
+    <a href="/" class="cta-btn">
+      🚀 Přejít do aplikace BLP Inventory
+    </a>
+
+    <footer class="footer">
+      BLP Film & Event Lighting • 2026
+    </footer>
+  </div>
+
+</body>
+</html>
