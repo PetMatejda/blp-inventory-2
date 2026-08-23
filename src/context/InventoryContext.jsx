@@ -104,28 +104,36 @@ export const InventoryProvider = ({ children }) => {
       setAuthLoading(false); // Auth has resolved — safe to render
     });
 
-    // Step 5: Pull fresh data when user switches back to the app
-    // Debounced to avoid login flash caused by rapid auth state checks
+    // Step 5: Pull fresh data when user switches back to the app (fast 100ms)
     let visibilityTimeout = null;
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         if (visibilityTimeout) clearTimeout(visibilityTimeout);
         visibilityTimeout = setTimeout(async () => {
           setSyncStatus('syncing');
-          // Flush any pending local changes before pulling remote data
-          // to prevent stale cloud state from overwriting new local items
           await storageService.flushPendingSync();
           const res = await firebaseDb.pullFromCloud();
           if (res.success) refreshDataFromLocal();
           setSyncStatus(res.success ? 'synced' : 'offline');
-        }, 800); // Delay prevents auth modal flash on quick tab switch
+        }, 100);
       }
     };
+
+    // Step 6: Background Heartbeat (every 6 seconds) to keep multi-device state strictly synchronized
+    const heartbeatInterval = setInterval(async () => {
+      if (navigator.onLine && document.visibilityState === 'visible') {
+        await storageService.flushPendingSync();
+        const res = await firebaseDb.pullFromCloud();
+        if (res.success) {
+          refreshDataFromLocal();
+          setSyncStatus('synced');
+        }
+      }
+    }, 6000);
 
     const handleOnline = () => {
       setIsOffline(false);
       setSyncStatus('syncing');
-      // On coming back online: flush pending local changes first, then pull
       storageService.flushPendingSync().then(() => {
         firebaseDb.pullFromCloud().then((pullRes) => {
           if (pullRes.success) refreshDataFromLocal();
@@ -147,17 +155,21 @@ export const InventoryProvider = ({ children }) => {
 
     window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
+    window.addEventListener('pageshow', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
       unsubscribeCloud();
       unsubscribeAuth();
+      clearInterval(heartbeatInterval);
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleVisibilityChange);
+      window.removeEventListener('pageshow', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+
   }, [refreshDataFromLocal]);
 
   useEffect(() => {

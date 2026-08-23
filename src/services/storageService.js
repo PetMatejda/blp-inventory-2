@@ -19,8 +19,7 @@ const KEYS = {
   CURRENT_USER_ROLE: 'blp_user_role_v2',
 };
 
-// Debounce helper — 800ms window prevents rapid-fire pushes
-// that can race each other and corrupt cloud state
+// Fast debounce helper — 100ms window ensures instant pushes across devices
 let syncTimeout = null;
 // Guard: tracks whether we have local changes waiting to be pushed
 let hasPendingPush = false;
@@ -38,8 +37,9 @@ export const storageService = {
         auditLogs: this.getAuditLogs(),
       });
       hasPendingPush = false;
-    }, 800);
+    }, 100);
   },
+
 
   /**
    * Flush any pending debounced push immediately (used before pulling from cloud).
