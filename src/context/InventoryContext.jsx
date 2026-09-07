@@ -14,8 +14,21 @@ export const InventoryProvider = ({ children }) => {
   const [consumables, setConsumables] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [catalog, setCatalog] = useState([]);
-  const [currentUser, setCurrentUserState] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true); // true until first Firebase auth response
+  const [currentUser, setCurrentUserState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('blp_auth_user_v2');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [authLoading, setAuthLoading] = useState(() => {
+    try {
+      return !localStorage.getItem('blp_auth_user_v2');
+    } catch {
+      return true;
+    }
+  });
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [themeMode, setThemeMode] = useState('light');
 

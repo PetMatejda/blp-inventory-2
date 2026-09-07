@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blp-inventory-v7-final';
+const CACHE_NAME = 'blp-inventory-v8-persistent-auth';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

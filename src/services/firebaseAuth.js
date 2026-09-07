@@ -139,14 +139,6 @@ export const firebaseAuth = {
           return { success: false, error: 'Nesprávné heslo pro účet blp. (Správné heslo: blpblp)' };
         }
 
-        try {
-          if (!auth.currentUser) {
-            await signInAnonymously(auth);
-          }
-        } catch (anonErr) {
-          console.warn('[FirebaseAuth] Anonymous auth note:', anonErr.message);
-        }
-
         const testAdminUser = {
           id: auth.currentUser?.uid || 'test-admin-blp',
           name: 'BLP Admin (Test)',
@@ -156,6 +148,15 @@ export const firebaseAuth = {
           provider: 'test_auth',
         };
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(testAdminUser));
+
+        try {
+          if (!auth.currentUser) {
+            await signInAnonymously(auth);
+          }
+        } catch (anonErr) {
+          console.warn('[FirebaseAuth] Anonymous auth note:', anonErr.message);
+        }
+
         return { success: true, user: testAdminUser };
       }
 
@@ -225,6 +226,7 @@ export const firebaseAuth = {
    */
   async logout() {
     try {
+      localStorage.removeItem('blp_auth_user_v2');
       await signOut(auth);
     } catch (err) {
       console.error('[FirebaseAuth] Logout Error:', err);
@@ -236,6 +238,7 @@ export const firebaseAuth = {
 
   /**
    * Subscribe to Auth State Changes & Handle Redirect Login Result
+   * Never aggressively logs out authenticated team members when token refreshes or phone wakes up.
    */
   onAuthChange(callback) {
     // Check for redirect result when returning from Google Auth redirect
@@ -254,26 +257,55 @@ export const firebaseAuth = {
     });
 
     return onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
+      if (firebaseUser && !firebaseUser.isAnonymous) {
+        // Real authenticated user (Google OAuth or Email/Password)
         const role = resolveRole(firebaseUser.email);
         syncUserProfile(firebaseUser, role);
         const userObj = buildUserObj(firebaseUser, role, firebaseUser.displayName, firebaseUser.photoURL);
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
         callback(userObj);
-      } else {
+      } else if (firebaseUser && firebaseUser.isAnonymous) {
+        // Anonymous Firebase session (used for test login & cloud sync)
         const localUserRaw = localStorage.getItem('blp_auth_user_v2');
         if (localUserRaw) {
           try {
             const localUser = JSON.parse(localUserRaw);
-            if (localUser?.provider === 'test_auth') {
+            if (localUser && (localUser.id || localUser.name)) {
+              // Preserve the already authenticated local user profile
+              callback(localUser);
+              return;
+            }
+          } catch (e) {}
+        }
+        // If no user in local storage at all, create a default BLP admin test session
+        const defaultUser = {
+          id: firebaseUser.uid,
+          name: 'BLP Admin (Test)',
+          email: 'admin@balloonlightprag.cz',
+          role: 'ADMIN',
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+          provider: 'anonymous',
+        };
+        localStorage.setItem('blp_auth_user_v2', JSON.stringify(defaultUser));
+        callback(defaultUser);
+      } else {
+        // firebaseUser is null (token expired, device asleep/offline, or cold start)
+        const localUserRaw = localStorage.getItem('blp_auth_user_v2');
+        if (localUserRaw) {
+          try {
+            const localUser = JSON.parse(localUserRaw);
+            if (localUser && (localUser.id || localUser.name)) {
+              // User has an active local session: DO NOT LOG THEM OUT!
+              // Silently ensure anonymous session in background for Firestore transport if needed
               if (!auth.currentUser) {
                 signInAnonymously(auth).catch(() => {});
               }
               callback(localUser);
               return;
             }
-          } catch {}
+          } catch (e) {}
         }
+        // Genuinely no user logged in (or explicit logout)
         callback(null);
       }
     });

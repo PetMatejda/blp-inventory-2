@@ -34,8 +34,12 @@ export const RoleSwitcherModal = () => {
   const users = TEAM_MEMBERS;
 
   const handleSelectUser = (user) => {
-    setCurrentUser(user);
-    localStorage.setItem('blp_auth_user_v2', JSON.stringify(user));
+    const userWithProvider = {
+      ...user,
+      provider: 'team_profile',
+    };
+    setCurrentUser(userWithProvider);
+    localStorage.setItem('blp_auth_user_v2', JSON.stringify(userWithProvider));
     setIsRoleModalOpen(false);
   };
 

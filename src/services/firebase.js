@@ -10,6 +10,8 @@ import {
   signInAnonymously,
   signOut,
   onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
 } from 'firebase/auth';
 
 import {
@@ -54,6 +56,13 @@ export const app = appInstance;
 
 // Initialize Firebase Auth
 export const auth = getAuth(app);
+try {
+  setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.warn('[Firebase] setPersistence note:', err.message);
+  });
+} catch (persistErr) {
+  console.warn('[Firebase] setPersistence error:', persistErr);
+}
 export const googleProvider = new GoogleAuthProvider();
 
 
