@@ -89,6 +89,7 @@ Implemented in `src/services/firebaseAuth.js` and `src/components/auth/AuthModal
   - `ADMIN` (Lead Gaffer): Full access to create/edit/delete jobs, archive jobs, edit master catalog, duplicate jobs as templates.
   - `USER` (Crew Member): Access restricted to operational tasks (Packing list swiping, stepper quantity adjustments, damage reporting, consumable updates).
 - **Auto-Admin Whitelist**: Users with email `petmatejda@gmail.com` or containing `petr`/`gaffer`/`admin` are automatically assigned `ADMIN` status.
+- **Session Persistence & Timeout Prevention**: Configured with explicit `browserLocalPersistence` in Firebase Auth paired with a resilient local session cache (`blp_auth_user_v2`). When working on film sets or in warehouses where connectivity drops or Firebase's 1-hour auth token cannot refresh, the app never aggressively logs out active crew members. The session persists indefinitely across device lock, sleep, background tab suspension, and offline periods until the user explicitly clicks "Odhlásit se".
 
 ---
 
