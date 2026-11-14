@@ -5,13 +5,14 @@ import { ItemThumbnail } from '../common/ItemThumbnail';
 import {
   Search, Plus, Layers, Zap, Weight, Check, Info,
   FolderOpen, ArrowRight, Edit3, Trash2, X, ChevronLeft,
-  ChevronRight, Filter, EyeOff, Eye, Package
+  ChevronRight, Filter, EyeOff, Eye, Package, RefreshCw
 } from 'lucide-react';
 import { CatalogItemDrawer } from './CatalogItemDrawer';
 import { useDialogs } from '../common/Dialogs';
 import { RestoreCatalogCard } from '../warehouse/RestoreCatalogCard';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { resolveCode } from '../../domain/labels-qr';
+import { plural } from '../../domain/labels';
 
 // ─────────────────────────────────────────────────────────────────────
 // CATALOG CARD — compact, no "edit mode" concept
@@ -175,6 +176,7 @@ export const EquipmentCatalog = () => {
     deleteCatalogItem,
     isAdmin,
     stockUnits,
+    restoreCatalogFromBackup,
   } = useInventory();
   const { confirm, toast } = useDialogs();
 
@@ -272,10 +274,23 @@ export const EquipmentCatalog = () => {
         <div>
           <h1 className="text-xl font-bold text-on-surface">Katalog techniky</h1>
           <p className="text-xs text-outline mt-0.5">
-            {catalog.length} položek {isAdmin() && '· Klikněte ✏ pro úpravu'}
+            {catalog.length} {plural(catalog.length, 'položka', 'položky', 'položek')} {isAdmin() && '· Klikněte ✏ pro úpravu'}
           </p>
         </div>
         {isAdmin() && (
+          <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              if (await confirm({
+                title: 'Doplnit chybějící katalog?',
+                message: 'Doplní položky ze zálohy původních dat (nebo z výchozího katalogu) a techniku, která je na zakázkách, ale v katalogu chybí. Existující položky se nezmění.',
+                confirmLabel: 'Doplnit',
+              })) restoreCatalogFromBackup();
+            }}
+            className="flex items-center gap-2 px-3 py-2.5 border border-outline-variant bg-card-bg text-on-surface font-semibold text-sm rounded-2xl active:scale-95"
+          >
+            <RefreshCw className="w-4 h-4" /> Doplnit
+          </button>
           <button
             onClick={() => setDrawerItem('NEW')}
             className="flex items-center gap-2 px-3.5 py-2.5 bg-secondary text-on-secondary-container font-bold text-sm rounded-2xl shadow-md active:scale-95 transition-all"
@@ -283,6 +298,7 @@ export const EquipmentCatalog = () => {
             <Plus className="w-4 h-4" />
             <span className="hidden xs:inline">Nová položka</span>
           </button>
+          </div>
         )}
       </div>
 

@@ -19,7 +19,7 @@ import {
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
-  persistentMultipleTabManager,
+  persistentSingleTabManager,
   doc,
   setDoc,
   getDoc,
@@ -79,13 +79,15 @@ try {
 export const googleProvider = new GoogleAuthProvider();
 
 
-// Firestore with a persistent offline cache (IndexedDB, shared across tabs).
+// Firestore with a persistent offline cache (IndexedDB, owned by one tab).
 // Reads work offline from the cache and writes are queued and survive app
 // restarts until the device is back online.
 let firestore;
 try {
   firestore = initializeFirestore(app, {
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    // Single-tab cache: sharing one IndexedDB cache between tabs proved fragile on
+    // desktop Chrome (hangs / Out of Memory). Other tabs fall back to memory cache.
+    localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({ forceOwnership: false }) }),
   });
 } catch (err) {
   console.warn('[Firebase] Persistent cache unavailable, using memory cache:', err);

@@ -60,6 +60,19 @@ export const SettingsModal = () => {
     }
   };
 
+  /** Deletes the offline copy of the data in this browser and reloads from the cloud. */
+  const resetLocalCache = async () => {
+    const warn = hasPendingWrites ? '\n\n⚠️ Některé změny se ještě neodeslaly do cloudu a vymazáním se ztratí. Nejdřív počkejte na „Uloženo“.' : '';
+    if (await confirm({
+      title: 'Vymazat offline data?',
+      message: `Smaže se jen kopie dat v tomto prohlížeči; v cloudu zůstane vše. Pomáhá, když aplikace zamrzá nebo padá.${warn}`,
+      confirmLabel: 'Vymazat a načíst znovu',
+      danger: true,
+    })) {
+      window.location.href = `${window.location.pathname}?reset-cache=1`;
+    }
+  };
+
   const handleLogout = async () => {
     const warn = hasPendingWrites ? '\n\nNěkteré změny se ještě neodeslaly do cloudu — po odhlášení se odešlou až při dalším přihlášení na tomto zařízení.' : '';
     if (await confirm({ title: 'Odhlásit se?', message: `Účet ${currentUser?.email || ''}${warn}`, confirmLabel: 'Odhlásit', danger: !!warn })) {
@@ -200,6 +213,7 @@ export const SettingsModal = () => {
             {migrationInfo?.counts && <li>Převedeno: {Object.entries(migrationInfo.counts).map(([k, v]) => `${k} ${v}`).join(', ')}</li>}
           </ul>
           <button onClick={restoreCatalogFromBackup} className="mt-2 h-11 px-3 rounded-xl border border-outline-variant bg-card-bg font-semibold">Doplnit chybějící katalog ze zálohy</button>
+          <button onClick={resetLocalCache} className="mt-2 ml-2 h-11 px-3 rounded-xl border border-error/40 bg-card-bg text-error font-semibold">Vymazat offline data v tomto zařízení</button>
         </details>
 
         {/* System Info */}

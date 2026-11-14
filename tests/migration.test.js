@@ -141,6 +141,19 @@ describe('běh migrace', () => {
     expect(g.docs.get(`catalog/${INITIAL_CATALOG[0].id}`)).toMatchObject({ name: INITIAL_CATALOG[0].name });
   });
 
+  it('obnova katalogu doplní i techniku ze zakázek, která v katalogu chybí', async () => {
+    const g = fakeFirestore({ 'inventory_store/blp_main_store': { ...legacy(), catalog: [] } });
+    const jobItems = [
+      makeItem({ id: 'x1', catalogId: 'cat-own-1', name: 'Vlastní světlo', category: 'Lights', quantityRequested: 3, serialNumber: 'OWN-101', photoUrls: ['https://img/x.jpg'] }),
+      makeItem({ id: 'x2', catalogId: 'cat-own-1', name: 'Vlastní světlo', quantityRequested: 5 }),
+      makeItem({ id: 'x3', catalogId: INITIAL_CATALOG[0].id }),
+      makeItem({ id: 'x4', catalogId: null }),
+    ];
+    const res = await restoreCatalog(g.fs, { existingIds: [], defaults: INITIAL_CATALOG, jobItems });
+    expect(res).toMatchObject({ source: 'default', count: INITIAL_CATALOG.length + 1, fromJobs: 1 });
+    expect(g.docs.get('catalog/cat-own-1')).toMatchObject({ name: 'Vlastní světlo', availableCount: 5, serialPrefix: 'OWN', image: 'https://img/x.jpg', restoredFromJobs: true });
+  });
+
   it('velká data zapisuje po dávkách menších než 500', async () => {
     const big = legacy();
     big.jobItems = Array.from({ length: 1200 }, (_, i) => makeItem({ id: `i${i}`, name: `Kus ${i}` }));

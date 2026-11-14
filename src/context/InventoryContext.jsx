@@ -367,13 +367,13 @@ export const InventoryProvider = ({ children }) => {
     if (!navigator.onLine) { showNotice('📴 Obnova katalogu potřebuje připojení.'); return null; }
     try {
       const fs = { db, doc, getDoc, writeBatch };
-      const res = await restoreCatalog(fs, { existingIds: catalog.map((c) => c.id), defaults: INITIAL_CATALOG });
+      const res = await restoreCatalog(fs, { existingIds: catalog.map((c) => c.id), defaults: INITIAL_CATALOG, jobItems: allJobItems });
       // Brácha (consumables) may be missing for the same reason — restore only when empty.
       if (consumables.length === 0) {
         await restoreCatalog(fs, { collection: 'consumables', existingIds: [], defaults: INITIAL_CONSUMABLES });
       }
       showNotice(res.count
-        ? `✅ Obnoveno ${res.count} položek katalogu (${res.source === 'legacy' ? 'ze zálohy' : 'z výchozího katalogu'}).`
+        ? `✅ Doplněno ${res.count} položek katalogu (${res.source === 'legacy' ? 'ze zálohy' : 'z výchozího katalogu'}${res.fromJobs ? `, ${res.fromJobs} podle zakázek` : ''}).`
         : 'Katalog je úplný, nebylo co obnovit.', 6000);
       return res;
     } catch (err) {

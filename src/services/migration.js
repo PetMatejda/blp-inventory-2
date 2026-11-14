@@ -100,7 +100,7 @@ export function buildMigrationPlan(legacy = {}) {
  * document (backup); when that has none, uses the built-in default catalog.
  * Never overwrites items that already exist. Returns { count, source }.
  */
-export async function restoreCatalog(fs, { existingIds = [], defaults = [], collection = 'catalog' } = {}) {
+export async function restoreCatalog(fs, { existingIds = [], defaults = [], collection = 'catalog', jobItems = [] } = {}) {
   const { db, doc, getDoc, writeBatch } = fs;
   const existing = new Set(existingIds.map(String));
   let source = 'legacy';
@@ -111,13 +111,43 @@ export async function restoreCatalog(fs, { existingIds = [], defaults = [], coll
     source = 'default';
     items = defaults.filter((c) => c && c.id).map((c) => clean({ ...c, id: String(c.id) }));
   }
+  // Equipment used on jobs whose catalog entry is missing everywhere is rebuilt from the job lines.
+  const derived = collection === 'catalog' ? catalogFromJobItems(jobItems, new Set([...existing, ...items.map((c) => c.id)])) : [];
+  items = [...items, ...derived];
   const missing = items.filter((c) => !existing.has(c.id));
   for (let i = 0; i < missing.length; i += BATCH_SIZE) {
     const batch = writeBatch(db);
     for (const c of missing.slice(i, i + BATCH_SIZE)) batch.set(doc(db, collection, c.id), c);
     await batch.commit();
   }
-  return { count: missing.length, source, available: items.length };
+  return { count: missing.length, source, available: items.length, fromJobs: derived.filter((c) => !existing.has(c.id)).length };
+}
+
+/**
+ * Catalog entries rebuilt from job lines that point to a catalog id nobody has.
+ * Available count = the largest quantity ever requested (to be checked by a stocktake).
+ */
+export function catalogFromJobItems(jobItems, knownIds = new Set()) {
+  const byId = new Map();
+  for (const i of jobItems) {
+    if (!i?.catalogId || knownIds.has(i.catalogId)) continue;
+    const prev = byId.get(i.catalogId);
+    const image = (i.photoUrls || []).find((u) => typeof u === 'string' && /^https?:/.test(u)) || '';
+    const prefix = String(i.serialNumber || '').split(/[,\s]/)[0].replace(/-\d+$/, '') || 'EQP';
+    byId.set(i.catalogId, {
+      id: i.catalogId,
+      name: (prev?.name || i.name || '').replace(/\s*\(Ad-Hoc\)$/, ''),
+      category: prev?.category || i.category || 'Lights',
+      image: prev?.image || image,
+      serialPrefix: prev?.serialPrefix || prefix,
+      barcode: prev?.barcode || i.barcode || '',
+      availableCount: Math.max(prev?.availableCount || 0, i.quantityRequested || 0),
+      isBundle: false,
+      bundleItems: [],
+      restoredFromJobs: true,
+    });
+  }
+  return [...byId.values()].map(clean);
 }
 
 /**
