@@ -17,7 +17,7 @@ export const getCategoryMeta = (catName) => {
   if (q.includes('light') || q.includes('svět')) return CATEGORIES[0];
   if (q.includes('ballast') || q.includes('balast') || q.includes('zdroj')) return CATEGORIES[1];
   if (q.includes('textil') || q.includes('difúz') || q.includes('screen') || q.includes('butterfly')) return CATEGORIES[2];
-  if (q.includes('cable') || q.includes('kábel') || q.includes('kabel')) return CATEGORIES[3];
+  if (q.includes('cable') || q.includes('kábel') || q.includes('kábl') || q.includes('kabel')) return CATEGORIES[3];
   if (q.includes('distrib') || q.includes('rozvad')) return CATEGORIES[4];
   if (q.includes('grip') || q.includes('stand') || q.includes('stativ')) return CATEGORIES[5];
   if (q.includes('kit') || q.includes('set') || q.includes('balíček')) return CATEGORIES[6];

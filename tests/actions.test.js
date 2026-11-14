@@ -32,6 +32,15 @@ describe('položky zakázky', () => {
     expect(items()[0]).toMatchObject({ name: 'SkyPanel S60-C', quantityRequested: 1, catalogId: 'cat-sky' });
   });
 
+  it('odebranou položku jde vrátit zpět se stejnými daty (Vrátit)', () => {
+    actions.updateItemQuantity('ji-1', 3, 'LOADING');
+    const removed = actions.deleteJobItem('ji-1');
+    expect(items()).toHaveLength(0);
+    actions.restoreJobItem(removed);
+    expect(items()).toEqual([expect.objectContaining({ id: 'ji-1', quantityLoaded: 3, name: 'SkyPanel S60-C' })]);
+    expect(lastAudit().action).toBe('Vrácení odebrané položky');
+  });
+
   it('opakované přidání z katalogu navýší počet a vrátí hotovou položku do PENDING', () => {
     actions.setItemLoadedOrPacked('ji-1', 'LOADING');
     actions.addCatalogItemToJob('job-1', makeCatalogItem());

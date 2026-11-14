@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { savePhoto, usePhotoSrc } from '../../services/photoService';
+import { useDialogs } from '../common/Dialogs';
 
 const PRESET_PHOTOS = [
   { label: 'SkyPanel', url: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80' },
@@ -32,6 +33,7 @@ const EMPTY_FORM = {
 
 export const CatalogItemDrawer = ({ item, onClose }) => {
   const { createCatalogItem, updateCatalogItem, catalog } = useInventory();
+  const { confirm } = useDialogs();
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [showPresets, setShowPresets] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -157,9 +159,15 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
     onClose();
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
     stopBarcodeScanner();
-    if (isDirty && !window.confirm('Máte neuložené změny. Zavřít bez uložení?')) return;
+    if (isDirty && !(await confirm({
+      title: 'Zahodit změny?',
+      message: 'Úpravy této položky katalogu nejsou uložené.',
+      confirmLabel: 'Zahodit',
+      cancelLabel: 'Pokračovat v úpravách',
+      danger: true,
+    }))) return;
     onClose();
   };
 

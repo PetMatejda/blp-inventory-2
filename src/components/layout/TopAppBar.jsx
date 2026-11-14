@@ -1,151 +1,62 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Settings, RefreshCw, WifiOff, User, LogOut, ChevronDown } from 'lucide-react';
-import { firebaseAuth } from '../../services/firebaseAuth';
+import { Check, RefreshCw, WifiOff, User, ChevronDown, Lock } from 'lucide-react';
+
+// One clear sync state the crew can trust (ANALYZA_A_NAVRH.md, 3.8).
+const SYNC_CHIP = {
+  synced: { icon: Check, label: 'Uloženo', cls: 'bg-secondary-container/60 text-on-secondary-container border-secondary/40' },
+  syncing: { icon: RefreshCw, label: 'Ukládám…', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/50', spin: true },
+  offline: { icon: WifiOff, label: 'Offline', cls: 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/60' },
+  error: { icon: Lock, label: 'Bez přístupu', cls: 'bg-error-container/40 text-error border-error/50' },
+};
 
 export const TopAppBar = () => {
-  const {
-    jobs,
-    currentJobId,
-    setCurrentJobId,
-    currentJob,
-    currentUser,
-    setCurrentUser,
-    setIsAuthModalOpen,
-    setIsSettingsModalOpen,
-    isOffline,
-    forceSyncAll,
-    syncStatus,
-  } = useInventory();
-
+  const { jobs, setCurrentJobId, currentJob, currentUser, setIsSettingsModalOpen, forceSyncAll, syncStatus } = useInventory();
   const [avatarError, setAvatarError] = useState(false);
 
-  const handleAvatarClick = () => setIsAuthModalOpen(true);
-
-  const handleLogout = async (e) => {
-    e.stopPropagation();
-    if (window.confirm('Odhlásit se ze systému BLP Inventory?')) {
-      await firebaseAuth.logout();
-      setCurrentUser(null);
-      setIsAuthModalOpen(true);
-    }
-  };
-
-  const isSyncing = syncStatus === 'syncing';
-  const activeJobs = jobs.filter(j => j.status === 'ACTIVE');
+  const activeJobs = jobs.filter((j) => j.status === 'ACTIVE');
+  const chip = SYNC_CHIP[syncStatus] || SYNC_CHIP.synced;
+  const ChipIcon = chip.icon;
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-md border-b border-outline-variant h-14 flex items-center justify-between px-3 shadow-sm">
-      {/* LEFT: Avatar + Job dropdown (or title) */}
-      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-        <button
-          onClick={handleAvatarClick}
-          className="relative w-9 h-9 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center overflow-hidden shrink-0 active:scale-90 transition-transform"
-          title="Profil uživatele"
-        >
-          {currentUser?.avatar && !avatarError ? (
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-full h-full object-cover"
-              onError={() => setAvatarError(true)}
-            />
-          ) : (
-            <User className="w-4 h-4 text-primary" />
-          )}
-          {/* Online/offline dot */}
-          <span
-            className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-background ${
-              isOffline ? 'bg-error' : 'bg-secondary'
-            }`}
-          />
-        </button>
-
-        {/* Dropdown with ACTIVE jobs only */}
-        <div className="min-w-0 flex-1">
-          {currentJob ? (
-            <div className="relative inline-flex items-center max-w-full">
-              <select
-                value={currentJob.id}
-                onChange={(e) => setCurrentJobId(e.target.value)}
-                className={`font-bold text-xs sm:text-sm rounded-lg pl-2 pr-6 py-1 border appearance-none truncate leading-tight focus:outline-none cursor-pointer max-w-[200px] sm:max-w-xs transition-colors ${
-                  currentJob.status === 'ARCHIVED'
-                    ? 'bg-surface-container-high border-outline-variant text-outline'
-                    : 'bg-surface-container border-outline-variant text-on-surface hover:border-primary/50'
-                }`}
-                title="Aktivní zakázky"
-              >
-                {/* If viewing an archived job from Dashboard, show read-only option */}
-                {currentJob.status === 'ARCHIVED' && (
-                  <option value={currentJob.id} className="bg-surface-container text-on-surface font-normal">
-                    📁 {currentJob.name} (Archiv — pouze pro čtení)
-                  </option>
-                )}
-                {/* ONLY ACTIVE JOBS ARE LISTED */}
-                {activeJobs.map((j) => (
-                  <option key={j.id} value={j.id} className="bg-surface-container text-on-surface font-semibold">
-                    {j.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 absolute right-1.5 pointer-events-none text-outline" />
-            </div>
-          ) : (
-            <h1 className="font-bold text-sm text-on-surface leading-tight">
-              BLP Film
-            </h1>
-          )}
-          {/* Offline warning inline */}
-          {isOffline && (
-            <p className="text-[10px] text-error font-mono font-bold flex items-center gap-1 mt-0.5">
-              <WifiOff className="w-3 h-3" /> Offline — data nemusí být aktuální
-            </p>
-          )}
-        </div>
-      </div>
-
-
-      {/* RIGHT: Sync + Settings + Logout — compact */}
-      <div className="flex items-center gap-1 shrink-0">
-        {/* Sync button */}
-        <button
-          onClick={forceSyncAll}
-          className={`w-9 h-9 flex items-center justify-center rounded-xl border transition-all active:scale-90 ${
-            isSyncing
-              ? 'bg-amber-500/15 border-amber-500/60 text-amber-400'
-              : isOffline
-              ? 'bg-error-container/20 border-error/40 text-error'
-              : 'bg-surface-container border-outline-variant text-outline hover:text-primary hover:border-primary/40'
-          }`}
-          title={isSyncing ? 'Synchronizuji...' : isOffline ? 'Offline' : 'Synchronizovat'}
-        >
-          {isOffline ? (
-            <WifiOff className="w-4 h-4" />
-          ) : (
-            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          )}
-        </button>
-
-        {/* Settings */}
+    <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-md border-b border-outline-variant h-14 flex items-center justify-between gap-2 px-3 shadow-sm">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         <button
           onClick={() => setIsSettingsModalOpen(true)}
-          className="w-9 h-9 flex items-center justify-center rounded-xl border border-outline-variant bg-surface-container text-outline hover:text-primary hover:border-primary/40 transition-all active:scale-90"
-          title="Nastavení"
+          className="w-11 h-11 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center overflow-hidden shrink-0 active:scale-90"
+          aria-label="Profil a nastavení"
         >
-          <Settings className="w-4 h-4" />
+          {currentUser?.avatar && !avatarError
+            ? <img src={currentUser.avatar} alt="" className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
+            : <User className="w-5 h-5 text-primary" />}
         </button>
 
-        {/* Logout */}
-        {currentUser && (
-          <button
-            onClick={handleLogout}
-            className="w-9 h-9 flex items-center justify-center rounded-xl border border-transparent text-outline hover:text-error hover:bg-error-container/20 hover:border-error/30 transition-all active:scale-90"
-            title="Odhlásit se"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+        {currentJob ? (
+          <div className="relative min-w-0 flex-1">
+            <select
+              value={currentJob.id}
+              onChange={(e) => setCurrentJobId(e.target.value)}
+              aria-label="Aktuální zakázka"
+              className="w-full h-11 font-bold text-base rounded-xl pl-3 pr-8 border appearance-none truncate bg-surface-container border-outline-variant text-on-surface focus:outline-none focus:border-primary"
+            >
+              {currentJob.status === 'ARCHIVED' && <option value={currentJob.id}>📁 {currentJob.name} (archiv)</option>}
+              {activeJobs.map((j) => <option key={j.id} value={j.id}>{j.name}</option>)}
+            </select>
+            <ChevronDown className="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-outline" />
+          </div>
+        ) : (
+          <h1 className="font-bold text-base text-on-surface">BLP Inventory</h1>
         )}
       </div>
+
+      <button
+        onClick={forceSyncAll}
+        className={`h-11 px-3 rounded-xl border text-sm font-semibold flex items-center gap-1.5 shrink-0 active:scale-95 ${chip.cls}`}
+        aria-label={`Stav ukládání: ${chip.label}. Klepnutím ověříte odeslání do cloudu.`}
+      >
+        <ChipIcon className={`w-4 h-4 ${chip.spin ? 'animate-spin' : ''}`} />
+        <span className="hidden min-[380px]:inline">{chip.label}</span>
+      </button>
     </header>
   );
 };

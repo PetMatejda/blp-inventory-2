@@ -5,7 +5,7 @@ import { createInventoryActions } from '../services/inventoryActions';
 import { migrateLegacyStore, MIGRATION_DOC } from '../services/migration';
 import { db, doc, getDoc, runTransaction, writeBatch } from '../services/firebase';
 import { INITIAL_VEHICLES } from '../mockData/initialData';
-import { CATEGORIES } from '../utils/categoryIcons';
+import { CATEGORIES, getCategoryMeta } from '../utils/categoryIcons';
 
 const InventoryContext = createContext();
 
@@ -13,8 +13,10 @@ const CURRENT_JOB_KEY = 'blp_current_job_id_v2';
 const EMPTY_DATA = { jobs: [], jobItems: [], catalog: [], consumables: [], auditLogs: [] };
 
 // Stable, readable order (Firestore returns documents by ID).
+// Older data uses Czech category names; getCategoryMeta maps them to the same IDs.
 const categoryRank = (cat) => {
-  const idx = (CATEGORIES || []).findIndex((c) => (c.id || c) === cat);
+  const id = getCategoryMeta(cat)?.id ?? cat;
+  const idx = (CATEGORIES || []).findIndex((c) => c.id === id);
   return idx === -1 ? 999 : idx;
 };
 const byCategoryThenName = (a, b) =>
@@ -54,7 +56,7 @@ export const InventoryProvider = ({ children }) => {
 
   // Filters & Nav state
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('REMAINING');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals state
@@ -68,6 +70,8 @@ export const InventoryProvider = ({ children }) => {
   const [editingJob, setEditingJob] = useState(null);
   const [templateJob, setTemplateJob] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+  const [photoViewerItem, setPhotoViewerItem] = useState(null);
+  const [finishingJob, setFinishingJob] = useState(null); // job shown in the "finish job" guide
 
   const noticeTimer = useRef(null);
   const showNotice = useCallback((text, ms = 4000) => {
@@ -226,11 +230,9 @@ export const InventoryProvider = ({ children }) => {
   const setItemPending = (itemId) => withItemJob(itemId, (mode) => actions.setItemPending(itemId, mode));
   const toggleItemStatus = (itemId) => withItemJob(itemId, (mode) => actions.toggleItemStatus(itemId, mode));
 
-  const deleteJobItem = (itemId) => withItemJob(itemId, () => {
-    const removed = actions.deleteJobItem(itemId);
-    if (removed) showNotice('🗑️ Položka byla odebrána ze zakázky.', 3500);
-    return removed;
-  });
+  /** Returns the removed item so the caller can offer "Vrátit" (restoreJobItem). */
+  const deleteJobItem = (itemId) => withItemJob(itemId, () => actions.deleteJobItem(itemId));
+  const restoreJobItem = (item) => actions.restoreJobItem(item);
 
   const reportItemDamage = (itemId, severity, notes, photoUrl) => {
     withItemJob(itemId, () => actions.reportItemDamage(itemId, severity, notes, photoUrl));
@@ -250,18 +252,17 @@ export const InventoryProvider = ({ children }) => {
     actions.addCatalogItemToJob(currentJob.id, catalogItem);
   };
 
+  // Callers show their own confirmation / undo toast (see FinishJobSheet).
   const finishJob = (jobId) => {
     actions.setJobStatus(jobId, 'ARCHIVED');
     if (currentJob?.id === jobId) {
       const next = jobs.find((j) => j.status === 'ACTIVE' && j.id !== jobId);
       if (next) setCurrentJobId(next.id);
     }
-    showNotice('📁 Zakázka byla uzavřena a přesunuta do archivu.');
   };
 
   const reactivateJob = (jobId) => {
     actions.setJobStatus(jobId, 'ACTIVE');
-    showNotice('⚡ Zakázka byla obnovena z archivu.');
   };
 
   const updateJob = (jobId, jobData) => {
@@ -357,6 +358,7 @@ export const InventoryProvider = ({ children }) => {
         setItemPending,
         toggleItemStatus,
         deleteJobItem,
+        restoreJobItem,
         reportItemDamage,
         addAdHocItem,
         addCatalogItemToJob,
@@ -396,6 +398,10 @@ export const InventoryProvider = ({ children }) => {
         // Context Menu State
         contextMenu,
         setContextMenu,
+        photoViewerItem,
+        setPhotoViewerItem,
+        finishingJob,
+        setFinishingJob,
       }}
     >
       {children}

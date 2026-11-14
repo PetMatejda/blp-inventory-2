@@ -102,7 +102,7 @@ export const ProtocolModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[65] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-card-bg rounded-2xl border border-outline-variant max-w-2xl w-full p-6 flex flex-col gap-5 shadow-2xl relative my-8">
         {/* Header */}
         <div className="flex justify-between items-start border-b border-outline-variant pb-3">

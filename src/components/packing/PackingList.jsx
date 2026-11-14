@@ -1,34 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
+import { useDialogs } from '../common/Dialogs';
 import { ItemSwipeCard } from './ItemSwipeCard';
+import { phaseOf, filtersFor, filterCounts, matchesFilter, phaseSummary, plural } from '../../domain/labels';
 import {
-  Search, QrCode, Plus, Package, Lock, Unlock,
-  Truck, Copy, X, AlertTriangle, BookOpen, FileText
+  Search, QrCode, Plus, Package, Lock, Unlock, Truck, Copy, X, BookOpen, FileText, CheckCircle2, ArrowRight,
 } from 'lucide-react';
-
 
 export const PackingList = () => {
   const {
-    currentJob,
-    jobItems,
-    selectedStatusFilter,
-    setSelectedStatusFilter,
-    searchQuery,
-    setSearchQuery,
-    setIsAdHocModalOpen,
-    setIsScannerModalOpen,
-    setActiveTab,
-    toggleJobMode,
-    finishJob,
-    reactivateJob,
-    setTemplateJob,
-    setEditingJob,
-    setIsProtocolModalOpen,
+    currentJob, jobItems, selectedStatusFilter, setSelectedStatusFilter, searchQuery, setSearchQuery,
+    setIsAdHocModalOpen, setIsScannerModalOpen, setActiveTab, toggleJobMode, reactivateJob,
+    setTemplateJob, setIsProtocolModalOpen, setFinishingJob,
   } = useInventory();
-
+  const { confirm, toast } = useDialogs();
   const [fabOpen, setFabOpen] = useState(false);
 
-  // Close FAB when scrolling
   useEffect(() => {
     const handleScroll = () => { if (fabOpen) setFabOpen(false); };
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -37,284 +24,201 @@ export const PackingList = () => {
 
   if (!currentJob) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-outline flex flex-col items-center gap-4">
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-on-surface-variant flex flex-col items-center gap-4">
         <Package className="w-16 h-16 text-outline/40" />
-        <p className="text-lg">Vyberte nebo vytvořte zakázku v záložce Dashboard.</p>
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className="px-6 py-3 bg-primary text-on-primary-container font-semibold rounded-2xl active:scale-95 transition-transform"
-        >
-          Přejít na Dashboard
+        <p className="text-lg">Vyberte nebo vytvořte zakázku.</p>
+        <button onClick={() => setActiveTab('dashboard')} className="h-14 px-6 bg-primary text-on-primary-container font-semibold rounded-2xl active:scale-95">
+          Přejít na zakázky
         </button>
       </div>
     );
   }
 
   const isArchived = currentJob.status === 'ARCHIVED';
-  const isModeDerigging = currentJob.mode === 'DERIGGING';
+  const mode = currentJob.mode || 'LOADING';
+  const phase = phaseOf(mode);
+  const isDerigging = mode === 'DERIGGING';
+  const filters = filtersFor(mode);
+  const activeFilter = filters.some((f) => f.id === selectedStatusFilter) ? selectedStatusFilter : 'REMAINING';
+  const counts = filterCounts(jobItems, mode);
+  const summary = phaseSummary(jobItems, mode);
+  const progress = summary.total ? Math.round((summary.done / summary.total) * 100) : 0;
 
-  // Filter items
-  const filteredItems = jobItems.filter((item) => {
-    if (selectedStatusFilter !== 'ALL' && item.status !== selectedStatusFilter) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      if (
-        !item.name.toLowerCase().includes(q) &&
-        !item.serialNumber?.toLowerCase().includes(q) &&
-        !item.category.toLowerCase().includes(q)
-      ) return false;
+  const q = searchQuery.trim().toLowerCase();
+  // While searching, look through everything so a found item is never hidden by the filter.
+  const visibleItems = jobItems.filter((item) => {
+    if (q) {
+      return item.name.toLowerCase().includes(q)
+        || item.serialNumber?.toLowerCase().includes(q)
+        || item.category?.toLowerCase().includes(q);
     }
-    return true;
+    return matchesFilter(item, activeFilter, mode);
   });
 
-  const totalRows = jobItems.length;
-  const totalPcs = jobItems.reduce((sum, i) => sum + (i.quantityRequested || 1), 0);
-  const pendingRows = jobItems.filter(i => i.status === 'PENDING').length;
-  const loadedRows = jobItems.filter(i => i.status === 'LOADED').length;
-  const loadedPcs = jobItems.filter(i => i.status === 'LOADED').reduce((sum, i) => sum + (i.quantityLoaded || 0), 0);
-  const packedRows = jobItems.filter(i => i.status === 'PACKED').length;
-  const packedPcs = jobItems.filter(i => i.status === 'PACKED').reduce((sum, i) => sum + (i.quantityLoaded || 0), 0);
-  const damagedCount = jobItems.filter(i => i.status === 'DAMAGED').length;
-
-  const doneRows = isModeDerigging ? packedRows : loadedRows;
-  const progress = totalRows > 0 ? Math.round((doneRows / totalRows) * 100) : 0;
-
-  const statusFilters = [
-    { id: 'ALL', label: 'Vše', count: totalRows, activeClass: 'bg-primary text-on-primary-container border-primary' },
-    { id: 'PENDING', label: 'K naložení', count: pendingRows, dot: '#475569', activeClass: 'bg-surface-variant text-on-surface border-outline' },
-    { id: 'LOADED', label: 'Na place', count: loadedRows, dot: '#10b981', activeClass: 'bg-secondary text-on-secondary-container border-secondary' },
-    { id: 'PACKED', label: 'K odvozu', count: packedRows, dot: '#06b6d4', activeClass: 'bg-tertiary-container text-on-tertiary-container border-tertiary' },
-    { id: 'DAMAGED', label: 'Závada', count: damagedCount, dot: '#ef4444', activeClass: 'bg-error-container text-on-error-container border-error' },
-  ];
-
+  const switchPhase = async () => {
+    const ok = await confirm(isDerigging ? {
+      title: 'Vrátit do riggingu?',
+      message: 'Swipe bude znovu znamenat „naloženo“.',
+      confirmLabel: 'Zpět na rigging',
+    } : {
+      title: 'Zahájit derigging?',
+      message: summary.remaining.length
+        ? `${summary.remaining.length} ${plural(summary.remaining.length, 'položka není naložená', 'položky nejsou naložené', 'položek není naložených')}. Derigging se týká jen techniky, která je na placu.\n\nSwipe bude znamenat „sbaleno k odvozu“.`
+        : 'Vše je naložené. Swipe bude znamenat „sbaleno k odvozu“.',
+      confirmLabel: 'Zahájit derigging',
+    });
+    if (ok) {
+      toggleJobMode();
+      setSelectedStatusFilter('REMAINING');
+      toast({ text: isDerigging ? 'Fáze: Rigging' : 'Fáze: Derigging' });
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto pb-32">
-
-      {/* ── STICKY COMMAND BAR — sits directly below TopAppBar without gaps ── */}
+      {/* Sticky command bar */}
       <div className="sticky top-14 z-30 bg-surface-container border-b border-outline-variant shadow-sm">
-
-        {/* Archived banner */}
         {isArchived && (
-          <div className="bg-surface-container-high border-b border-outline px-4 py-2 flex justify-between items-center gap-2 text-xs">
-            <div className="flex items-center gap-2 text-outline">
-              <Lock className="w-3.5 h-3.5 text-tertiary shrink-0" />
-              <span><strong className="text-on-surface">Archivováno</strong> — pouze pro čtení</span>
-            </div>
+          <div className="bg-surface-container-high border-b border-outline px-4 py-2 flex justify-between items-center gap-2">
+            <span className="flex items-center gap-2 text-sm text-on-surface-variant">
+              <Lock className="w-4 h-4 text-tertiary shrink-0" /> <strong className="text-on-surface">Archiv</strong> – jen pro čtení
+            </span>
             <div className="flex gap-2">
-              <button
-                onClick={() => setTemplateJob(currentJob)}
-                className="px-2.5 py-1 bg-surface-container text-on-surface font-semibold rounded-lg flex items-center gap-1 border border-outline-variant active:scale-95 shadow-sm"
-              >
-                <Copy className="w-3 h-3 text-secondary" /> Vzor
+              <button onClick={() => setTemplateJob(currentJob)} className="h-11 px-3 bg-surface-container text-on-surface text-sm font-semibold rounded-xl flex items-center gap-1.5 border border-outline-variant">
+                <Copy className="w-4 h-4 text-secondary" /> Vzor
               </button>
-              <button
-                onClick={() => reactivateJob(currentJob.id)}
-                className="px-2.5 py-1 bg-secondary text-on-secondary-container font-bold rounded-lg flex items-center gap-1 active:scale-95 shadow-sm"
-              >
-                <Unlock className="w-3 h-3" /> Obnovit
+              <button onClick={() => { reactivateJob(currentJob.id); toast({ text: 'Zakázka obnovena' }); }} className="h-11 px-3 bg-secondary text-on-secondary-container text-sm font-bold rounded-xl flex items-center gap-1.5">
+                <Unlock className="w-4 h-4" /> Obnovit
               </button>
             </div>
           </div>
         )}
 
-        {/* Row 1: Mode strip (Rigging/Derigging) + Progress bar */}
-        <div className="px-3 py-2 border-b border-outline-variant/60">
-          <div className="flex items-center gap-2.5">
-            {/* Mode switcher — inline pills */}
+        {/* Phase + progress */}
+        <div className="px-3 pt-2.5 pb-2 border-b border-outline-variant/60">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className={`inline-flex items-center gap-1.5 text-sm font-bold ${isDerigging ? 'text-cyan-700 dark:text-cyan-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
+              {isDerigging ? <Truck className="w-4 h-4" /> : <Package className="w-4 h-4" />}
+              {phase.name} <span className="font-normal text-on-surface-variant">· {phase.description}</span>
+            </span>
             {!isArchived && (
-              <div className="flex bg-surface-container-high rounded-xl p-0.5 border border-outline-variant gap-1 shrink-0">
-                <button
-                  onClick={() => isModeDerigging && toggleJobMode()}
-                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    !isModeDerigging
-                      ? 'bg-secondary text-on-secondary-container shadow-sm'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  <Package className="w-3.5 h-3.5" /> Rigging
-                </button>
-                <button
-                  onClick={() => !isModeDerigging && toggleJobMode()}
-                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    isModeDerigging
-                      ? 'bg-blue-500 text-white shadow-sm'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  <Truck className="w-3.5 h-3.5" /> Derigging
-                </button>
-              </div>
-            )}
-
-            {/* Progress bar — fills remaining space */}
-            <div className="flex-1 flex items-center gap-2 min-w-0">
-              <div className="flex-1 h-2.5 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant/40">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    isModeDerigging ? 'bg-blue-500 shadow-sm shadow-blue-500/50' : 'bg-secondary shadow-sm shadow-emerald-500/50'
-                  }`}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <span className="text-xs font-mono font-bold text-on-surface shrink-0">
-                {doneRows} / {totalRows} položek • {progress} %
-              </span>
-
-              {damagedCount > 0 && (
-                <span className="text-xs text-error font-bold flex items-center gap-0.5 shrink-0 bg-error-container/30 px-1.5 py-0.5 rounded-md border border-error/30">
-                  <AlertTriangle className="w-3.5 h-3.5" /> {damagedCount}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-
-        {/* Row 2: Search bar + Scanner */}
-        <div className="px-3 py-1.5 border-b border-outline-variant/60 flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Hledat techniku, SN..."
-              className="w-full h-10 pl-9 pr-9 bg-card-bg border border-outline-variant rounded-xl text-on-surface text-sm focus:border-primary focus:outline-none placeholder:text-outline shadow-inner"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
-              >
-                <X className="w-4 h-4" />
+              <button onClick={switchPhase} className="h-9 px-3 rounded-xl text-sm font-semibold border border-outline-variant bg-card-bg text-on-surface flex items-center gap-1 shrink-0">
+                {isDerigging ? 'Rigging' : 'Derigging'} <ArrowRight className="w-4 h-4" />
               </button>
             )}
           </div>
-          <button
-            onClick={() => setIsScannerModalOpen(true)}
-            disabled={isArchived}
-            className="w-10 h-10 bg-card-bg border border-outline-variant rounded-xl flex items-center justify-center text-primary hover:border-primary/50 disabled:opacity-40 active:scale-90 transition-transform shrink-0 shadow-sm"
-            title="QR / Barcode Skener"
-          >
-            <QrCode className="w-5 h-5 text-secondary" />
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-3 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant/40"
+              role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={phase.progressLabel}>
+              <div className={`h-full rounded-full transition-all duration-500 ${isDerigging ? 'bg-cyan-500' : 'bg-emerald-500'}`} style={{ width: `${progress}%` }} />
+            </div>
+            <span className="text-sm font-mono font-bold text-on-surface shrink-0">{summary.done}/{summary.total}</span>
+          </div>
+        </div>
+
+        {/* Search + scanner + protocol */}
+        <div className="px-3 py-2 border-b border-outline-variant/60 flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Hledat techniku, SN…"
+              className="w-full h-12 pl-10 pr-11 bg-card-bg border border-outline-variant rounded-xl text-on-surface text-base focus:border-primary focus:outline-none placeholder:text-outline"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} aria-label="Vymazat hledání" className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-outline">
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+          <button onClick={() => setIsScannerModalOpen(true)} disabled={isArchived} aria-label="Skenovat kód"
+            className="w-12 h-12 bg-card-bg border border-outline-variant rounded-xl flex items-center justify-center disabled:opacity-40 active:scale-90 shrink-0">
+            <QrCode className="w-6 h-6 text-secondary" />
           </button>
-          <button
-            onClick={() => setIsProtocolModalOpen(true)}
-            className="w-10 h-10 bg-card-bg border border-outline-variant rounded-xl flex items-center justify-center text-primary hover:border-primary/50 active:scale-90 transition-transform shrink-0 shadow-sm"
-            title="Předávací protokol (PDF)"
-            aria-label="Předávací protokol (PDF)"
-          >
-            <FileText className="w-5 h-5" />
+          <button onClick={() => setIsProtocolModalOpen(true)} aria-label="Předávací protokol (PDF)"
+            className="w-12 h-12 bg-card-bg border border-outline-variant rounded-xl flex items-center justify-center active:scale-90 shrink-0">
+            <FileText className="w-6 h-6 text-primary" />
           </button>
         </div>
 
-        {/* Row 3: Status filter pills */}
-        <div className="px-3 py-2 bg-surface-container">
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            {statusFilters.map((f) => {
-              const isActive = selectedStatusFilter === f.id;
+        {/* Filters for this phase */}
+        {!q && (
+          <div className="px-3 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar" role="tablist">
+            {filters.map((f) => {
+              const active = activeFilter === f.id;
               return (
                 <button
                   key={f.id}
+                  role="tab"
+                  aria-selected={active}
                   onClick={() => setSelectedStatusFilter(f.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border transition-all shrink-0 active:scale-95 shadow-sm ${
-                    isActive
-                      ? f.activeClass
-                      : 'bg-card-bg text-on-surface-variant border-outline-variant hover:border-outline'
-                  }`}
+                  className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap border shrink-0 flex items-center gap-2 ${
+                    active ? 'bg-primary text-on-primary-container border-primary' : 'bg-card-bg text-on-surface-variant border-outline-variant'
+                  } ${f.id === 'DAMAGED' && counts.DAMAGED > 0 && !active ? 'text-error border-error/40' : ''}`}
                 >
-                  {f.dot && (
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: f.dot }}
-                    />
-                  )}
                   {f.label}
-                  <span
-                    className={`font-mono font-bold text-[11px] px-1.5 py-0.2 rounded-md ${
-                      isActive ? 'bg-black/20' : 'bg-surface-container-high'
-                    }`}
-                  >
-                    {f.count}
-                  </span>
+                  <span className={`font-mono font-bold text-xs px-1.5 py-0.5 rounded-md ${active ? 'bg-black/20' : 'bg-surface-container-high'}`}>{counts[f.id]}</span>
                 </button>
               );
             })}
           </div>
-        </div>
-      </div>
-      {/* ── END STICKY ── */}
-
-
-      {/* Item List with clean top breathing room */}
-      <div className="flex flex-col gap-3 px-3 pt-4 pb-8">
-
-
-        {filteredItems.length === 0 ? (
-          <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-outline flex flex-col items-center gap-2">
-            <Package className="w-10 h-10 text-outline/40" />
-            <p className="text-sm">
-              {searchQuery
-                ? `Žádná shoda pro „${searchQuery}"`
-                : 'Žádné položky v tomto filtru.'}
-            </p>
-          </div>
-        ) : (
-          filteredItems.map((item) => (
-            <ItemSwipeCard key={item.id} item={item} />
-          ))
         )}
       </div>
 
-      {/* ════════════════════════════════════════════
-          FAB — Floating Action Button
-          (hidden when archived)
-      ════════════════════════════════════════════ */}
+      {/* Items */}
+      <div className="flex flex-col gap-3 px-3 pt-4 pb-8">
+        {visibleItems.length > 0 ? (
+          visibleItems.map((item) => <ItemSwipeCard key={item.id} item={item} />)
+        ) : q ? (
+          <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant">Nic neodpovídá „{searchQuery}“.</div>
+        ) : activeFilter === 'REMAINING' && summary.total > 0 ? (
+          <div className="bg-card-bg border border-secondary/40 rounded-2xl p-6 text-center flex flex-col items-center gap-3">
+            <CheckCircle2 className="w-12 h-12 text-secondary" />
+            <p className="text-lg font-bold text-on-surface">{phase.allDone}</p>
+            {summary.damaged.length > 0 && <p className="text-sm text-error font-semibold">{summary.damaged.length} {plural(summary.damaged.length, 'položka má', 'položky mají', 'položek má')} nahlášenou závadu.</p>}
+            {!isArchived && (isDerigging ? (
+              <button onClick={() => setFinishingJob(currentJob)} className="h-14 px-6 rounded-2xl bg-secondary text-on-secondary-container font-bold flex items-center gap-2">
+                <Lock className="w-5 h-5" /> Ukončit zakázku…
+              </button>
+            ) : (
+              <button onClick={switchPhase} className="h-14 px-6 rounded-2xl bg-secondary text-on-secondary-container font-bold flex items-center gap-2">
+                <Truck className="w-5 h-5" /> Zahájit derigging
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant flex flex-col items-center gap-2">
+            <Package className="w-10 h-10 text-outline/40" />
+            <p className="text-base">{summary.total === 0 ? 'Zakázka zatím nemá žádnou techniku.' : 'V tomto filtru nic není.'}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Add item (FAB) */}
       {!isArchived && (
         <>
-          {/* FAB backdrop when open */}
-          {fabOpen && (
-            <div
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-              onClick={() => setFabOpen(false)}
-            />
-          )}
-
-          {/* FAB sub-actions (shown when open) */}
+          {fabOpen && <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setFabOpen(false)} />}
           {fabOpen && (
             <div className="fixed right-4 z-50 flex flex-col items-end gap-2" style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>
-              <button
-                onClick={() => { setIsAdHocModalOpen(true); setFabOpen(false); }}
-                className="flex items-center gap-2.5 bg-card-bg border border-outline-variant text-on-surface font-semibold text-sm px-4 h-12 rounded-2xl shadow-xl active:scale-95 transition-transform"
-              >
-                <span className="text-xs font-mono text-secondary font-bold">Ad-Hoc</span>
-                Vlastní položka
-                <Plus className="w-4 h-4 text-secondary" />
+              <button onClick={() => { setActiveTab('catalog'); setFabOpen(false); }} className="flex items-center gap-2.5 bg-card-bg border border-outline-variant text-on-surface font-semibold text-base px-4 h-14 rounded-2xl shadow-xl">
+                <BookOpen className="w-5 h-5 text-primary" /> Z katalogu
               </button>
-              <button
-                onClick={() => { setActiveTab('catalog'); setFabOpen(false); }}
-                className="flex items-center gap-2.5 bg-card-bg border border-outline-variant text-on-surface font-semibold text-sm px-4 h-12 rounded-2xl shadow-xl active:scale-95 transition-transform"
-              >
-                <span className="text-xs font-mono text-primary font-bold">Katalog</span>
-                Z katalogu techniky
-                <BookOpen className="w-4 h-4 text-primary" />
+              <button onClick={() => { setIsAdHocModalOpen(true); setFabOpen(false); }} className="flex items-center gap-2.5 bg-card-bg border border-outline-variant text-on-surface font-semibold text-base px-4 h-14 rounded-2xl shadow-xl">
+                <Plus className="w-5 h-5 text-secondary" /> Vlastní položka
               </button>
             </div>
           )}
-
-          {/* FAB main button */}
           <button
             onClick={() => setFabOpen(!fabOpen)}
-            className={`fixed right-4 z-50 w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-200 active:scale-90 ${
-              fabOpen
-                ? 'bg-error-container border-2 border-error/60 text-error rotate-45'
-                : 'bg-secondary border-2 border-secondary/60 text-on-secondary-container'
+            className={`fixed right-4 z-50 w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-200 active:scale-90 ${
+              fabOpen ? 'bg-error-container border-2 border-error/60 text-error rotate-45' : 'bg-secondary border-2 border-secondary/60 text-on-secondary-container'
             }`}
             style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 0.5rem)' }}
-            title={fabOpen ? 'Zavřít' : 'Přidat položku do zakázky'}
+            aria-label={fabOpen ? 'Zavřít' : 'Přidat techniku do zakázky'}
           >
-            <Plus className="w-7 h-7 stroke-[2.5]" />
+            <Plus className="w-8 h-8 stroke-[2.5]" />
           </button>
         </>
       )}

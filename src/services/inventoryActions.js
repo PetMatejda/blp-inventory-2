@@ -105,6 +105,17 @@ export function createInventoryActions({ repo, getState, getActor }) {
       return item;
     },
 
+    /** Undo of deleteJobItem: puts the same record back (same ID and data). */
+    restoreJobItem(item) {
+      if (!item?.id) return null;
+      const { id, ...data } = item;
+      repo.commit([
+        { type: 'set', col: 'jobItems', id, data: stamp({ ...data, id }) },
+        auditOp(item.jobId, 'Vrácení odebrané položky', `${item.name} (${item.quantityRequested} ks) vrácen do zakázky`),
+      ]);
+      return item;
+    },
+
     addAdHocItem(jobId, name, category, quantity) {
       const qty = Math.max(1, parseInt(quantity, 10) || 1);
       const existing = findSameEquipment(jobItemsOf(jobId), jobId, { name: adHocName(name) });

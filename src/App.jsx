@@ -15,6 +15,9 @@ import { BarcodeScannerModal } from './components/modals/BarcodeScannerModal';
 import { DamageReportModal } from './components/damage/DamageReportModal';
 import { SettingsModal } from './components/modals/SettingsModal';
 import { ProtocolModal } from './components/protocol/ProtocolModal';
+import { PhotoViewer } from './components/packing/PhotoViewer';
+import { FinishJobSheet } from './components/dashboard/FinishJobSheet';
+import { DialogProvider } from './components/common/Dialogs';
 import { EditJobModal } from './components/modals/EditJobModal';
 import { DuplicateJobModal } from './components/modals/DuplicateJobModal';
 import { ContextMenuModal } from './components/modals/ContextMenuModal';
@@ -35,6 +38,8 @@ const ModalLayer = () => {
       <EditJobModal />
       <DuplicateJobModal />
       <ContextMenuModal />
+      <PhotoViewer />
+      <FinishJobSheet />
 
       <AuthModal
         isOpen={showAuthModal}
@@ -146,6 +151,7 @@ export function App() {
   return (
     <ErrorBoundary>
       <InventoryProvider>
+        <DialogProvider>
         <AuthGate>
           <div className="min-h-screen flex flex-col bg-background text-on-surface">
             {/* Global toast notifications */}
@@ -167,6 +173,7 @@ export function App() {
             <ModalLayer />
           </div>
         </AuthGate>
+        </DialogProvider>
       </InventoryProvider>
     </ErrorBoundary>
   );

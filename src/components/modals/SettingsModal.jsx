@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Settings, X, Moon, Sun, CloudUpload, CheckCircle2, AlertCircle, Smartphone, Download, ShieldCheck } from 'lucide-react';
+import { Settings, X, Moon, Sun, CloudUpload, CheckCircle2, AlertCircle, Smartphone, Download, ShieldCheck, LogOut, User } from 'lucide-react';
+import { useDialogs } from '../common/Dialogs';
+import { firebaseAuth } from '../../services/firebaseAuth';
 
 export const SettingsModal = () => {
   const {
     isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode,
-    forceSyncAll, hasPendingWrites, isOffline,
+    forceSyncAll, hasPendingWrites, isOffline, currentUser, setCurrentUser, setIsAuthModalOpen,
   } = useInventory();
+  const { confirm } = useDialogs();
   const [syncStatus, setSyncStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -47,7 +50,22 @@ export const SettingsModal = () => {
       }
       setDeferredPrompt(null);
     } else {
-      alert('Pro instalaci aplikace na Androidu:\n1. Otevřete web v prohlížeči Chrome na mobilu\n2. Klikněte na menu 3 teček (⋮) vpravo nahoře\n3. Zvolte "Přidat na domovskou obrazovku" nebo "Nainstalovat aplikaci"');
+      await confirm({
+        title: 'Instalace na telefon',
+        message: '1. Otevřete web v Chrome na mobilu\n2. Klepněte na menu ⋮ vpravo nahoře\n3. Zvolte „Přidat na plochu“ nebo „Nainstalovat aplikaci“',
+        confirmLabel: 'Rozumím',
+        cancelLabel: 'Zavřít',
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    const warn = hasPendingWrites ? '\n\nNěkteré změny se ještě neodeslaly do cloudu — po odhlášení se odešlou až při dalším přihlášení na tomto zařízení.' : '';
+    if (await confirm({ title: 'Odhlásit se?', message: `Účet ${currentUser?.email || ''}${warn}`, confirmLabel: 'Odhlásit', danger: !!warn })) {
+      await firebaseAuth.logout();
+      setCurrentUser(null);
+      setIsSettingsModalOpen(false);
+      setIsAuthModalOpen(true);
     }
   };
 
@@ -69,6 +87,22 @@ export const SettingsModal = () => {
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Profile */}
+        {currentUser && (
+          <div className="flex items-center gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant">
+            <div className="w-12 h-12 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden flex items-center justify-center shrink-0">
+              {currentUser.avatar ? <img src={currentUser.avatar} alt="" className="w-full h-full object-cover" /> : <User className="w-6 h-6 text-primary" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-base text-on-surface truncate">{currentUser.name}</p>
+              <p className="text-sm text-on-surface-variant truncate">{currentUser.email}</p>
+            </div>
+            <button onClick={handleLogout} className="h-11 px-3 rounded-xl border border-outline-variant text-sm font-semibold text-on-surface flex items-center gap-1.5 shrink-0">
+              <LogOut className="w-4 h-4" /> Odhlásit
+            </button>
+          </div>
+        )}
 
         {/* Sync Status Toast */}
         {syncStatus && (

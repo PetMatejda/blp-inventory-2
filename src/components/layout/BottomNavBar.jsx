@@ -8,8 +8,8 @@ export const BottomNavBar = () => {
   const refillCount = consumables.filter(c => c.state === 2).length;
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'packing', label: 'Packing', icon: PackageCheck },
+    { id: 'dashboard', label: 'Zakázky', icon: LayoutDashboard },
+    { id: 'packing', label: 'Balení', icon: PackageCheck },
     { id: 'catalog', label: 'Katalog', icon: BookOpen },
     { id: 'bracha', label: 'Brácha', icon: Briefcase, badge: refillCount },
     { id: 'history', label: 'Historie', icon: History },
@@ -48,7 +48,7 @@ export const BottomNavBar = () => {
               </div>
 
               <span
-                className={`font-sans text-[10px] font-semibold tracking-tight transition-all ${
+                className={`font-sans text-xs font-semibold tracking-tight transition-all ${
                   isActive ? 'text-secondary' : 'text-on-surface-variant'
                 }`}
               >

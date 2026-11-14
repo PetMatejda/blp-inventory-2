@@ -1,272 +1,141 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { useLongPress } from '../../hooks/useLongPress';
-import { Plus, FolderOpen, Calendar, User, FileText, AlertTriangle, CheckCircle, Lock, Unlock, Copy, Edit2, Archive, MoreVertical, Package, Truck } from 'lucide-react';
+import { phaseOf, phaseSummary } from '../../domain/labels';
+import { Plus, FolderOpen, Calendar, User, AlertTriangle, Lock, MoreVertical, Package, Truck, ChevronRight } from 'lucide-react';
+
+const formatDate = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' });
+};
 
 const JobCardItem = ({ job, isSelected }) => {
-  const { allJobItems, setCurrentJobId, setActiveTab, setEditingJob, setTemplateJob, setIsProtocolModalOpen, finishJob, reactivateJob, setContextMenu, isAdmin } = useInventory();
+  const { allJobItems, setCurrentJobId, setActiveTab, setContextMenu } = useInventory();
 
-  // Use allJobItems so dashboard always shows correct counts regardless of active job
-  const items = allJobItems.filter(i => i.jobId === job.id);
-  const totalRows = items.length;
-  const loadedRows = items.filter(i => i.status === 'LOADED').length;
-  const packedRows = items.filter(i => i.status === 'PACKED').length;
-  const damagedCount = items.filter(i => i.status === 'DAMAGED').length;
+  const items = allJobItems.filter((i) => i.jobId === job.id);
   const isArchived = job.status === 'ARCHIVED';
-  const isModeDerigging = job.mode === 'DERIGGING';
+  const isDerigging = job.mode === 'DERIGGING';
+  const phase = phaseOf(job.mode);
+  const s = phaseSummary(items, job.mode);
+  const progress = s.total ? Math.round((s.done / s.total) * 100) : 0;
 
-  // Progress calculation strictly by item row count (položky)
-  const currentDoneRows = isModeDerigging ? packedRows : loadedRows;
-  const progress = totalRows > 0 ? Math.round((currentDoneRows / totalRows) * 100) : 0;
-
-
-
-  // Attach tap & long press (cancelLongPress is a helper, not a DOM prop)
-  const { cancelLongPress, ...longPressProps } = useLongPress(
-    (e) => {
-      e.stopPropagation();
-      setContextMenu({ type: 'JOB', target: job });
-    },
-    () => {
-      setCurrentJobId(job.id);
-      setActiveTab('packing');
-    }
-  );
+  const open = () => { setCurrentJobId(job.id); setActiveTab('packing'); };
+  const openMenu = () => setContextMenu({ type: 'JOB', target: job });
+  const { cancelLongPress, ...longPress } = useLongPress((e) => { e.stopPropagation(); openMenu(); }, open);
 
   return (
-    <article
-      className={`bg-card-bg rounded-2xl border transition-all overflow-hidden flex flex-col shadow-md relative select-none ${
-        isSelected ? 'border-primary ring-1 ring-primary/40' : 'border-outline-variant hover:border-outline'
-      }`}
-    >
-      {/* Clickable Card Body — opens packaging or long press context menu */}
+    <article className={`bg-card-bg rounded-2xl border overflow-hidden shadow-md relative select-none ${
+      isSelected ? 'border-primary ring-1 ring-primary/40' : 'border-outline-variant'
+    }`}>
       <div
-        {...longPressProps}
-        className="p-5 flex flex-col gap-4 cursor-pointer hover:bg-surface-container/30 transition-colors"
+        {...longPress}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter') open(); }}
+        aria-label={`Otevřít zakázku ${job.name}`}
+        className="p-4 flex flex-col gap-3 cursor-pointer active:bg-surface-container/40"
       >
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <h2 className="text-xl font-bold text-on-surface">{job.name}</h2>
-              {isArchived && (
-                <span className="px-2 py-0.5 bg-surface-container-highest text-outline font-mono text-[11px] font-bold rounded border border-outline-variant flex items-center gap-1">
-                  <Lock className="w-3 h-3" /> Ukončeno
-                </span>
-              )}
-              {!isArchived && isModeDerigging && (
-                <span className="px-2.5 py-0.5 bg-blue-500/15 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-mono text-[11px] font-bold rounded border border-blue-500/40 flex items-center gap-1">
-                  <Truck className="w-3 h-3" /> REŽIM DERIGGING
-                </span>
-              )}
-              {!isArchived && !isModeDerigging && (
-                <span className="px-2.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-mono text-[11px] font-bold rounded border border-emerald-500/40 flex items-center gap-1">
-                  <Package className="w-3 h-3" /> REŽIM RIGGING
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-primary font-medium">{job.client}</p>
-
-            {/* Info badges: BLP Responsible, Gaffer & Rigging/Derigging Dates */}
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-xs text-on-surface-variant">
-              <span className="flex items-center gap-1.5 font-semibold text-primary">
-                <User className="w-3.5 h-3.5" /> BLP: {job.blpResponsible || 'Nezadáno'}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-outline" /> Gaffer: {job.assignedGaffer || 'Nezadáno'}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-secondary" /> Rigging: {job.riggingDate || job.date}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-tertiary" /> Derigging: {job.deriggingDate || job.date}
-              </span>
-            </div>
+        <div className="flex justify-between items-start gap-2">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-on-surface leading-snug break-words">{job.name}</h2>
+            {job.client && <p className="text-sm text-primary font-medium">{job.client}</p>}
           </div>
-
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`px-3 py-1 text-xs font-mono font-bold rounded-full border ${
-                job.status === 'ACTIVE'
-                  ? 'bg-secondary-container text-on-secondary-container border-secondary/40'
-                  : 'bg-surface-variant text-outline border-outline-variant'
-              }`}
-            >
-              {job.status === 'ACTIVE' ? 'Aktivní' : 'Archivováno'}
-            </span>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setContextMenu({ type: 'JOB', target: job });
-              }}
-              className="p-1.5 text-outline hover:text-on-surface bg-surface-container hover:bg-surface-container-high border border-outline-variant rounded-lg transition-colors"
-              title="Otevřít kontextové menu zakázky"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Mode Aware Progress Section */}
-        <div className="flex flex-col gap-1.5 mt-2 bg-surface-container p-3 rounded-xl border border-outline-variant">
-          <div className="flex justify-between items-center text-xs font-mono">
-            <span className={`font-bold flex items-center gap-1.5 ${isModeDerigging ? 'text-cyan-400' : 'text-emerald-400'}`}>
-              {isModeDerigging ? <Truck className="w-3.5 h-3.5" /> : <Package className="w-3.5 h-3.5" />}
-              {isModeDerigging ? 'PRŮBĚH DERIGGINGU (SBALENO K ODVOZU)' : 'PRŮBĚH NAKLÁDKY (NA PLACE)'}
-            </span>
-            <span className="text-on-surface font-bold">
-              {currentDoneRows} / {totalRows} položek • {progress} %
-            </span>
-
-          </div>
-
-          {/* High-Contrast Progress Bar */}
-          <div className="w-full h-3 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant p-0.5">
-            <div
-              className={`h-full transition-all duration-300 rounded-full ${
-                isModeDerigging ? 'bg-cyan-400 shadow-sm shadow-cyan-400/50' : 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
-              }`}
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-
-          {damagedCount > 0 && (
-            <div className="flex items-center gap-1.5 text-xs text-error font-semibold mt-1">
-              <AlertTriangle className="w-3.5 h-3.5" /> Poškozeno: {damagedCount} ks techniky
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Card Footer Actions — isolated from card click/long press */}
-      <div className="p-3 border-t border-outline-variant bg-surface-container flex flex-wrap gap-2 justify-between items-center z-10">
-        <div className="flex gap-2">
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setTemplateJob(job);
-            }}
-            className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm active:scale-95 cursor-pointer"
+            onMouseDown={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); openMenu(); }}
+            className="w-11 h-11 -mr-1 -mt-1 shrink-0 rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high"
+            aria-label={`Možnosti zakázky ${job.name}`}
           >
-            <Copy className="w-4 h-4 text-secondary" />
-            <span>Použít jako vzor</span>
+            <MoreVertical className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex gap-2">
-          {isArchived ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                reactivateJob(job.id);
-              }}
-              className="h-10 px-4 rounded-xl border border-outline-variant bg-card-bg hover:bg-surface-container-high text-primary font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
-            >
-              <Unlock className="w-4 h-4 text-secondary" />
-              <span>Obnovit</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (window.confirm(`Chcete dokončit zakázku "${job.name}" a přesunout ji do archivu?`)) {
-                  finishJob(job.id);
-                }
-              }}
-              className="h-10 px-3.5 rounded-xl border border-outline-variant bg-card-bg hover:border-error/40 hover:bg-error-container/20 text-on-surface hover:text-error font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
-            >
-              <Lock className="w-4 h-4" />
-              <span>Ukončit</span>
-            </button>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-on-surface-variant">
+          <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {formatDate(job.riggingDate || job.date)} – {formatDate(job.deriggingDate || job.date)}</span>
+          {job.assignedGaffer && <span className="flex items-center gap-1.5"><User className="w-4 h-4" /> {job.assignedGaffer}</span>}
+          {job.blpResponsible && <span className="flex items-center gap-1.5"><User className="w-4 h-4 text-primary" /> BLP: {job.blpResponsible}</span>}
+        </div>
+
+        <div className="flex flex-col gap-1.5 bg-surface-container p-3 rounded-xl border border-outline-variant">
+          <div className="flex justify-between items-center text-sm">
+            <span className={`font-bold flex items-center gap-1.5 ${
+              isArchived ? 'text-on-surface-variant' : isDerigging ? 'text-cyan-700 dark:text-cyan-300' : 'text-emerald-700 dark:text-emerald-300'
+            }`}>
+              {isArchived ? <Lock className="w-4 h-4" /> : isDerigging ? <Truck className="w-4 h-4" /> : <Package className="w-4 h-4" />}
+              {isArchived ? 'Archiv' : `${phase.name} · ${phase.progressLabel.toLowerCase()}`}
+            </span>
+            <span className="font-mono font-bold text-on-surface">{s.done}/{s.total}</span>
+          </div>
+          <div className="w-full h-3 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant">
+            <div className={`h-full rounded-full transition-all duration-300 ${isDerigging ? 'bg-cyan-500' : 'bg-emerald-500'}`} style={{ width: `${progress}%` }} />
+          </div>
+          {s.damaged.length > 0 && (
+            <div className="flex items-center gap-1.5 text-sm text-error font-semibold mt-0.5">
+              <AlertTriangle className="w-4 h-4" /> Závady: {s.damaged.length}
+            </div>
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setCurrentJobId(job.id);
-            setActiveTab('packing');
-          }}
-          className="h-10 px-5 rounded-xl bg-secondary text-on-secondary-container hover:opacity-90 text-sm font-semibold flex items-center gap-2 justify-center transition-all active:scale-95 shadow cursor-pointer"
-        >
-          <FolderOpen className="w-4 h-4" />
-          {isArchived ? 'Zobrazit' : 'Otevřít Packaging'}
-        </button>
+        <span className="self-end text-sm font-semibold text-secondary flex items-center gap-1">
+          {isArchived ? 'Zobrazit' : 'Otevřít balení'} <ChevronRight className="w-4 h-4" />
+        </span>
       </div>
     </article>
   );
 };
 
-
-
-
-
 export const JobDashboard = () => {
-  const { jobs, currentJobId, setIsNewJobModalOpen, isAdmin } = useInventory();
+  const { jobs, currentJobId, setIsNewJobModalOpen } = useInventory();
   const [filterState, setFilterState] = useState('ACTIVE');
 
-  const filteredJobs = jobs.filter(j => j.status === filterState);
+  const filteredJobs = jobs.filter((j) => j.status === filterState);
+  const tab = (id, label) => (
+    <button
+      role="tab"
+      aria-selected={filterState === id}
+      onClick={() => setFilterState(id)}
+      className={`flex-1 h-11 text-center rounded-lg font-semibold text-base transition-all ${
+        filterState === id ? 'bg-primary-container text-on-primary-container shadow-sm border border-primary/30' : 'text-on-surface-variant'
+      }`}
+    >
+      {label} ({jobs.filter((j) => j.status === id).length})
+    </button>
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-4 flex flex-col gap-4 pb-24">
-      {/* Active vs Archived Toggle + New Job CTA */}
       <div className="flex items-center gap-2">
-        <div className="flex bg-surface-container p-1 rounded-xl border border-outline-variant shadow-sm flex-1">
-          <button
-            onClick={() => setFilterState('ACTIVE')}
-            className={`flex-1 py-2 text-center rounded-lg font-semibold text-sm transition-all ${
-              filterState === 'ACTIVE'
-                ? 'bg-primary-container text-on-primary-container shadow-sm border border-primary/30'
-                : 'text-outline hover:text-on-surface'
-            }`}
-          >
-            Aktivní ({jobs.filter(j => j.status === 'ACTIVE').length})
-          </button>
-          <button
-            onClick={() => setFilterState('ARCHIVED')}
-            className={`flex-1 py-2 text-center rounded-lg font-semibold text-sm transition-all ${
-              filterState === 'ARCHIVED'
-                ? 'bg-primary-container text-on-primary-container shadow-sm border border-primary/30'
-                : 'text-outline hover:text-on-surface'
-            }`}
-          >
-            Archiv ({jobs.filter(j => j.status === 'ARCHIVED').length})
-          </button>
+        <div className="flex bg-surface-container p-1 rounded-xl border border-outline-variant shadow-sm flex-1" role="tablist">
+          {tab('ACTIVE', 'Aktivní')}
+          {tab('ARCHIVED', 'Archiv')}
         </div>
-
         <button
           onClick={() => setIsNewJobModalOpen(true)}
-          className="h-10 w-10 bg-primary text-on-primary-container font-semibold rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md active:scale-95 shrink-0"
-          title="Nová Zakázka"
+          className="h-[52px] px-4 bg-primary text-on-primary-container font-semibold rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 shrink-0"
+          aria-label="Nová zakázka"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Nová</span>
         </button>
       </div>
 
-      {/* Jobs List */}
       <div className="flex flex-col gap-4">
         {filteredJobs.length === 0 ? (
-          <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-outline flex flex-col items-center gap-3">
+          <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant flex flex-col items-center gap-3">
             <FolderOpen className="w-12 h-12 text-outline/50" />
-            <p>Žádné zakázky v této záložce.</p>
+            <p className="text-base">{filterState === 'ACTIVE' ? 'Žádné aktivní zakázky.' : 'Archiv je prázdný.'}</p>
+            {filterState === 'ACTIVE' && (
+              <button onClick={() => setIsNewJobModalOpen(true)} className="h-12 px-5 rounded-xl bg-primary text-on-primary-container font-semibold">
+                Založit zakázku
+              </button>
+            )}
           </div>
         ) : (
-          filteredJobs.map((job) => (
-            <JobCardItem
-              key={job.id}
-              job={job}
-              isSelected={job.id === currentJobId}
-            />
-          ))
+          filteredJobs.map((job) => <JobCardItem key={job.id} job={job} isSelected={job.id === currentJobId} />)
         )}
       </div>
     </div>

@@ -8,6 +8,7 @@ import {
   ChevronRight, Filter, EyeOff, Eye, Package
 } from 'lucide-react';
 import { CatalogItemDrawer } from './CatalogItemDrawer';
+import { useDialogs } from '../common/Dialogs';
 
 // ─────────────────────────────────────────────────────────────────────
 // CATALOG CARD — compact, no "edit mode" concept
@@ -171,6 +172,7 @@ export const EquipmentCatalog = () => {
     deleteCatalogItem,
     isAdmin,
   } = useInventory();
+  const { confirm } = useDialogs();
 
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -203,8 +205,13 @@ export const EquipmentCatalog = () => {
     setTimeout(() => setAddedItemSuccess(null), 2500);
   };
 
-  const handleDelete = (itemId, itemName) => {
-    if (window.confirm(`Opravdu smazat „${itemName}" z celého katalogu?`)) {
+  const handleDelete = async (itemId, itemName) => {
+    if (await confirm({
+      title: `Smazat „${itemName}“ z katalogu?`,
+      message: 'Položka zmizí z katalogu pro celý tým. Zakázky, které ji už obsahují, zůstanou beze změny.',
+      confirmLabel: 'Smazat z katalogu',
+      danger: true,
+    })) {
       deleteCatalogItem(itemId);
     }
   };
