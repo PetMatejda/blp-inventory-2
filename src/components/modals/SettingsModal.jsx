@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { Settings, X, Moon, Sun, CloudUpload, CheckCircle2, AlertCircle, Smartphone, Download, ShieldCheck } from 'lucide-react';
-import { storageService } from '../../services/storageService';
 
 export const SettingsModal = () => {
-  const { isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode } = useInventory();
+  const {
+    isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode,
+    forceSyncAll, hasPendingWrites, isOffline,
+  } = useInventory();
   const [syncStatus, setSyncStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -32,13 +34,8 @@ export const SettingsModal = () => {
   const handleManualCloudPush = async () => {
     setLoading(true);
     setSyncStatus(null);
-    const res = await storageService.syncToCloudManual();
+    await forceSyncAll();
     setLoading(false);
-    if (res.success) {
-      setSyncStatus({ type: 'success', text: 'Data byla úspěšně nahrána do Firebase!' });
-    } else {
-      setSyncStatus({ type: 'error', text: `Chyba zápisu: ${res.error || 'Zkontrolujte přihlášení'}` });
-    }
   };
 
   const handleInstallApp = async () => {
@@ -115,13 +112,20 @@ export const SettingsModal = () => {
         {/* Cloud Sync */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-mono text-outline uppercase font-bold">Cloud synchronizace</label>
+          <p className="text-xs text-on-surface-variant">
+            {isOffline
+              ? '📴 Offline – změny se ukládají v telefonu a odešlou se po připojení.'
+              : hasPendingWrites
+                ? '⏳ Některé změny se ještě odesílají do cloudu.'
+                : '✅ Všechny změny jsou uložené v cloudu.'}
+          </p>
           <button
             onClick={handleManualCloudPush}
             disabled={loading}
             className="w-full py-3 px-4 bg-primary text-on-primary-container font-mono font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md hover:opacity-95 disabled:opacity-50"
           >
             <CloudUpload className="w-4 h-4" />
-            {loading ? 'Nahrávám...' : '🔥 Vynutit nahrání dat do Firebase'}
+            {loading ? 'Odesílám…' : 'Odeslat a ověřit uložení v cloudu'}
           </button>
         </div>
 

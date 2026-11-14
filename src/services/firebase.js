@@ -12,6 +12,7 @@ import {
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
+  connectAuthEmulator,
 } from 'firebase/auth';
 
 import {
@@ -26,9 +27,14 @@ import {
   onSnapshot,
   updateDoc,
   deleteDoc,
+  writeBatch,
+  runTransaction,
+  query,
+  orderBy,
+  limit,
+  waitForPendingWrites,
+  connectFirestoreEmulator,
 } from 'firebase/firestore';
-
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Firebase configuration with environment variables and production fallbacks
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
@@ -69,11 +75,27 @@ try {
 export const googleProvider = new GoogleAuthProvider();
 
 
-// Initialize Firestore safely
-export const db = getFirestore(app);
+// Firestore with a persistent offline cache (IndexedDB, shared across tabs).
+// Reads work offline from the cache and writes are queued and survive app
+// restarts until the device is back online.
+let firestore;
+try {
+  firestore = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  });
+} catch (err) {
+  console.warn('[Firebase] Persistent cache unavailable, using memory cache:', err);
+  firestore = getFirestore(app);
+}
+export const db = firestore;
 
-// Cloud Storage for photos (damage reports, catalog images)
-export const storage = getStorage(app);
+// Local development against the Firebase emulators (npm run emulators):
+// start Vite with VITE_USE_EMULATORS=true and VITE_FIREBASE_PROJECT_ID=demo-blp.
+if (env.VITE_USE_EMULATORS === 'true') {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  console.info('[Firebase] Using local emulators (auth :9099, firestore :8080)');
+}
 
 
 export {
@@ -93,8 +115,11 @@ export {
   onSnapshot,
   updateDoc,
   deleteDoc,
-  storageRef,
-  uploadBytes,
-  getDownloadURL,
+  writeBatch,
+  runTransaction,
+  query,
+  orderBy,
+  limit,
+  waitForPendingWrites,
 };
 

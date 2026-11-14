@@ -6,7 +6,7 @@ import {
   Weight, Zap, Package, ChevronDown, Camera, Search, QrCode
 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { uploadPhoto, photoPath } from '../../services/photoService';
+import { savePhoto, usePhotoSrc } from '../../services/photoService';
 
 const PRESET_PHOTOS = [
   { label: 'SkyPanel', url: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80' },
@@ -37,6 +37,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
   const [isDirty, setIsDirty] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [imageError, setImageError] = useState('');
+  const previewSrc = usePhotoSrc(formData.image);
 
   // Barcode Camera Scanner state
   const [isScanningBarcode, setIsScanningBarcode] = useState(false);
@@ -88,10 +89,10 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
     setImageError('');
     setImageUploading(true);
     try {
-      const url = await uploadPhoto(file, photoPath('catalog', isEditing ? item.id : 'new'));
-      set({ image: url });
+      const ref = await savePhoto(file, { kind: 'catalog', itemId: isEditing ? item.id : '' });
+      set({ image: ref });
     } catch (err) {
-      setImageError(err.message || 'Fotku se nepodařilo nahrát.');
+      setImageError(err.message || 'Fotku se nepodařilo uložit.');
     } finally {
       setImageUploading(false);
     }
@@ -248,7 +249,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
           <div className="flex gap-4 items-start">
             <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-outline-variant bg-surface-container shrink-0 group">
               <img
-                src={formData.image}
+                src={previewSrc || PRESET_PHOTOS[0].url}
                 alt="Preview"
                 className="w-full h-full object-cover"
                 onError={(e) => { e.target.src = PRESET_PHOTOS[0].url; }}

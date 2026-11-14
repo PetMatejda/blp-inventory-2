@@ -31,20 +31,54 @@ service cloud.firestore {
         ];
     }
 
-    // Sdílený sklad, zakázky a technika — jen schválení uživatelé.
-    match /inventory_store/{document=**} {
+    // Zakázky, položky, katalog a spotřební materiál (jeden dokument = jeden záznam).
+    match /jobs/{id} {
       allow read, write: if isApprovedUser();
+    }
+    match /jobItems/{id} {
+      allow read, write: if isApprovedUser();
+    }
+    match /catalog/{id} {
+      allow read, write: if isApprovedUser();
+    }
+    match /consumables/{id} {
+      allow read, write: if isApprovedUser();
+    }
+
+    // Auditní log je neměnný: záznamy se jen přidávají.
+    // (Opakovaný zápis stejných dat je povolen kvůli bezpečnému opakování migrace.)
+    match /auditLogs/{id} {
+      allow read, create: if isApprovedUser();
+      allow update: if isApprovedUser() && request.resource.data == resource.data;
+      allow delete: if false;
+    }
+
+    // Fotky (závady, katalog) jako dokumenty — max. ~1 MB, nepřepisují se.
+    match /photos/{id} {
+      allow read: if isApprovedUser();
+      allow create: if isApprovedUser()
+        && request.resource.data.dataUrl is string
+        && request.resource.data.dataUrl.size() < 1000000
+        && request.resource.data.dataUrl.matches('^data:image/jpeg;base64,.*');
+      allow update, delete: if false;
+    }
+
+    // Stav jednorázové migrace dat.
+    match /meta/{id} {
+      allow read, write: if isApprovedUser();
+    }
+
+    // Původní sdílený dokument — po převodu jen pro čtení (záloha).
+    // Zápis je zakázán, aby staré verze aplikace nezapisovaly do dat, která už nikdo nečte.
+    match /inventory_store/{document=**} {
+      allow read: if isApprovedUser();
+      allow write: if false;
     }
 
     // Uživatelské profily: číst mohou schválení uživatelé, zapisovat jen vlastní profil.
     match /users/{userId} {
       allow read: if isApprovedUser();
       allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Ostatní dokumenty — jen schválení uživatelé.
-    match /{document=**} {
-      allow read, write: if isApprovedUser();
     }
   }
 }

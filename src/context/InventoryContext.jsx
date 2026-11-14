@@ -1,19 +1,40 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { storageService } from '../services/storageService';
-import { firebaseDb } from '../services/firebaseDb';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { firebaseAuth } from '../services/firebaseAuth';
+import { createFirestoreRepo } from '../services/inventoryRepo';
+import { createInventoryActions } from '../services/inventoryActions';
+import { migrateLegacyStore, MIGRATION_DOC } from '../services/migration';
+import { db, doc, getDoc, runTransaction, writeBatch } from '../services/firebase';
+import { INITIAL_VEHICLES } from '../mockData/initialData';
+import { CATEGORIES } from '../utils/categoryIcons';
 
 const InventoryContext = createContext();
 
+const CURRENT_JOB_KEY = 'blp_current_job_id_v2';
+const EMPTY_DATA = { jobs: [], jobItems: [], catalog: [], consumables: [], auditLogs: [] };
+
+// Stable, readable order (Firestore returns documents by ID).
+const categoryRank = (cat) => {
+  const idx = (CATEGORIES || []).findIndex((c) => (c.id || c) === cat);
+  return idx === -1 ? 999 : idx;
+};
+const byCategoryThenName = (a, b) =>
+  categoryRank(a.category) - categoryRank(b.category) || String(a.name || '').localeCompare(String(b.name || ''), 'cs');
+const SORTERS = {
+  jobs: (a, b) => String(b.riggingDate || '').localeCompare(String(a.riggingDate || '')) || String(a.name || '').localeCompare(String(b.name || ''), 'cs'),
+  jobItems: byCategoryThenName,
+  catalog: byCategoryThenName,
+  consumables: byCategoryThenName,
+  auditLogs: (a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')),
+};
+
+const isPermissionError = (err) => /permission|insufficient/i.test(err?.code || err?.message || '');
+
 export const InventoryProvider = ({ children }) => {
-  const [jobs, setJobs] = useState([]);
-  const [currentJobId, setCurrentJobIdState] = useState('');
-  const [jobItems, setJobItems] = useState([]);
-  const [allJobItems, setAllJobItems] = useState([]); // ALL items across ALL jobs — for dashboard counts
-  const [vehicles, setVehicles] = useState([]);
-  const [consumables, setConsumables] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [catalog, setCatalog] = useState([]);
+  const [data, setData] = useState(EMPTY_DATA);
+  const [pending, setPending] = useState({});
+  const [currentJobId, setCurrentJobIdState] = useState(() => {
+    try { return localStorage.getItem(CURRENT_JOB_KEY) || ''; } catch { return ''; }
+  });
   const [currentUser, setCurrentUserState] = useState(() => {
     try {
       const saved = localStorage.getItem('blp_auth_user_v2');
@@ -23,17 +44,12 @@ export const InventoryProvider = ({ children }) => {
     }
   });
   const [authLoading, setAuthLoading] = useState(() => {
-    try {
-      return !localStorage.getItem('blp_auth_user_v2');
-    } catch {
-      return true;
-    }
+    try { return !localStorage.getItem('blp_auth_user_v2'); } catch { return true; }
   });
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [migrationState, setMigrationState] = useState(null); // null | 'running' | 'done'
   const [themeMode, setThemeMode] = useState('light');
-
-  // Cloud Sync state & indicator
-  const [syncStatus, setSyncStatus] = useState('synced'); // 'synced' | 'syncing' | 'offline' | 'error'
   const [syncNotice, setSyncNotice] = useState(null);
 
   // Filters & Nav state
@@ -49,416 +65,268 @@ export const InventoryProvider = ({ children }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isProtocolModalOpen, setIsProtocolModalOpen] = useState(false);
-
-  // Job Editing & Template Modals
   const [editingJob, setEditingJob] = useState(null);
   const [templateJob, setTemplateJob] = useState(null);
-
-  // Global Context Menu state (Long Press)
   const [contextMenu, setContextMenu] = useState(null);
 
-  // Tell the user when the cloud refuses access (account not on the approved list)
-  const reportCloudError = useCallback((res) => {
-    if (!res?.success && /permission|insufficient/i.test(res?.error || '')) {
-      setSyncStatus('error');
-      setSyncNotice('🔒 Tento účet nemá přístup k datům BLP. Požádejte správce o přidání vašeho e-mailu.');
-      return true;
-    }
-    return false;
+  const noticeTimer = useRef(null);
+  const showNotice = useCallback((text, ms = 4000) => {
+    clearTimeout(noticeTimer.current);
+    setSyncNotice(text);
+    if (ms) noticeTimer.current = setTimeout(() => setSyncNotice(null), ms);
   }, []);
 
-  // Read local cache into React state
-  const refreshDataFromLocal = useCallback(() => {
-    setJobs(storageService.getJobs());
-    const savedJobId = storageService.getCurrentJobId();
-    setCurrentJobIdState(savedJobId);
-    setJobItems(storageService.getJobItems(savedJobId));
-    setAllJobItems(storageService.getJobItems(null)); // null = all jobs
-    setVehicles(storageService.getVehicles());
-    setConsumables(storageService.getConsumables());
-    setAuditLogs(storageService.getAuditLogs());
-    setCatalog(storageService.getCatalog());
-  }, []);
+  const denyAccess = useCallback(() => {
+    setAccessDenied(true);
+    showNotice('🔒 Tento účet nemá přístup k datům BLP. Požádejte správce o přidání vašeho e-mailu.', 0);
+  }, [showNotice]);
+
+  // ── Data layer ─────────────────────────────────────────────
+  const dataRef = useRef(EMPTY_DATA);
+  dataRef.current = data;
+  const actorRef = useRef('Neznámý uživatel');
+  actorRef.current = currentUser?.name ? `${currentUser.name} (${currentUser.role || 'USER'})` : 'Neznámý uživatel';
+
+  const repo = useMemo(() => createFirestoreRepo({
+    onWriteError: (err) => {
+      if (isPermissionError(err)) denyAccess();
+      else showNotice('⚠️ Změnu se nepodařilo uložit do cloudu. Zkuste to prosím znovu.');
+    },
+  }), [denyAccess, showNotice]);
+
+  const actions = useMemo(() => createInventoryActions({
+    repo,
+    getState: () => dataRef.current,
+    getActor: () => actorRef.current,
+  }), [repo]);
 
   useEffect(() => {
-    // Step 1: Initialize local fallback storage (version v5 ensures clean cache)
-    storageService.init();
-    refreshDataFromLocal();
+    let unsubscribeData = () => {};
+    let unsubscribeMarker = () => {};
 
-    // Step 2: Real-time Firestore subscription (instant multi-device sync).
-    // Started once a user is signed in (Step 4): Firestore rules reject
-    // unauthenticated listeners and a rejected listener never recovers.
-    let unsubscribeCloud = () => {};
-    const startCloudListener = () => {
-      unsubscribeCloud();
-      unsubscribeCloud = firebaseDb.subscribeToCloud(() => {
-        console.log('[Context] 🔔 Realtime remote update received from Firestore.');
-        setSyncStatus('synced');
-        refreshDataFromLocal();
-      });
+    const startData = (user) => {
+      unsubscribeData();
+      unsubscribeMarker();
+      setAccessDenied(false);
+
+      unsubscribeData = repo.subscribe(
+        (col, records, meta) => {
+          setData((prev) => ({ ...prev, [col]: [...records].sort(SORTERS[col]) }));
+          setPending((prev) => (prev[col] === meta.pending ? prev : { ...prev, [col]: meta.pending }));
+        },
+        (col, err) => {
+          console.warn(`[Context] Listener ${col} error:`, err);
+          if (isPermissionError(err)) denyAccess();
+        },
+      );
+
+      unsubscribeMarker = repo.watchDoc(MIGRATION_DOC[0], MIGRATION_DOC[1],
+        (marker) => setMigrationState(marker?.status || null),
+        (err) => { if (isPermissionError(err)) denyAccess(); });
+
+      // One-time move from the legacy shared document (needs a connection).
+      if (navigator.onLine) {
+        migrateLegacyStore({ db, doc, getDoc, runTransaction, writeBatch }, { user: user.email || user.name })
+          .then((res) => {
+            if (res.status === 'done') showNotice('✅ Data byla převedena do nové struktury.');
+          })
+          .catch((err) => {
+            console.warn('[Context] Migration:', err);
+            if (isPermissionError(err)) denyAccess();
+          });
+      }
     };
 
-    // Step 3: The startup cloud pull happens in Step 4, once Firebase confirms a signed-in user.
-    setSyncStatus('syncing');
+    const stopData = () => {
+      unsubscribeData();
+      unsubscribeMarker();
+      unsubscribeData = () => {};
+      unsubscribeMarker = () => {};
+      setData(EMPTY_DATA);
+      setPending({});
+    };
 
-    // Step 4: Subscribe to Firebase Auth state
     const unsubscribeAuth = firebaseAuth.onAuthChange((user) => {
       if (user) {
         setCurrentUserState(user);
-        storageService.setUserRole(user.role);
         setIsAuthModalOpen(false);
-        startCloudListener();
-        // Data reads require a signed-in, approved account — pull now that we have one.
-        storageService.flushPendingSync().then(() => firebaseDb.pullFromCloud()).then((res) => {
-          if (reportCloudError(res)) return;
-          if (res.success) refreshDataFromLocal();
-          setSyncStatus(res.success ? 'synced' : 'offline');
-        });
+        startData(user);
       } else {
-        unsubscribeCloud();
-        unsubscribeCloud = () => {};
+        stopData();
         setCurrentUserState(null);
         setIsAuthModalOpen(true);
-        setSyncStatus('offline');
       }
       setAuthLoading(false);
     });
 
-    // Step 5: Refresh on tab visibility — always flush local changes first
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        if (storageService.isSyncInProgress && storageService.isSyncInProgress()) {
-          console.log('[Context] Visibility changed but sync is in progress, skipping pull');
-          return;
-        }
-        await storageService.flushPendingSync();
-        firebaseDb.pullFromCloud().then((res) => {
-          if (res.success) refreshDataFromLocal();
-          setSyncStatus(res.success ? 'synced' : 'offline');
-        });
-      }
-    };
-
-    const handleOnline = async () => {
-      setIsOffline(false);
-      setSyncStatus('syncing');
-      await storageService.flushPendingSync();
-      firebaseDb.pullFromCloud().then((res) => {
-        if (res.success) refreshDataFromLocal();
-        setSyncStatus(res.success ? 'synced' : 'offline');
-      });
-    };
-
-    const handleOffline = () => {
-      setIsOffline(true);
-      setSyncStatus('offline');
-    };
-
-    window.addEventListener('visibilitychange', handleVisibilityChange);
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
-      unsubscribeCloud();
       unsubscribeAuth();
-      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      stopData();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-
-  }, [refreshDataFromLocal, reportCloudError]);
-
+  }, [repo, denyAccess, showNotice]);
 
   useEffect(() => {
     const root = document.documentElement;
-    if (themeMode === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else {
-      root.classList.remove('dark');
-      root.classList.add('light');
-    }
+    root.classList.toggle('dark', themeMode === 'dark');
+    root.classList.toggle('light', themeMode !== 'dark');
   }, [themeMode]);
+
+  // ── Derived state ──────────────────────────────────────────
+  const { jobs, jobItems: allJobItems, catalog, consumables, auditLogs } = data;
+  const currentJob = jobs.find((j) => j.id === currentJobId)
+    || jobs.find((j) => j.status === 'ACTIVE')
+    || jobs[0]
+    || null;
+  const jobItems = useMemo(
+    () => (currentJob ? allJobItems.filter((i) => i.jobId === currentJob.id) : []),
+    [allJobItems, currentJob],
+  );
+  const hasPendingWrites = Object.values(pending).some(Boolean);
+  const syncStatus = accessDenied ? 'error'
+    : isOffline ? 'offline'
+      : (hasPendingWrites || migrationState === 'running') ? 'syncing'
+        : 'synced';
 
   const setCurrentUser = (user) => {
     setCurrentUserState(user);
-    if (user) {
-      storageService.setUserRole(user.role);
-      setActiveTab('dashboard');
-    }
+    if (user) setActiveTab('dashboard');
   };
 
   const isAdmin = () => true; // All users are admins for this phase
   const canEditPacking = () => true;
-
   const userRole = currentUser?.role || 'USER';
 
   const setCurrentJobId = (jobId) => {
-    storageService.setCurrentJobId(jobId);
-    setCurrentJobIdState(jobId);
-    setJobItems(storageService.getJobItems(jobId));
-    // Also refresh allJobItems so dashboard counts stay accurate after navigation
-    setAllJobItems(storageService.getJobItems(null));
+    try { localStorage.setItem(CURRENT_JOB_KEY, jobId || ''); } catch { /* private mode */ }
+    setCurrentJobIdState(jobId || '');
   };
 
-  const currentJob = jobs.find(j => j.id === currentJobId) || jobs[0] || null;
-
-  // Helper: refresh UI and push to cloud after any mutation
-  const afterMutation = () => {
-    refreshDataFromLocal();
-    // setSyncStatus shows 'syncing' until cloud confirms
-    // storageService.syncToCloud() is debounced at 50ms
+  // ── Actions (same API as before) ───────────────────────────
+  const jobOfItem = (itemId) => {
+    const item = allJobItems.find((i) => i.id === itemId);
+    return item ? jobs.find((j) => j.id === item.jobId) : null;
+  };
+  const archivedNotice = () => showNotice('🔒 Zakázka je archivovaná. Pro úpravy ji nejprve obnovte.');
+  const withItemJob = (itemId, fn) => {
+    const job = jobOfItem(itemId);
+    if (job?.status === 'ARCHIVED') { archivedNotice(); return null; }
+    return fn(job?.mode || 'LOADING');
   };
 
-  // Actions with Cloud Sync queue integration
-  const updateItemQuantity = (itemId, delta) => {
-    if (currentJob?.status === 'ARCHIVED') return;
-    setSyncStatus('syncing');
-    const mode = currentJob?.mode || 'LOADING';
-    const actorName = getActorName();
-    storageService.updateItemQuantity(itemId, delta, actorName, mode);
-    afterMutation();
-  };
+  const updateItemQuantity = (itemId, delta) => withItemJob(itemId, (mode) => actions.updateItemQuantity(itemId, delta, mode));
+  const setItemExactQuantity = (itemId, qty) => withItemJob(itemId, (mode) => actions.setItemExactQuantity(itemId, qty, mode));
+  const setItemLoadedOrPacked = (itemId) => withItemJob(itemId, (mode) => actions.setItemLoadedOrPacked(itemId, mode));
+  const setItemPending = (itemId) => withItemJob(itemId, (mode) => actions.setItemPending(itemId, mode));
+  const toggleItemStatus = (itemId) => withItemJob(itemId, (mode) => actions.toggleItemStatus(itemId, mode));
 
-  const setItemExactQuantity = (itemId, exactQty) => {
-    if (currentJob?.status === 'ARCHIVED') return;
-    const allItems = storageService.getJobItems(currentJobId);
-    const item = allItems.find(i => i.id === itemId);
-    if (!item) return;
-    const delta = exactQty - item.quantityLoaded;
-    updateItemQuantity(itemId, delta);
-  };
-
-  const setItemLoadedOrPacked = (itemId) => {
-    if (currentJob?.status === 'ARCHIVED') return;
-    setSyncStatus('syncing');
-    const mode = currentJob?.mode || 'LOADING';
-    const actorName = getActorName();
-    storageService.setItemLoadedOrPacked(itemId, actorName, mode);
-    afterMutation();
-  };
-
-  const setItemPending = (itemId) => {
-    if (currentJob?.status === 'ARCHIVED') return;
-    setSyncStatus('syncing');
-    const mode = currentJob?.mode || 'LOADING';
-    const actorName = getActorName();
-    storageService.setItemPending(itemId, actorName, mode);
-    afterMutation();
-  };
-
-  const toggleItemStatus = (itemId) => {
-    if (currentJob?.status === 'ARCHIVED') return;
-    setSyncStatus('syncing');
-    const mode = currentJob?.mode || 'LOADING';
-    const actorName = getActorName();
-    storageService.toggleItemStatus(itemId, actorName, mode);
-    afterMutation();
-  };
-
-  const deleteJobItem = (itemId, itemData = null) => {
-    if (currentJob?.status === 'ARCHIVED') {
-      alert('Tato zakázka je archivována. Pro odebírání položek ji nejprve obnovte tlačítkem Obnovit v kontextovém menu zakázky.');
-      return;
-    }
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.deleteJobItem(itemId, actorName, itemData);
-    afterMutation();
-    setSyncNotice('🗑️ Položka byla odebrána ze zakázky a smazána z cloudu.');
-    setTimeout(() => setSyncNotice(null), 3500);
-  };
+  const deleteJobItem = (itemId) => withItemJob(itemId, () => {
+    const removed = actions.deleteJobItem(itemId);
+    if (removed) showNotice('🗑️ Položka byla odebrána ze zakázky.', 3500);
+    return removed;
+  });
 
   const reportItemDamage = (itemId, severity, notes, photoUrl) => {
-    if (currentJob?.status === 'ARCHIVED') return;
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.reportItemDamage(itemId, severity, notes, photoUrl, actorName);
-    afterMutation();
+    withItemJob(itemId, () => actions.reportItemDamage(itemId, severity, notes, photoUrl));
     setDamageReportItem(null);
   };
 
   const addAdHocItem = (name, category, quantity) => {
-    if (!currentJobId || currentJob?.status === 'ARCHIVED') return;
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.addAdHocItem(currentJobId, name, category, 'v1', quantity, actorName);
-    afterMutation();
+    if (!currentJob) return;
+    if (currentJob.status === 'ARCHIVED') { archivedNotice(); return; }
+    actions.addAdHocItem(currentJob.id, name, category, quantity);
     setIsAdHocModalOpen(false);
   };
 
   const addCatalogItemToJob = (catalogItem) => {
-    if (!currentJobId || currentJob?.status === 'ARCHIVED') return;
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.addCatalogItemToJob(currentJobId, catalogItem, 'v1', actorName);
-    afterMutation();
+    if (!currentJob) return;
+    if (currentJob.status === 'ARCHIVED') { archivedNotice(); return; }
+    actions.addCatalogItemToJob(currentJob.id, catalogItem);
   };
 
-  const getActorName = () => {
-    if (currentUser?.name) {
-      return `${currentUser.name} (${currentUser.role || 'USER'})`;
-    }
-    return 'Neznámý uživatel';
-  };
-
-  // Job Status & Template Operations
   const finishJob = (jobId) => {
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.finishJob(jobId, actorName);
-
-    // If the finished job was the currently selected job, switch current selection to another active job
-    const allJobs = storageService.getJobs();
-    const otherActiveJobs = allJobs.filter(j => j.status === 'ACTIVE' && j.id !== jobId);
-    if (currentJobId === jobId && otherActiveJobs.length > 0) {
-      storageService.setCurrentJobId(otherActiveJobs[0].id);
-      setCurrentJobIdState(otherActiveJobs[0].id);
+    actions.setJobStatus(jobId, 'ARCHIVED');
+    if (currentJob?.id === jobId) {
+      const next = jobs.find((j) => j.status === 'ACTIVE' && j.id !== jobId);
+      if (next) setCurrentJobId(next.id);
     }
-
-    afterMutation();
-    setSyncNotice('📁 Zakázka byla úspěšně uzavřena a přesunuta do Archivu!');
-    setTimeout(() => setSyncNotice(null), 4000);
+    showNotice('📁 Zakázka byla uzavřena a přesunuta do archivu.');
   };
 
   const reactivateJob = (jobId) => {
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.reactivateJob(jobId, actorName);
-    afterMutation();
-    setSyncNotice('⚡ Zakázka byla obnovena z archivu do aktivních!');
-    setTimeout(() => setSyncNotice(null), 4000);
+    actions.setJobStatus(jobId, 'ACTIVE');
+    showNotice('⚡ Zakázka byla obnovena z archivu.');
   };
 
   const updateJob = (jobId, jobData) => {
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.updateJob(jobId, jobData, actorName);
-    afterMutation();
+    actions.updateJob(jobId, jobData);
     setEditingJob(null);
   };
 
   const duplicateJobAsTemplate = (sourceJobId, newJobData) => {
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    const newJob = storageService.duplicateJobAsTemplate(sourceJobId, newJobData, actorName);
-    afterMutation();
-    if (newJob) {
-      setCurrentJobId(newJob.id);
-    }
+    const job = actions.duplicateJobAsTemplate(sourceJobId, newJobData);
+    if (job) setCurrentJobId(job.id);
     setTemplateJob(null);
     setActiveTab('packing');
   };
 
-
-  // Master Catalog CRUD (Restricted to ADMIN)
-  const createCatalogItem = (itemData) => {
-    if (!isAdmin()) {
-      alert('Správa Master Katalogu vyžaduje oprávnění ADMIN (Lead Gaffer).');
-      return;
-    }
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.createCatalogItem(itemData, actorName);
-    afterMutation();
-  };
-
-  const updateCatalogItem = (catalogId, itemData) => {
-    if (!isAdmin()) {
-      alert('Správa Master Katalogu vyžaduje oprávnění ADMIN (Lead Gaffer).');
-      return;
-    }
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.updateCatalogItem(catalogId, itemData, actorName);
-    afterMutation();
-  };
-
-  const deleteCatalogItem = (catalogId) => {
-    if (!isAdmin()) {
-      alert('Správa Master Katalogu vyžaduje oprávnění ADMIN (Lead Gaffer).');
-      return;
-    }
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.deleteCatalogItem(catalogId, actorName);
-    afterMutation();
-  };
-
-  const updateConsumableState = (consumableId, newState) => {
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.updateConsumableState(consumableId, newState, actorName);
-    afterMutation();
-  };
-
-  const toggleJobMode = () => {
-    if (!currentJobId || currentJob?.status === 'ARCHIVED') return;
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.toggleJobMode(currentJobId, actorName);
-    afterMutation();
-  };
-
   const createJob = (jobData) => {
-    if (!isAdmin()) {
-      alert('Vytváření zakázek vyžaduje oprávnění ADMIN (Lead Gaffer).');
-      return;
-    }
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    const newJob = storageService.createJob(jobData, actorName);
-    afterMutation();
-    setCurrentJobId(newJob.id);
+    const job = actions.createJob(jobData);
+    setCurrentJobId(job.id);
     setActiveTab('packing');
     setIsNewJobModalOpen(false);
   };
 
   const deleteJob = (jobId) => {
-    if (!isAdmin()) {
-      alert('Mazání zakázek vyžaduje oprávnění ADMIN.');
+    actions.deleteJob(jobId);
+    if (currentJob?.id === jobId) setCurrentJobId('');
+  };
+
+  const toggleJobMode = () => {
+    if (!currentJob) return;
+    if (currentJob.status === 'ARCHIVED') { archivedNotice(); return; }
+    actions.toggleJobMode(currentJob.id);
+  };
+
+  const createCatalogItem = (itemData) => actions.createCatalogItem(itemData);
+  const updateCatalogItem = (catalogId, itemData) => actions.updateCatalogItem(catalogId, itemData);
+  const deleteCatalogItem = (catalogId) => actions.deleteCatalogItem(catalogId);
+  const updateConsumableState = (consumableId, newState) => actions.updateConsumableState(consumableId, newState);
+
+  /** Waits until every local change is on the server. */
+  const forceSyncAll = async () => {
+    if (accessDenied) { denyAccess(); return; }
+    if (!navigator.onLine) {
+      showNotice('📴 Jste offline. Změny jsou uložené v telefonu a odešlou se po připojení.');
       return;
     }
-    setSyncStatus('syncing');
-    const actorName = getActorName();
-    storageService.deleteJob(jobId, actorName);
-    afterMutation();
-  };
-
-
-
-  const forceSyncAll = async () => {
-    setSyncStatus('syncing');
-    await storageService.flushPendingSync();
-    const pullRes = await firebaseDb.pullFromCloud();
-    refreshDataFromLocal();
-    if (reportCloudError(pullRes)) return;
-    setSyncStatus(pullRes.success ? 'synced' : 'offline');
-    if (pullRes.success) {
-      setSyncNotice('🔥 Data byla úspěšně synchronizována s cloudem!');
-    } else {
-      setSyncNotice(`⚠️ Chyba synchronizace: ${pullRes.error || 'Zkontrolujte připojení'}`);
+    showNotice('⏳ Odesílám změny do cloudu…', 0);
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000));
+    try {
+      await Promise.race([repo.waitForSync(), timeout]);
+      showNotice('✅ Všechny změny jsou uložené v cloudu.');
+    } catch {
+      showNotice('⚠️ Odeslání trvá déle než obvykle. Změny zůstávají uložené v telefonu.');
     }
-    setTimeout(() => setSyncNotice(null), 4000);
-  };
-
-
-  const resetDemoData = () => {
-    storageService.resetDemoData();
-    refreshDataFromLocal();
   };
 
   return (
     <InventoryContext.Provider
       value={{
         jobs,
-        currentJobId,
+        currentJobId: currentJob?.id || '',
         setCurrentJobId,
         currentJob,
         jobItems,
         allJobItems,
         authLoading,
-        vehicles,
+        vehicles: INITIAL_VEHICLES,
         consumables,
         auditLogs,
         catalog,
@@ -471,6 +339,8 @@ export const InventoryProvider = ({ children }) => {
         setIsOffline,
         syncStatus,
         syncNotice,
+        hasPendingWrites,
+        migrationState,
         themeMode,
         setThemeMode,
         activeTab,
@@ -503,8 +373,6 @@ export const InventoryProvider = ({ children }) => {
         deleteJob,
         forceSyncAll,
 
-        resetDemoData,
-
         // Modals & Editing
         isNewJobModalOpen,
         setIsNewJobModalOpen,
@@ -514,7 +382,6 @@ export const InventoryProvider = ({ children }) => {
         setIsScannerModalOpen,
         damageReportItem,
         setDamageReportItem,
-
         isAuthModalOpen,
         setIsAuthModalOpen,
         isSettingsModalOpen,

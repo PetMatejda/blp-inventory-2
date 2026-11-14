@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { uploadPhoto, photoPath } from '../../services/photoService';
+import { savePhoto } from '../../services/photoService';
 import { Camera, AlertTriangle, X, Trash2 } from 'lucide-react';
 
 const SEVERITIES = [
@@ -63,13 +63,12 @@ export const DamageReportModal = () => {
     setIsSaving(true);
     setUploadError('');
     try {
-      const url = await uploadPhoto(
-        photoFile,
-        photoPath('damage', damageReportItem.jobId, damageReportItem.id),
-      );
-      save(url);
+      const ref = await savePhoto(photoFile, {
+        kind: 'damage', jobId: damageReportItem.jobId, itemId: damageReportItem.id,
+      });
+      save(ref);
     } catch (err) {
-      setUploadError(err.message || 'Fotku se nepodařilo nahrát.');
+      setUploadError(err.message || 'Fotku se nepodařilo uložit.');
       setIsSaving(false);
     }
   };
@@ -197,7 +196,7 @@ export const DamageReportModal = () => {
               disabled={isSaving}
               className="flex-1 py-3 bg-error text-on-error font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all disabled:opacity-60"
             >
-              <AlertTriangle className="w-4 h-4" /> {isSaving ? 'Nahrávám fotku…' : 'Nahlásit poškození'}
+              <AlertTriangle className="w-4 h-4" /> {isSaving ? 'Ukládám fotku…' : 'Nahlásit poškození'}
             </button>
           </div>
         </form>

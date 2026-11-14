@@ -18,64 +18,44 @@ This document provides a comprehensive technical overview of the **BLP Inventory
 
 ## 2. Cloud Backend & Firebase Architecture
 
-- **Firebase Project ID**: `blp-inventory`
+- **Firebase Project ID**: `blp-inventory` (free Spark plan — no Cloud Storage)
 - **Auth Domain**: `blp-inventory.firebaseapp.com`
-- **Storage Bucket**: `blp-inventory.firebasestorage.app`
 
-### Database Schema (Cloud Firestore)
+### Database Schema (Cloud Firestore) — one document per record
 
-All persistent application state is stored in Google Cloud Firestore under two main structures:
+| Collection | Document | Notes |
+|---|---|---|
+| `jobs/{id}` | `name, client, assignedGaffer, blpResponsible, riggingDate, deriggingDate, status (ACTIVE/ARCHIVED), mode (LOADING/DERIGGING), vehicleIds, updatedAt, updatedBy` | |
+| `jobItems/{id}` | `jobId, catalogId, name, category, quantityRequested, quantityLoaded, status, serialNumber, barcode, isAdHoc, bundleTag, damageSeverity, damageNotes, photoUrls, updatedAt, updatedBy` | |
+| `catalog/{id}` | `name, category, weight, power, image, serialPrefix, barcode, availableCount, isBundle, bundleItems` | |
+| `consumables/{id}` | `name, category, state (0 OK / 1 50% / 2 REFILL), stateLabel` | |
+| `auditLogs/{id}` | `timestamp, user, jobId, action, detail, type` | append-only (rules) |
+| `photos/{id}` | `dataUrl (JPEG ≤ ~700 kB), kind, jobId, itemId, createdAt, createdBy` | referenced as `photo:<id>` |
+| `meta/migration_v3` | `status (running/done), startedAt, finishedAt, by, counts` | one-time migration marker |
+| `users/{uid}` | `uid, name, email, role, avatar, updatedAt` | own profile only |
+| `inventory_store/blp_main_store` | legacy single document | **read-only backup** after migration |
 
-1. **Global Inventory Store Document**:
-   - Path: `/inventory_store/blp_main_store`
-   - Contains:
-     - `jobs`: Array of job project objects (`id`, `name`, `client`, `assignedGaffer`, `riggingDate`, `deriggingDate`, `status`, `mode`, `vehicleIds`).
-     - `jobItems`: Array of equipment items assigned to jobs (`id`, `jobId`, `catalogId`, `name`, `category`, `quantityRequested`, `quantityLoaded`, `status`, `serialNumber`, `isBundle`, `bundleItems`, `damageNotes`, `photoUrls`).
-     - `catalog`: Array of master equipment catalog items (`id`, `name`, `category`, `weight`, `power`, `image`, `serialPrefix`, `availableCount`, `isBundle`, `bundleItems`).
-     - `consumables`: Array of consumable supplies (`id`, `name`, `category`, `state`, `stateLabel`).
-     - `auditLogs`: Array of timestamped action logs (`id`, `timestamp`, `user`, `jobId`, `action`, `detail`, `type`).
-     - `updatedAt`: ISO timestamp of the last database modification.
-
-2. **User Profiles Collection**:
-   - Path: `/users/{uid}`
-   - Contains: `{ uid, name, email, role, avatar, updatedAt }`.
+**Photos** are stored as Firestore documents (Storage needs the paid Blaze plan). `photoService.savePhoto()` shrinks a photo on the phone (max 1280 px JPEG, EXIF/GPS stripped, re-compressed until it fits) and returns `photo:<id>`; `usePhotoSrc()` / `ItemThumbnail` resolve it. Moving to Storage later only touches `photoService.js`.
 
 ---
 
-## 3. Realtime Dual-Layer Data Synchronization
-
-The application uses a **dual-layer synchronization strategy** (Local Cache + Realtime Firestore Listener):
+## 3. Data Layer & Offline Sync
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    User Action                          │
-│        (Swipe Card, Stepper Qty, Add Item)              │
-└────────────────────────────┬────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────┐
-│               Local Storage & Context                   │
-│          Instant UI Update (< 16ms render)              │
-└────────────────────────────┬────────────────────────────┘
-                             │ (50ms fast push)
-                             ▼
-┌─────────────────────────────────────────────────────────┐
-│                 Firebase Cloud Firestore                │
-│             Doc: /inventory_store/blp_main_store        │
-└────────────────────────────┬────────────────────────────┘
-                             │ (onSnapshot Realtime Event)
-                             ▼
-┌─────────────────────────────────────────────────────────┐
-│              Remote Devices (Web / Mobile)              │
-│       Filtered by hasPendingWrites -> Live Sync         │
-└─────────────────────────────────────────────────────────┘
+Screen ──► InventoryContext (same API as before)
+              │ actions                 ▲ live data (onSnapshot per collection)
+              ▼                         │
+        inventoryActions.js ──► inventoryRepo.js ──► Firestore SDK + persistent cache (IndexedDB)
+        (rules: domain/items.js)                         │  queued writes survive restarts/offline
+                                                         ▼
+                                                   Cloud Firestore ──► other devices (realtime)
 ```
 
-### Sync Safety Mechanisms
-
-- **Metadata Filter (`hasPendingWrites`)**: In `src/services/firebaseDb.js`, `subscribeToCloud` sets `{ includeMetadataChanges: true }` and ignores snapshots where `snap.metadata.hasPendingWrites === true`. This prevents local uncommitted writes from echoing back and overwriting local component state.
-- **Tab Focus Auto-Pull**: `InventoryContext.jsx` registers listeners on `visibilitychange` and `focus`. When a user unlocks their mobile phone or switches back to the app tab, `firebaseDb.pullFromCloud()` automatically fetches the newest server payload.
-- **Manual Force Sync**: The top navigation bar and settings modal contain a 1-click **🔄 Force Sync** button that triggers `forceSyncAll()` (`syncToCloudManual` + `syncFromCloudManual`).
+- **Offline first by the SDK**: `firebase.js` initialises Firestore with `persistentLocalCache` (multi-tab). Writes apply locally at once, are queued while offline and sent when the device is back online. No custom localStorage cache, merge or tombstones.
+- **Per-record writes**: each action updates only the affected documents (plus an audit entry) in one batch, so two people editing different items never overwrite each other. Same-document conflicts are last-write-wins per field set.
+- **Sync status**: `hasPendingWrites` from snapshot metadata → `syncStatus` (`synced` / `syncing` / `offline` / `error`). "Odeslat a ověřit" calls `waitForPendingWrites`.
+- **Business rules** live in `src/domain/items.js` as pure functions (state machine, bundles, templates) and are unit-tested.
+- **Migration** (`src/services/migration.js`): on first sign-in of an approved user, a transaction claims `meta/migration_v3`, the legacy document is converted (deleted records skipped via tombstones, duplicates merged, IDs made unique, audit trimmed to 300) and written in batches of ≤ 400. Other devices skip it. The legacy document is never modified.
 
 ---
 
@@ -83,13 +63,11 @@ The application uses a **dual-layer synchronization strategy** (Local Cache + Re
 
 Implemented in `src/services/firebaseAuth.js` and `src/components/auth/AuthModal.jsx`:
 
-- **Google OAuth**: `signInWithPopup(auth, googleProvider)` with an automatic fallback to `signInWithRedirect` for mobile WebViews or browsers with popup blockers.
-- **Email & Password**: Standard Firebase Auth sign-in and registration with error translation in Czech.
-- **Roles**:
-  - `ADMIN` (Lead Gaffer): Full access to create/edit/delete jobs, archive jobs, edit master catalog, duplicate jobs as templates.
-  - `USER` (Crew Member): Access restricted to operational tasks (Packing list swiping, stepper quantity adjustments, damage reporting, consumable updates).
-- **Auto-Admin Whitelist**: Users with email `petmatejda@gmail.com` or containing `petr`/`gaffer`/`admin` are automatically assigned `ADMIN` status.
-- **Session Persistence & Timeout Prevention**: Configured with explicit `browserLocalPersistence` in Firebase Auth paired with a resilient local session cache (`blp_auth_user_v2`). When working on film sets or in warehouses where connectivity drops or Firebase's 1-hour auth token cannot refresh, the app never aggressively logs out active crew members. The session persists indefinitely across device lock, sleep, background tab suspension, and offline periods until the user explicitly clicks "Odhlásit se".
+- **Google OAuth** (popup, redirect fallback for WebViews) and **e-mail + password**. E-mail accounts must verify their address (verification link sent on registration / login).
+- **Access control is in Firestore rules** (`firestore.rules`): only signed-in users with a **verified e-mail on the approved list** can read or write data. To add a team member, add the e-mail to the list and publish the rules (Firebase Console → Firestore → Rules).
+- The shared test login (`blp/blpblp`) and anonymous sessions were removed.
+- Session persists via `browserLocalPersistence`; a `null` Firebase user means signed out.
+- Roles: everybody is `ADMIN` for now (`isAdmin()` returns true).
 
 ---
 
@@ -118,7 +96,7 @@ Item cards in `ItemSwipeCard.jsx` feature a dedicated 12px left accent bar with 
 
 ### Thumbnail Fallback System
 
-Component `src/components/common/ItemThumbnail.jsx` renders image previews. If an image fails to load (404, CORS, offline), it automatically renders a styled category icon card (e.g. Light bulb for Lights, Tripod for Grip, Cable plug for Cables).
+Component `src/components/common/ItemThumbnail.jsx` renders image previews. If an image fails to load (404, CORS, offline), it automatically renders a styled category icon card (e.g. Light bulb for Lights, Tripod for Grip, Cable plug for Cables). Photos taken in the app (`photo:<id>`) are resolved through `usePhotoSrc()`.
 
 ---
 
@@ -126,47 +104,38 @@ Component `src/components/common/ItemThumbnail.jsx` renders image previews. If a
 
 ```
 blp-inventory-2/
-├── public/
-│   ├── manifest.json              # PWA Manifest for Android WebAPK
-│   ├── icon-192.png               # Android App Icon (192x192)
-│   └── icon-512.png               # Android App Icon (512x512)
 ├── src/
-│   ├── components/
-│   │   ├── auth/
-│   │   │   └── AuthModal.jsx      # Authentication Modal (Login/Register/Logout)
-│   │   ├── catalog/
-│   │   │   └── EquipmentCatalog.jsx # Master Equipment Catalog & Bundle Viewer
-│   │   ├── common/
-│   │   │   └── ItemThumbnail.jsx  # Image preview with Category Icon fallback
-│   │   ├── dashboard/
-│   │   │   └── JobDashboard.jsx   # Project Dashboard & Mode Progress Bars
-│   │   ├── layout/
-│   │   │   └── TopAppBar.jsx      # Navigation bar, User Profile, Sync Status
-│   │   ├── modals/
-│   │   │   └── SettingsModal.jsx  # App Settings, Manual Cloud Sync, PWA Installer
-│   │   └── packing/
-│   │       ├── ItemSwipeCard.jsx  # Swipeable Item Card (40px threshold)
-│   │       └── PackingList.jsx    # Main Equipment Packing View
-│   ├── context/
-│   │   └── InventoryContext.jsx   # React Context & Central State Controller
+│   ├── domain/items.js              # Item state machine, bundles, templates (pure, tested)
 │   ├── services/
-│   │   ├── firebase.js            # Firebase App, Auth & Firestore Initialization
-│   │   ├── firebaseAuth.js        # Authentication Handlers (Google / Email)
-│   │   ├── firebaseDb.js          # Firestore Realtime Listeners & Push/Pull
-│   │   └── storageService.js      # Local Cache, Consolidation & Audit Logging
-│   ├── mockData/
-│   │   └── initialData.js         # Fallback Initial Catalog & Job Data
-│   └── App.jsx                    # Root App Component & Auth Modal Guard
-├── vercel.json                    # Vercel SSR/Build Configuration
-├── vite.config.js                 # Vite Bundler Config
-└── package.json                   # Dependencies & Scripts
+│   │   ├── firebase.js              # Firebase init, Firestore persistent cache, emulator switch
+│   │   ├── firebaseAuth.js          # Google / e-mail auth
+│   │   ├── inventoryRepo.js         # Firestore collections: listeners + writes
+│   │   ├── inventoryActions.js      # Everything a user can do (writes + audit)
+│   │   ├── migration.js             # One-time legacy document → collections
+│   │   ├── tombstones.js            # Legacy deletion markers (used by migration only)
+│   │   ├── photoService.js          # Photos as Firestore docs, usePhotoSrc()
+│   │   └── pdfService.js            # Handover protocol PDF
+│   ├── context/InventoryContext.jsx # React state from live data, action API for screens
+│   └── components/…                 # Screens and modals
+├── tests/                           # Vitest unit tests (npm test)
+├── tests-rules/                     # Firestore rules tests (emulator)
+├── scripts/emulator-seed.mjs        # Seeds local emulators with legacy data + test user
+├── firestore.rules                  # Security rules (publish in Firebase Console)
+├── firebase.json                    # Emulator config
+└── .github/workflows/ci.yml         # CI: tests, build, rules tests
 ```
 
 ---
 
 ## 7. Developer & Build Commands
 
-- **Development Server**: `npm run dev` (Runs locally on `http://localhost:3000` or `5173`)
-- **Production Build**: `npm run build` (Outputs to `dist/`)
-- **Preview Build**: `npm run preview`
+- `npm run dev` — development server
+- `npm run build` — production build (`dist/`)
+- `npm test` — unit tests (domain, actions, migration, photos, protocol)
+- `npm run test:rules:emulator` — Firestore rules tests (needs Java; CI runs them)
+- **Local testing against emulators** (never touches production data):
+  1. `npm run emulators` (needs Java, e.g. Android Studio's `jbr` via `JAVA_HOME`)
+  2. `node scripts/emulator-seed.mjs` — legacy data + test user `admin@blp.cz` / `emulator-test-123`
+  3. `VITE_USE_EMULATORS=true VITE_FIREBASE_PROJECT_ID=demo-blp npm run dev`
+- **Note**: npm/Vite may fail inside the OneDrive folder (OneDrive locks `node_modules`); keep the working copy outside OneDrive.
 - **Git Repository**: `https://github.com/PetMatejda/blp-inventory-2.git`

@@ -21,8 +21,8 @@ const JobCardItem = ({ job, isSelected }) => {
 
 
 
-  // Attach tap & long press
-  const longPressProps = useLongPress(
+  // Attach tap & long press (cancelLongPress is a helper, not a DOM prop)
+  const { cancelLongPress, ...longPressProps } = useLongPress(
     (e) => {
       e.stopPropagation();
       setContextMenu({ type: 'JOB', target: job });

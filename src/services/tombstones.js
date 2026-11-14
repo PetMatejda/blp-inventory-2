@@ -1,6 +1,7 @@
 /**
- * Tombstones — records of deleted job items, shared by the local cache
- * (storageService) and the cloud merge (firebaseDb).
+ * Tombstones — records of deleted job items in the LEGACY single-document store.
+ * Used only by the one-time migration (migration.js) to skip deleted records;
+ * the collection-based store deletes documents directly and needs none.
  *
  * Two kinds of entries live in the same list:
  *  - ID tombstones (`ji-cat-123`): permanent. Item IDs are never reused, so an

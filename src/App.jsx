@@ -122,18 +122,6 @@ class ErrorBoundary extends React.Component {
           >
             Načíst aplikaci znovu
           </button>
-          <button
-            onClick={() => {
-              if (window.confirm('Smazat data uložená v tomto telefonu a načíst je znovu z cloudu?\n\nZměny, které se ještě neodeslaly do cloudu, budou ztraceny.')) {
-                ['blp_jobs_v2', 'blp_job_items_v2', 'blp_catalog_v2', 'blp_consumables_v2', 'blp_audit_logs_v2']
-                  .forEach((key) => localStorage.removeItem(key));
-                window.location.reload();
-              }
-            }}
-            className="mt-4 text-xs text-slate-400 underline"
-          >
-            Nepomohlo to? Smazat data v telefonu a stáhnout z cloudu
-          </button>
         </div>
       );
     }

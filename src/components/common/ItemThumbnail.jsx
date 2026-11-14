@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getCategoryMeta } from '../../utils/categoryIcons';
+import { usePhotoSrc } from '../../services/photoService';
 
 /**
  * ItemThumbnail
@@ -12,7 +13,9 @@ import { getCategoryMeta } from '../../utils/categoryIcons';
  *   <ItemThumbnail src={item.image} name={item.name} category={item.category}
  *     className="w-full h-full" onClick={...} />
  */
-export const ItemThumbnail = ({ src, name, category, className = '', onClick }) => {
+export const ItemThumbnail = ({ src: rawSrc, name, category, className = '', onClick }) => {
+  // Photos taken in the app are stored as "photo:<id>" references (see photoService).
+  const src = usePhotoSrc(rawSrc);
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const catMeta = getCategoryMeta(category);
