@@ -1,6 +1,6 @@
 import React from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { LayoutDashboard, PackageCheck, BookOpen, Briefcase, History } from 'lucide-react';
+import { LayoutDashboard, PackageCheck, Warehouse, Briefcase, History } from 'lucide-react';
 
 export const BottomNavBar = () => {
   const { activeTab, setActiveTab, consumables } = useInventory();
@@ -10,7 +10,7 @@ export const BottomNavBar = () => {
   const tabs = [
     { id: 'dashboard', label: 'Zakázky', icon: LayoutDashboard },
     { id: 'packing', label: 'Balení', icon: PackageCheck },
-    { id: 'catalog', label: 'Katalog', icon: BookOpen },
+    { id: 'catalog', label: 'Sklad', icon: Warehouse },
     { id: 'bracha', label: 'Brácha', icon: Briefcase, badge: refillCount },
     { id: 'history', label: 'Historie', icon: History },
   ];

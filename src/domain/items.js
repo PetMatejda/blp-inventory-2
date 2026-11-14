@@ -2,9 +2,19 @@
 // Pure functions: they take the current item and return the changed fields.
 // No storage, no Firebase — the data layer decides how to persist the result.
 
-export const MODES = { LOADING: 'LOADING', DERIGGING: 'DERIGGING' };
+export const MODES = { LOADING: 'LOADING', DERIGGING: 'DERIGGING', RESTOCK: 'RESTOCK' };
 
-const doneStatus = (mode) => (mode === MODES.DERIGGING ? 'PACKED' : 'LOADED');
+const DONE = { LOADING: 'LOADED', DERIGGING: 'PACKED', RESTOCK: 'RESTOCKED' };
+const doneStatus = (mode) => DONE[mode] || 'LOADED';
+
+/**
+ * Entering the restock phase: every piece has to be counted back into the
+ * warehouse, so counts start at 0. Damaged items keep their state (→ service).
+ */
+export function enterRestock(item) {
+  if (item.status === 'DAMAGED') return {};
+  return { quantityLoaded: 0, status: 'PENDING' };
+}
 const normName = (name) => String(name || '').toLowerCase().trim();
 
 /** +/- stepper. Never below 0; counting past the plan raises the plan (current behaviour). */
@@ -30,6 +40,7 @@ export function markDone(item, mode = MODES.LOADING) {
 
 /** Swipe left: back to "to load" (rigging) or back "on set" (derigging). */
 export function markUndone(item, mode = MODES.LOADING) {
+  if (mode === MODES.RESTOCK) return { quantityLoaded: 0, status: 'PENDING' };
   return mode === MODES.DERIGGING
     ? { quantityLoaded: item.quantityRequested || 0, status: 'LOADED' }
     : { quantityLoaded: 0, status: 'PENDING' };
@@ -40,7 +51,7 @@ export function markUndone(item, mode = MODES.LOADING) {
  * quantity stays and the item is done only if the full quantity is present.
  */
 export function toggleStatus(item, mode = MODES.LOADING) {
-  if (item.status === 'LOADED' || item.status === 'PACKED') {
+  if (item.status === 'LOADED' || item.status === 'PACKED' || item.status === 'RESTOCKED') {
     return { quantityLoaded: 0, status: 'PENDING' };
   }
   if (item.status === 'DAMAGED') {

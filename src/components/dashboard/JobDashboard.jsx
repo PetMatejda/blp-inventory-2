@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { useLongPress } from '../../hooks/useLongPress';
 import { phaseOf, phaseSummary } from '../../domain/labels';
-import { Plus, FolderOpen, Calendar, User, AlertTriangle, Lock, MoreVertical, Package, Truck, ChevronRight } from 'lucide-react';
+import { Plus, FolderOpen, Calendar, User, AlertTriangle, Lock, MoreVertical, Package, Truck, ChevronRight, Warehouse } from 'lucide-react';
 
 const formatDate = (iso) => {
   if (!iso) return '—';
@@ -18,7 +18,8 @@ const JobCardItem = ({ job, isSelected }) => {
   const isDerigging = job.mode === 'DERIGGING';
   const phase = phaseOf(job.mode);
   const s = phaseSummary(items, job.mode);
-  const progress = s.total ? Math.round((s.done / s.total) * 100) : 0;
+  const progress = s.percent;
+  const isRestock = job.mode === 'RESTOCK';
 
   const open = () => { setCurrentJobId(job.id); setActiveTab('packing'); };
   const openMenu = () => setContextMenu({ type: 'JOB', target: job });
@@ -64,15 +65,15 @@ const JobCardItem = ({ job, isSelected }) => {
         <div className="flex flex-col gap-1.5 bg-surface-container p-3 rounded-xl border border-outline-variant">
           <div className="flex justify-between items-center text-sm">
             <span className={`font-bold flex items-center gap-1.5 ${
-              isArchived ? 'text-on-surface-variant' : isDerigging ? 'text-cyan-700 dark:text-cyan-300' : 'text-emerald-700 dark:text-emerald-300'
+              isArchived ? 'text-on-surface-variant' : isRestock ? 'text-violet-700 dark:text-violet-300' : isDerigging ? 'text-cyan-700 dark:text-cyan-300' : 'text-emerald-700 dark:text-emerald-300'
             }`}>
-              {isArchived ? <Lock className="w-4 h-4" /> : isDerigging ? <Truck className="w-4 h-4" /> : <Package className="w-4 h-4" />}
+              {isArchived ? <Lock className="w-4 h-4" /> : isRestock ? <Warehouse className="w-4 h-4" /> : isDerigging ? <Truck className="w-4 h-4" /> : <Package className="w-4 h-4" />}
               {isArchived ? 'Archiv' : `${phase.name} · ${phase.progressLabel.toLowerCase()}`}
             </span>
-            <span className="font-mono font-bold text-on-surface">{s.done}/{s.total}</span>
+            <span className="font-mono font-bold text-on-surface">{s.donePieces}/{s.totalPieces} ks</span>
           </div>
           <div className="w-full h-3 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant">
-            <div className={`h-full rounded-full transition-all duration-300 ${isDerigging ? 'bg-cyan-500' : 'bg-emerald-500'}`} style={{ width: `${progress}%` }} />
+            <div className={`h-full rounded-full transition-all duration-300 ${isRestock ? 'bg-violet-500' : isDerigging ? 'bg-cyan-500' : 'bg-emerald-500'}`} style={{ width: `${progress}%` }} />
           </div>
           {s.damaged.length > 0 && (
             <div className="flex items-center gap-1.5 text-sm text-error font-semibold mt-0.5">

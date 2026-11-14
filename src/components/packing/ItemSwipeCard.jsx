@@ -26,7 +26,7 @@ const SEVERITY = { LIGHT: 'lehká', MAJOR: 'nefunkční', CRITICAL: 'kritická' 
 
 const SWIPE_THRESHOLD = 40;
 
-export const ItemSwipeCard = ({ item }) => {
+export const ItemSwipeCard = ({ item, shortage = 0 }) => {
   const {
     updateItemQuantity,
     setItemExactQuantity,
@@ -178,6 +178,12 @@ export const ItemSwipeCard = ({ item }) => {
                 </button>
               )}
             </div>
+          )}
+
+          {shortage > 0 && (
+            <p className="text-sm font-semibold text-error flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 shrink-0" /> Ve skladu v tomto termínu chybí {shortage} ks
+            </p>
           )}
 
           {item.bundleTag && <p className="text-xs text-on-surface-variant">{item.bundleTag}</p>}

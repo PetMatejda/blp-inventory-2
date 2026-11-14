@@ -45,6 +45,26 @@ service cloud.firestore {
       allow read, write: if isApprovedUser();
     }
 
+    // Sklad: stav zásob, kusy se štítkem, inventury.
+    match /stockLevels/{id} {
+      allow read, write: if isApprovedUser();
+    }
+    match /stockUnits/{id} {
+      allow read, write: if isApprovedUser();
+    }
+    match /stocktakes/{id} {
+      allow read, write: if isApprovedUser();
+    }
+    match /stocktakeLines/{id} {
+      allow read, write: if isApprovedUser();
+    }
+
+    // Pohyby skladu jsou neměnná historie (stejně jako audit).
+    match /movements/{id} {
+      allow read, create: if isApprovedUser();
+      allow update, delete: if false;
+    }
+
     // Auditní log je neměnný: záznamy se jen přidávají.
     // (Opakovaný zápis stejných dat je povolen kvůli bezpečnému opakování migrace.)
     match /auditLogs/{id} {

@@ -4,14 +4,21 @@ import { useDialogs } from '../common/Dialogs';
 import { ItemSwipeCard } from './ItemSwipeCard';
 import { phaseOf, filtersFor, filterCounts, matchesFilter, phaseSummary, plural } from '../../domain/labels';
 import {
-  Search, QrCode, Plus, Package, Lock, Unlock, Truck, Copy, X, BookOpen, FileText, CheckCircle2, ArrowRight,
+  Search, QrCode, Plus, Package, Lock, Unlock, Truck, Copy, X, BookOpen, FileText, CheckCircle2, ArrowRight, Warehouse,
 } from 'lucide-react';
+
+const PHASE_COLOR = {
+  LOADING: 'text-emerald-700 dark:text-emerald-300',
+  DERIGGING: 'text-cyan-700 dark:text-cyan-300',
+  RESTOCK: 'text-violet-700 dark:text-violet-300',
+};
+const PHASE_BAR = { LOADING: 'bg-emerald-500', DERIGGING: 'bg-cyan-500', RESTOCK: 'bg-violet-500' };
 
 export const PackingList = () => {
   const {
     currentJob, jobItems, selectedStatusFilter, setSelectedStatusFilter, searchQuery, setSearchQuery,
-    setIsAdHocModalOpen, setIsScannerModalOpen, setActiveTab, toggleJobMode, reactivateJob,
-    setTemplateJob, setIsProtocolModalOpen, setFinishingJob,
+    setIsAdHocModalOpen, setIsScannerModalOpen, setActiveTab, changeJobPhase, reactivateJob,
+    setTemplateJob, setIsProtocolModalOpen, setFinishingJob, availabilityFor, stockLevels, setWarehouseTab,
   } = useInventory();
   const { confirm, toast } = useDialogs();
   const [fabOpen, setFabOpen] = useState(false);
@@ -42,7 +49,18 @@ export const PackingList = () => {
   const activeFilter = filters.some((f) => f.id === selectedStatusFilter) ? selectedStatusFilter : 'REMAINING';
   const counts = filterCounts(jobItems, mode);
   const summary = phaseSummary(jobItems, mode);
-  const progress = summary.total ? Math.round((summary.done / summary.total) * 100) : 0;
+  const progress = summary.percent;
+  const isRestock = mode === 'RESTOCK';
+  const stockTracked = stockLevels.length > 0;
+
+  // Pieces the warehouse cannot cover in the job's dates (only while planning/loading).
+  const shortages = {};
+  if (mode === 'LOADING' && !isArchived && stockTracked) {
+    for (const item of jobItems) {
+      if (!item.catalogId || shortages[item.catalogId] !== undefined) continue;
+      shortages[item.catalogId] = availabilityFor(item.catalogId)?.short || 0;
+    }
+  }
 
   const q = searchQuery.trim().toLowerCase();
   // While searching, look through everything so a found item is never hidden by the filter.
@@ -55,22 +73,26 @@ export const PackingList = () => {
     return matchesFilter(item, activeFilter, mode);
   });
 
+  /** Next phase: Rigging → Derigging → Naskladnění (restock is finished in FinishJobSheet). */
+  const nextPhase = isDerigging ? 'RESTOCK' : 'DERIGGING';
   const switchPhase = async () => {
+    if (isRestock) { setFinishingJob(currentJob); return; }
+    const remaining = summary.remaining.length;
     const ok = await confirm(isDerigging ? {
-      title: 'Vrátit do riggingu?',
-      message: 'Swipe bude znovu znamenat „naloženo“.',
-      confirmLabel: 'Zpět na rigging',
+      title: 'Zahájit naskladnění?',
+      message: `Technika se bude počítat zpět do skladu od nuly — každý kus, který se vrátí.${remaining ? `\n\n${remaining} ${plural(remaining, 'položka není sbalená', 'položky nejsou sbalené', 'položek není sbalených')}.` : ''}\n\nPo potvrzení se do deriggingu nedá vrátit.`,
+      confirmLabel: 'Zahájit naskladnění',
     } : {
       title: 'Zahájit derigging?',
-      message: summary.remaining.length
-        ? `${summary.remaining.length} ${plural(summary.remaining.length, 'položka není naložená', 'položky nejsou naložené', 'položek není naložených')}. Derigging se týká jen techniky, která je na placu.\n\nSwipe bude znamenat „sbaleno k odvozu“.`
-        : 'Vše je naložené. Swipe bude znamenat „sbaleno k odvozu“.',
+      message: `${remaining
+        ? `${remaining} ${plural(remaining, 'položka není naložená', 'položky nejsou naložené', 'položek není naložených')}. Derigging se týká jen techniky, která je na placu.`
+        : 'Vše je naložené.'}${stockTracked ? '\n\nNaložené kusy se odepíšou ze skladu (vydáno na zakázku).' : ''}\n\nSwipe bude znamenat „sbaleno k odvozu“.`,
       confirmLabel: 'Zahájit derigging',
     });
     if (ok) {
-      toggleJobMode();
+      changeJobPhase(nextPhase);
       setSelectedStatusFilter('REMAINING');
-      toast({ text: isDerigging ? 'Fáze: Rigging' : 'Fáze: Derigging' });
+      toast({ text: `Fáze: ${phaseOf(nextPhase).name}` });
     }
   };
 
@@ -97,22 +119,22 @@ export const PackingList = () => {
         {/* Phase + progress */}
         <div className="px-3 pt-2.5 pb-2 border-b border-outline-variant/60">
           <div className="flex items-center justify-between gap-2 mb-1.5">
-            <span className={`inline-flex items-center gap-1.5 text-sm font-bold ${isDerigging ? 'text-cyan-700 dark:text-cyan-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
-              {isDerigging ? <Truck className="w-4 h-4" /> : <Package className="w-4 h-4" />}
-              {phase.name} <span className="font-normal text-on-surface-variant">· {phase.description}</span>
+            <span className={`inline-flex items-center gap-1.5 text-sm font-bold min-w-0 ${PHASE_COLOR[mode]}`}>
+              {isRestock ? <Warehouse className="w-4 h-4 shrink-0" /> : isDerigging ? <Truck className="w-4 h-4 shrink-0" /> : <Package className="w-4 h-4 shrink-0" />}
+              {phase.name}
             </span>
             {!isArchived && (
-              <button onClick={switchPhase} className="h-9 px-3 rounded-xl text-sm font-semibold border border-outline-variant bg-card-bg text-on-surface flex items-center gap-1 shrink-0">
-                {isDerigging ? 'Rigging' : 'Derigging'} <ArrowRight className="w-4 h-4" />
+              <button onClick={switchPhase} className="h-10 px-3 rounded-xl text-sm font-semibold border border-outline-variant bg-card-bg text-on-surface flex items-center gap-1 shrink-0">
+                {isRestock ? 'Dokončit' : phaseOf(nextPhase).name} <ArrowRight className="w-4 h-4" />
               </button>
             )}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex-1 h-3 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant/40"
-              role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={phase.progressLabel}>
-              <div className={`h-full rounded-full transition-all duration-500 ${isDerigging ? 'bg-cyan-500' : 'bg-emerald-500'}`} style={{ width: `${progress}%` }} />
+              role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${phase.progressLabel} ${summary.donePieces} z ${summary.totalPieces} kusů`}>
+              <div className={`h-full rounded-full transition-all duration-500 ${PHASE_BAR[mode]}`} style={{ width: `${progress}%` }} />
             </div>
-            <span className="text-sm font-mono font-bold text-on-surface shrink-0">{summary.done}/{summary.total}</span>
+            <span className="text-sm font-mono font-bold text-on-surface shrink-0">{summary.donePieces}/{summary.totalPieces} ks</span>
           </div>
         </div>
 
@@ -170,7 +192,7 @@ export const PackingList = () => {
       {/* Items */}
       <div className="flex flex-col gap-3 px-3 pt-4 pb-8">
         {visibleItems.length > 0 ? (
-          visibleItems.map((item) => <ItemSwipeCard key={item.id} item={item} />)
+          visibleItems.map((item) => <ItemSwipeCard key={item.id} item={item} shortage={shortages[item.catalogId] || 0} />)
         ) : q ? (
           <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant">Nic neodpovídá „{searchQuery}“.</div>
         ) : activeFilter === 'REMAINING' && summary.total > 0 ? (
@@ -178,15 +200,18 @@ export const PackingList = () => {
             <CheckCircle2 className="w-12 h-12 text-secondary" />
             <p className="text-lg font-bold text-on-surface">{phase.allDone}</p>
             {summary.damaged.length > 0 && <p className="text-sm text-error font-semibold">{summary.damaged.length} {plural(summary.damaged.length, 'položka má', 'položky mají', 'položek má')} nahlášenou závadu.</p>}
-            {!isArchived && (isDerigging ? (
-              <button onClick={() => setFinishingJob(currentJob)} className="h-14 px-6 rounded-2xl bg-secondary text-on-secondary-container font-bold flex items-center gap-2">
-                <Lock className="w-5 h-5" /> Ukončit zakázku…
-              </button>
-            ) : (
+            {!isArchived && (
               <button onClick={switchPhase} className="h-14 px-6 rounded-2xl bg-secondary text-on-secondary-container font-bold flex items-center gap-2">
-                <Truck className="w-5 h-5" /> Zahájit derigging
+                {isRestock ? <><Lock className="w-5 h-5" /> Dokončit naskladnění…</>
+                  : isDerigging ? <><Warehouse className="w-5 h-5" /> Zahájit naskladnění</>
+                    : <><Truck className="w-5 h-5" /> Zahájit derigging</>}
               </button>
-            ))}
+            )}
+            {!isArchived && isDerigging && (
+              <button onClick={() => setFinishingJob(currentJob)} className="text-sm text-on-surface-variant underline">
+                Ukončit bez naskladnění
+              </button>
+            )}
           </div>
         ) : (
           <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant flex flex-col items-center gap-2">
@@ -202,7 +227,7 @@ export const PackingList = () => {
           {fabOpen && <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setFabOpen(false)} />}
           {fabOpen && (
             <div className="fixed right-4 z-50 flex flex-col items-end gap-2" style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>
-              <button onClick={() => { setActiveTab('catalog'); setFabOpen(false); }} className="flex items-center gap-2.5 bg-card-bg border border-outline-variant text-on-surface font-semibold text-base px-4 h-14 rounded-2xl shadow-xl">
+              <button onClick={() => { setWarehouseTab('catalog'); setActiveTab('catalog'); setFabOpen(false); }} className="flex items-center gap-2.5 bg-card-bg border border-outline-variant text-on-surface font-semibold text-base px-4 h-14 rounded-2xl shadow-xl">
                 <BookOpen className="w-5 h-5 text-primary" /> Z katalogu
               </button>
               <button onClick={() => { setIsAdHocModalOpen(true); setFabOpen(false); }} className="flex items-center gap-2.5 bg-card-bg border border-outline-variant text-on-surface font-semibold text-base px-4 h-14 rounded-2xl shadow-xl">

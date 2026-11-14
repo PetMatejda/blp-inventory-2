@@ -4,14 +4,14 @@ import { Sheet, SheetAction, useDialogs } from '../common/Dialogs';
 import { phaseOf } from '../../domain/labels';
 import {
   FolderOpen, Edit2, Copy, FileText, Lock, Unlock, Image as ImageIcon, AlertTriangle,
-  Trash2, Check, RefreshCw, Hash, Truck, Package,
+  Trash2, Check, RefreshCw, Hash, Truck, Package, Warehouse,
 } from 'lucide-react';
 
 export const ContextMenuModal = () => {
   const {
     contextMenu, setContextMenu, setCurrentJobId, setActiveTab, setEditingJob, setTemplateJob,
     setIsProtocolModalOpen, reactivateJob, deleteJobItem, restoreJobItem, deleteJob, setDamageReportItem,
-    updateConsumableState, setItemExactQuantity, setPhotoViewerItem, setFinishingJob, currentJob, toggleJobMode,
+    updateConsumableState, setItemExactQuantity, setPhotoViewerItem, setFinishingJob, currentJob, changeJobPhase,
   } = useInventory();
   const { confirm, askNumber, toast } = useDialogs();
 
@@ -48,20 +48,40 @@ export const ContextMenuModal = () => {
   if (type === 'JOB') {
     const archived = target.status === 'ARCHIVED';
     const derigging = target.mode === 'DERIGGING';
+    const restock = target.mode === 'RESTOCK';
     return (
       <Sheet title={target.name} subtitle={target.client} onClose={close}>
         <div className="flex flex-col gap-2">
           <SheetAction icon={FolderOpen} label={archived ? 'Zobrazit seznam' : 'Otevřít balení'}
             onClick={run(() => { setCurrentJobId(target.id); setActiveTab('packing'); })} />
-          {!archived && currentJob?.id === target.id && (
-            <SheetAction icon={derigging ? Package : Truck} label={derigging ? 'Zpět na rigging' : 'Zahájit derigging'}
-              hint={derigging ? 'Nakládka ze skladu' : 'Balení na placu a odvoz'}
+          {!archived && restock && (
+            <SheetAction icon={Warehouse} label="Dokončit naskladnění…" hint="Souhrn pohybů ve skladu a archiv" onClick={run(() => setFinishingJob(target))} />
+          )}
+          {!archived && !restock && (
+            <SheetAction icon={derigging ? Warehouse : Truck} label={derigging ? 'Zahájit naskladnění' : 'Zahájit derigging'}
+              hint={derigging ? 'Počítání techniky zpět do skladu' : 'Balení na placu a odvoz'}
               onClick={run(async () => {
-                if (await confirm({
-                  title: derigging ? 'Vrátit zakázku do riggingu?' : 'Zahájit derigging?',
-                  message: derigging ? 'Swipe bude znovu znamenat „naloženo“.' : 'Swipe bude znamenat „sbaleno k odvozu“.',
-                  confirmLabel: derigging ? 'Zpět na rigging' : 'Zahájit derigging',
-                })) toggleJobMode();
+                if (await confirm(derigging ? {
+                  title: 'Zahájit naskladnění?',
+                  message: 'Technika se bude počítat zpět do skladu od nuly. Do deriggingu se pak nedá vrátit.',
+                  confirmLabel: 'Zahájit naskladnění',
+                } : {
+                  title: 'Zahájit derigging?',
+                  message: 'Naložené kusy se odepíšou ze skladu (vydáno na zakázku). Swipe bude znamenat „sbaleno k odvozu“.',
+                  confirmLabel: 'Zahájit derigging',
+                })) {
+                  changeJobPhase(derigging ? 'RESTOCK' : 'DERIGGING', target.id);
+                  setCurrentJobId(target.id);
+                  setActiveTab('packing');
+                }
+              })} />
+          )}
+          {!archived && derigging && (
+            <SheetAction icon={Package} label="Zpět na rigging" hint="Zruší výdej ze skladu"
+              onClick={run(async () => {
+                if (await confirm({ title: 'Vrátit zakázku do riggingu?', message: 'Výdej ze skladu se zruší a swipe bude znovu znamenat „naloženo“.', confirmLabel: 'Zpět na rigging' })) {
+                  changeJobPhase('LOADING', target.id);
+                }
               })} />
           )}
           <SheetAction icon={FileText} label="Předávací protokol (PDF)"
@@ -70,7 +90,7 @@ export const ContextMenuModal = () => {
           <SheetAction icon={Copy} label="Použít jako vzor" hint="Nová zakázka se stejnou technikou" onClick={run(() => setTemplateJob(target))} />
           {archived ? (
             <SheetAction icon={Unlock} label="Obnovit do aktivních" onClick={run(() => { reactivateJob(target.id); toast({ text: 'Zakázka obnovena' }); })} />
-          ) : (
+          ) : !restock && (
             <SheetAction icon={Lock} label="Ukončit zakázku…" hint="Souhrn, protokol a archiv" onClick={run(() => setFinishingJob(target))} />
           )}
           <SheetAction icon={Trash2} label="Trvale smazat zakázku" danger

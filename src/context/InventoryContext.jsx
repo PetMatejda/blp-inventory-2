@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useRef,
 import { firebaseAuth } from '../services/firebaseAuth';
 import { createFirestoreRepo } from '../services/inventoryRepo';
 import { createInventoryActions } from '../services/inventoryActions';
+import { createStockActions } from '../services/stockActions';
+import { availability } from '../domain/stock';
 import { migrateLegacyStore, MIGRATION_DOC } from '../services/migration';
 import { db, doc, getDoc, runTransaction, writeBatch } from '../services/firebase';
 import { INITIAL_VEHICLES } from '../mockData/initialData';
@@ -10,7 +12,10 @@ import { CATEGORIES, getCategoryMeta } from '../utils/categoryIcons';
 const InventoryContext = createContext();
 
 const CURRENT_JOB_KEY = 'blp_current_job_id_v2';
-const EMPTY_DATA = { jobs: [], jobItems: [], catalog: [], consumables: [], auditLogs: [] };
+const EMPTY_DATA = {
+  jobs: [], jobItems: [], catalog: [], consumables: [], auditLogs: [],
+  stockLevels: [], stockUnits: [], movements: [], stocktakes: [], stocktakeLines: [],
+};
 
 // Stable, readable order (Firestore returns documents by ID).
 // Older data uses Czech category names; getCategoryMeta maps them to the same IDs.
@@ -27,8 +32,14 @@ const SORTERS = {
   catalog: byCategoryThenName,
   consumables: byCategoryThenName,
   auditLogs: (a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')),
+  movements: (a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')),
+  stocktakes: (a, b) => String(b.startedAt || '').localeCompare(String(a.startedAt || '')),
+  stockLevels: () => 0,
+  stockUnits: (a, b) => String(a.code || '').localeCompare(String(b.code || ''), 'cs', { numeric: true }),
+  stocktakeLines: byCategoryThenName,
 };
 
+const CORE_COLLECTIONS = ['jobs', 'jobItems', 'catalog'];
 const isPermissionError = (err) => /permission|insufficient/i.test(err?.code || err?.message || '');
 
 export const InventoryProvider = ({ children }) => {
@@ -56,6 +67,7 @@ export const InventoryProvider = ({ children }) => {
 
   // Filters & Nav state
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [warehouseTab, setWarehouseTab] = useState('stock'); // stock | stocktake | movements | catalog
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('REMAINING');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -104,6 +116,12 @@ export const InventoryProvider = ({ children }) => {
     getActor: () => actorRef.current,
   }), [repo]);
 
+  const stock = useMemo(() => createStockActions({
+    repo,
+    getState: () => dataRef.current,
+    getActor: () => actorRef.current,
+  }), [repo]);
+
   useEffect(() => {
     let unsubscribeData = () => {};
     let unsubscribeMarker = () => {};
@@ -120,7 +138,9 @@ export const InventoryProvider = ({ children }) => {
         },
         (col, err) => {
           console.warn(`[Context] Listener ${col} error:`, err);
-          if (isPermissionError(err)) denyAccess();
+          // Only the core collections decide about access; a refused warehouse
+          // collection (e.g. rules not published yet) must not block the jobs.
+          if (isPermissionError(err) && CORE_COLLECTIONS.includes(col)) denyAccess();
         },
       );
 
@@ -183,7 +203,10 @@ export const InventoryProvider = ({ children }) => {
   }, [themeMode]);
 
   // ── Derived state ──────────────────────────────────────────
-  const { jobs, jobItems: allJobItems, catalog, consumables, auditLogs } = data;
+  const {
+    jobs, jobItems: allJobItems, catalog, consumables, auditLogs,
+    stockLevels, stockUnits, movements, stocktakes, stocktakeLines,
+  } = data;
   const currentJob = jobs.find((j) => j.id === currentJobId)
     || jobs.find((j) => j.status === 'ACTIVE')
     || jobs[0]
@@ -250,6 +273,19 @@ export const InventoryProvider = ({ children }) => {
     if (!currentJob) return;
     if (currentJob.status === 'ARCHIVED') { archivedNotice(); return; }
     actions.addCatalogItemToJob(currentJob.id, catalogItem);
+    // Warn when the warehouse does not have enough pieces in the job's dates.
+    const ids = catalogItem.isBundle
+      ? (catalogItem.bundleItems || []).map((s) => catalog.find((c) => c.name.toLowerCase().trim() === String(s.name).toLowerCase().trim())?.id).filter(Boolean)
+      : [catalogItem.id];
+    setTimeout(() => {
+      const short = ids.map((id) => ({ id, a: availability(id, currentJob, { jobs: dataRef.current.jobs, jobItems: dataRef.current.jobItems, levels: dataRef.current.stockLevels }) }))
+        .filter(({ a }) => a && a.short > 0);
+      if (short.length) {
+        const first = short[0];
+        const name = catalog.find((c) => c.id === first.id)?.name || '';
+        showNotice(`⚠️ ${name}: v termínu zakázky chybí ${first.a.short} ks (máte ${first.a.owned}, jinde rezervováno ${first.a.reservedElsewhere}).`, 6000);
+      }
+    }, 0);
   };
 
   // Callers show their own confirmation / undo toast (see FinishJobSheet).
@@ -289,11 +325,36 @@ export const InventoryProvider = ({ children }) => {
     if (currentJob?.id === jobId) setCurrentJobId('');
   };
 
-  const toggleJobMode = () => {
-    if (!currentJob) return;
-    if (currentJob.status === 'ARCHIVED') { archivedNotice(); return; }
-    actions.toggleJobMode(currentJob.id);
+  /**
+   * Move the current job to another phase and keep the warehouse in step:
+   *   Rigging → Derigging : loaded equipment is issued from the warehouse
+   *   Derigging → Rigging : the issue is cancelled
+   *   Derigging → Restock : counting back starts from zero
+   */
+  const changeJobPhase = (mode, jobId = currentJob?.id) => {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    if (job.status === 'ARCHIVED') { archivedNotice(); return; }
+    const stockTracked = stockLevels.length > 0;
+    if (mode === 'RESTOCK') { stock.startRestock(job.id); return; }
+    if (mode === 'DERIGGING' && (job.mode || 'LOADING') === 'LOADING' && stockTracked) stock.issueJob(job.id);
+    if (mode === 'LOADING' && job.mode === 'DERIGGING') stock.unissueJob(job.id);
+    actions.setJobMode(job.id, mode);
   };
+  const toggleJobMode = () => changeJobPhase(currentJob?.mode === 'DERIGGING' ? 'LOADING' : 'DERIGGING');
+
+  /** Finish restock: stock updated, job archived. */
+  const finishRestock = (jobId) => {
+    const plan = stock.finishRestock(jobId);
+    if (currentJob?.id === jobId) {
+      const next = jobs.find((j) => j.status === 'ACTIVE' && j.id !== jobId);
+      if (next) setCurrentJobId(next.id);
+    }
+    return plan;
+  };
+
+  const availabilityFor = (catalogId, job = currentJob) =>
+    availability(catalogId, job, { jobs, jobItems: allJobItems, levels: stockLevels });
 
   const createCatalogItem = (itemData) => actions.createCatalogItem(itemData);
   const updateCatalogItem = (catalogId, itemData) => actions.updateCatalogItem(catalogId, itemData);
@@ -346,6 +407,8 @@ export const InventoryProvider = ({ children }) => {
         setThemeMode,
         activeTab,
         setActiveTab,
+        warehouseTab,
+        setWarehouseTab,
         selectedStatusFilter,
         setSelectedStatusFilter,
         searchQuery,
@@ -371,6 +434,17 @@ export const InventoryProvider = ({ children }) => {
         deleteCatalogItem,
         updateConsumableState,
         toggleJobMode,
+        changeJobPhase,
+        finishRestock,
+        availabilityFor,
+
+        // Warehouse
+        stockLevels,
+        stockUnits,
+        movements,
+        stocktakes,
+        stocktakeLines,
+        stock,
         createJob,
         deleteJob,
         forceSyncAll,

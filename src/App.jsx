@@ -5,7 +5,7 @@ import { BottomNavBar } from './components/layout/BottomNavBar';
 
 import { JobDashboard } from './components/dashboard/JobDashboard';
 import { PackingList } from './components/packing/PackingList';
-import { EquipmentCatalog } from './components/catalog/EquipmentCatalog';
+import { WarehouseScreen } from './components/warehouse/WarehouseScreen';
 import { ConsumableKit } from './components/bracha/ConsumableKit';
 import { AuditTimeline } from './components/audit/AuditTimeline';
 
@@ -61,7 +61,7 @@ const MainContent = () => {
     case 'packing':
       return <PackingList />;
     case 'catalog':
-      return <EquipmentCatalog />;
+      return <WarehouseScreen />;
     case 'bracha':
       return <ConsumableKit />;
     case 'history':

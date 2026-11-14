@@ -201,6 +201,17 @@ export function createInventoryActions({ repo, getState, getActor }) {
       return { ...job, status };
     },
 
+    setJobMode(jobId, mode) {
+      const job = findJob(jobId);
+      if (!job || job.mode === mode) return null;
+      const labels = { LOADING: 'RIGGING (ze skladu na plac)', DERIGGING: 'DERIGGING (vracení z placu)', RESTOCK: 'NASKLADNĚNÍ (zpět do skladu)' };
+      repo.commit([
+        { type: 'update', col: 'jobs', id: jobId, data: stamp({ mode }) },
+        auditOp(jobId, 'Přepnutí fáze zakázky', labels[mode] || mode),
+      ]);
+      return { ...job, mode };
+    },
+
     toggleJobMode(jobId) {
       const job = findJob(jobId);
       if (!job) return null;

@@ -31,6 +31,11 @@ This document provides a comprehensive technical overview of the **BLP Inventory
 | `consumables/{id}` | `name, category, state (0 OK / 1 50% / 2 REFILL), stateLabel` | |
 | `auditLogs/{id}` | `timestamp, user, jobId, action, detail, type` | append-only (rules) |
 | `photos/{id}` | `dataUrl (JPEG ≤ ~700 kB), kind, jobId, itemId, createdAt, createdBy` | referenced as `photo:<id>` |
+| `stockLevels/{catalogId}` | `inStock, onJob, inService, missing` — counts change only via atomic `increment()` | |
+| `stockUnits/{id}` | `catalogId, code, serialNumber, status (IN_STOCK/IN_SERVICE/RETIRED)` — labelled units (lights, ballasts) | |
+| `movements/{id}` | `type (INIT/RECEIPT/ISSUE/RETURN/MISSING/TO_SERVICE/FROM_SERVICE/RETIRE/STOCKTAKE), catalogId, qty, jobId, unitCode, note, user, timestamp` | append-only |
+| `stocktakes/{id}` | `status (OPEN/APPROVED/CANCELLED), category, startedBy, approvedBy, summary, differences` | |
+| `stocktakeLines/{stocktakeId_catalogId}` | `expected (snapshot), counted / scannedUnitIds + extraCount, open` | |
 | `meta/migration_v3` | `status (running/done), startedAt, finishedAt, by, counts` | one-time migration marker |
 | `users/{uid}` | `uid, name, email, role, avatar, updatedAt` | own profile only |
 | `inventory_store/blp_main_store` | legacy single document | **read-only backup** after migration |
@@ -56,6 +61,17 @@ Screen ──► InventoryContext (same API as before)
 - **Sync status**: `hasPendingWrites` from snapshot metadata → `syncStatus` (`synced` / `syncing` / `offline` / `error`). "Odeslat a ověřit" calls `waitForPendingWrites`.
 - **Business rules** live in `src/domain/items.js` as pure functions (state machine, bundles, templates) and are unit-tested.
 - **Migration** (`src/services/migration.js`): on first sign-in of an approved user, a transaction claims `meta/migration_v3`, the legacy document is converted (deleted records skipped via tombstones, duplicates merged, IDs made unique, audit trimmed to 300) and written in batches of ≤ 400. Other devices skip it. The legacy document is never modified.
+
+---
+
+### Warehouse (Sklad)
+
+- **Tracking**: lights and ballasts per unit (labels, `stockUnits`), everything else by count; switchable per catalog item (`catalog.trackingType`). Locations: warehouse, job, service (+ missing).
+- **Job cycle** (`src/services/stockActions.js`, rules in `src/domain/stock.js`):
+  `LOADING` → *Zahájit derigging* issues loaded pieces (`job.issued`, `ISSUE` movements) → `DERIGGING` → *Zahájit naskladnění* (`RESTOCK`, counts start at 0) → *Dokončit naskladnění*: returned → warehouse, damaged → service, rest → missing; job archived. Going back to rigging cancels the issue. Jobs started before stock tracking (no `job.issued`) do not change counts except damaged → service.
+- **Availability**: owned (warehouse + jobs + service) − requested by other ACTIVE jobs overlapping in dates − requested here; shortage shown on item cards while rigging and when adding from the catalog.
+- **Stocktake**: lines snapshot the expected warehouse count; several people count at once (scanned units via `arrayUnion`); approval applies `counted − expected` as an increment (deliveries during the count are kept) and settles pieces recorded as missing. CSV exports for stock, movements and stocktakes.
+- **Job progress** is counted in pieces.
 
 ---
 

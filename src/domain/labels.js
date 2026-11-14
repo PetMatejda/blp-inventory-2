@@ -30,7 +30,23 @@ export const PHASES = {
     progressLabel: 'Sbaleno',
     allDone: 'Vše sbaleno',
   },
+  RESTOCK: {
+    id: 'RESTOCK',
+    name: 'Naskladnění',
+    description: 'Vrácení techniky do skladu',
+    doneStatus: 'RESTOCKED',
+    doneStatuses: ['RESTOCKED'],
+    doneLabel: 'Naskladněno',
+    remainingLabel: 'Zbývá naskladnit',
+    swipeDone: 'NASKLADNĚNO',
+    swipeUndo: 'NEZAPOČÍTAT',
+    progressLabel: 'Naskladněno',
+    allDone: 'Vše naskladněno',
+  },
 };
+
+/** Order of phases of a job. */
+export const PHASE_ORDER = ['LOADING', 'DERIGGING', 'RESTOCK'];
 
 export const phaseOf = (mode) => PHASES[mode] || PHASES.LOADING;
 
@@ -45,6 +61,7 @@ export function plural(n, one, few, many) {
 /** Status label as the crew says it in the current phase. */
 export function statusLabel(status, mode = 'LOADING') {
   if (status === 'DAMAGED') return 'Závada';
+  if (mode === 'RESTOCK') return status === 'RESTOCKED' ? 'Naskladněno' : 'K naskladnění';
   if (mode === 'DERIGGING') {
     if (status === 'PACKED') return 'Sbaleno';
     if (status === 'LOADED') return 'Na placu';
@@ -85,7 +102,19 @@ export function filterCounts(items, mode = 'LOADING') {
 /** Summary used when finishing a phase or a job. */
 export function phaseSummary(items, mode = 'LOADING') {
   const remaining = items.filter((i) => matchesFilter(i, 'REMAINING', mode));
+  const totalPieces = items.reduce((s, i) => s + (i.quantityRequested || 0), 0);
+  // Progress by pieces: loaded pieces while rigging, packed pieces while derigging,
+  // pieces counted back while restocking.
+  const donePieces = items.reduce((s, i) => {
+    const counted = Math.min(i.quantityLoaded || 0, i.quantityRequested || 0);
+    if (mode === 'DERIGGING') return s + (i.status === 'PACKED' ? counted : 0);
+    if (mode === 'RESTOCK') return s + (i.status === 'DAMAGED' ? 0 : counted);
+    return s + (i.status === 'DAMAGED' ? 0 : counted);
+  }, 0);
   return {
+    totalPieces,
+    donePieces,
+    percent: totalPieces ? Math.round((donePieces / totalPieces) * 100) : 0,
     total: items.length,
     done: items.filter((i) => matchesFilter(i, 'DONE', mode)).length,
     remaining,

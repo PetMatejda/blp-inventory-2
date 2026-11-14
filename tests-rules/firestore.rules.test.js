@@ -75,6 +75,23 @@ describe('auditní log je neměnný', () => {
   });
 });
 
+describe('sklad', () => {
+  it('schválený uživatel čte a zapisuje stav skladu, kusy a inventury', async () => {
+    for (const col of ['stockLevels', 'stockUnits', 'stocktakes', 'stocktakeLines']) {
+      await assertSucceeds(setDoc(doc(member(), `${col}/x`), { a: 1 }));
+      await assertSucceeds(getDoc(doc(member(), `${col}/x`)));
+    }
+  });
+  it('cizí účet sklad nevidí', async () => {
+    await assertFails(getDoc(doc(db('u', { email: 'cizi@example.com', email_verified: true }), 'stockLevels/x')));
+  });
+  it('pohyby skladu jdou jen přidávat', async () => {
+    await assertSucceeds(setDoc(doc(member(), 'movements/m1'), { type: 'RECEIPT', qty: 1 }));
+    await assertFails(updateDoc(doc(member(), 'movements/m1'), { qty: 99 }));
+    await assertFails(deleteDoc(doc(member(), 'movements/m1')));
+  });
+});
+
 describe('fotky', () => {
   it('JPEG fotku jde uložit', async () => {
     await assertSucceeds(setDoc(doc(member(), 'photos/p2'), { dataUrl: 'data:image/jpeg;base64,BBB', kind: 'damage' }));

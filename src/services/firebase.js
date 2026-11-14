@@ -33,6 +33,10 @@ import {
   orderBy,
   limit,
   waitForPendingWrites,
+  where,
+  increment,
+  arrayUnion,
+  arrayRemove,
   connectFirestoreEmulator,
 } from 'firebase/firestore';
 
@@ -121,5 +125,9 @@ export {
   orderBy,
   limit,
   waitForPendingWrites,
+  where,
+  increment,
+  arrayUnion,
+  arrayRemove,
 };
 

@@ -1,4 +1,5 @@
-// In-memory stand-in for the Firestore repo (same interface as inventoryRepo.js).
+// In-memory stand-in for the Firestore repo (same interface as inventoryRepo.js),
+// including the { __inc }, { __union }, { __remove } field markers.
 export function createMemoryRepo(seed = {}) {
   const cols = {};
   const ensure = (col) => (cols[col] ||= new Map());
@@ -6,12 +7,25 @@ export function createMemoryRepo(seed = {}) {
   let seq = 0;
   const log = [];
 
+  const resolve = (current = {}, data) => {
+    const out = { ...current };
+    for (const [k, v] of Object.entries(data)) {
+      if (v === undefined) continue;
+      if (v && typeof v === 'object' && !Array.isArray(v) && '__inc' in v) out[k] = (current[k] || 0) + v.__inc;
+      else if (v && typeof v === 'object' && !Array.isArray(v) && '__union' in v) out[k] = [...new Set([...(current[k] || []), ...v.__union])];
+      else if (v && typeof v === 'object' && !Array.isArray(v) && '__remove' in v) out[k] = (current[k] || []).filter((x) => !v.__remove.includes(x));
+      else out[k] = v;
+    }
+    return out;
+  };
+
   const apply = (op) => {
     const store = ensure(op.col);
-    if (op.type === 'set') store.set(op.id, { ...op.data, id: op.id });
+    if (op.type === 'set') store.set(op.id, { ...resolve({}, op.data), id: op.id });
+    else if (op.type === 'merge') store.set(op.id, { ...resolve(store.get(op.id) || {}, op.data), id: op.id });
     else if (op.type === 'update') {
       if (!store.has(op.id)) throw new Error(`update of missing ${op.col}/${op.id}`);
-      store.set(op.id, { ...store.get(op.id), ...op.data });
+      store.set(op.id, resolve(store.get(op.id), op.data));
     } else if (op.type === 'delete') store.delete(op.id);
   };
 
@@ -32,6 +46,8 @@ export function createMemoryRepo(seed = {}) {
   const state = () => ({
     jobs: all('jobs'), jobItems: all('jobItems'), catalog: all('catalog'),
     consumables: all('consumables'), auditLogs: all('auditLogs'),
+    stockLevels: all('stockLevels'), stockUnits: all('stockUnits'), movements: all('movements'),
+    stocktakes: all('stocktakes'), stocktakeLines: all('stocktakeLines').filter((l) => l.open),
   });
 
   return { repo, state, all, log };
