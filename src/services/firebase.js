@@ -29,14 +29,15 @@ import {
 } from 'firebase/firestore';
 
 // Firebase configuration with environment variables and production fallbacks
+const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAmYzBZ5vO4uR0f229Iv6isgeGC9EIeuPU",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "blp-inventory.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "blp-inventory",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "blp-inventory.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "270493687488",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:270493687488:web:56ab0bdb9c41b0f58fd725",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-P3YYE0EM5H",
+  apiKey: env.VITE_FIREBASE_API_KEY || "AIzaSyAmYzBZ5vO4uR0f229Iv6isgeGC9EIeuPU",
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || "blp-inventory.firebaseapp.com",
+  projectId: env.VITE_FIREBASE_PROJECT_ID || "blp-inventory",
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || "blp-inventory.firebasestorage.app",
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || "270493687488",
+  appId: env.VITE_FIREBASE_APP_ID || "1:270493687488:web:56ab0bdb9c41b0f58fd725",
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || "G-P3YYE0EM5H",
 };
 
 // Initialize Firebase App safely

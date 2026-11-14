@@ -134,12 +134,28 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+const GlobalNoticeToast = () => {
+  const { syncNotice } = useInventory();
+  if (!syncNotice) return null;
+
+  return (
+    <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 max-w-sm w-11/12 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-200">
+      <div className="bg-slate-900/95 dark:bg-zinc-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-white/20 text-xs font-semibold text-center flex items-center justify-center gap-2">
+        <span>{syncNotice}</span>
+      </div>
+    </div>
+  );
+};
+
 export function App() {
   return (
     <ErrorBoundary>
       <InventoryProvider>
         <AuthGate>
           <div className="min-h-screen flex flex-col bg-background text-on-surface">
+            {/* Global toast notifications */}
+            <GlobalNoticeToast />
+
             {/* Fixed Top Bar — h-14 (56px) */}
             <TopAppBar />
 

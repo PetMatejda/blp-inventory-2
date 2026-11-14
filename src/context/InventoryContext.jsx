@@ -106,9 +106,14 @@ export const InventoryProvider = ({ children }) => {
       setAuthLoading(false);
     });
 
-    // Step 5: Refresh on tab visibility / focus
-    const handleVisibilityChange = () => {
+    // Step 5: Refresh on tab visibility — always flush local changes first
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
+        if (storageService.isSyncInProgress && storageService.isSyncInProgress()) {
+          console.log('[Context] Visibility changed but sync is in progress, skipping pull');
+          return;
+        }
+        await storageService.flushPendingSync();
         firebaseDb.pullFromCloud().then((res) => {
           if (res.success) refreshDataFromLocal();
           setSyncStatus(res.success ? 'synced' : 'offline');
@@ -116,9 +121,10 @@ export const InventoryProvider = ({ children }) => {
       }
     };
 
-    const handleOnline = () => {
+    const handleOnline = async () => {
       setIsOffline(false);
       setSyncStatus('syncing');
+      await storageService.flushPendingSync();
       firebaseDb.pullFromCloud().then((res) => {
         if (res.success) refreshDataFromLocal();
         setSyncStatus(res.success ? 'synced' : 'offline');
@@ -131,7 +137,6 @@ export const InventoryProvider = ({ children }) => {
     };
 
     window.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
@@ -139,7 +144,6 @@ export const InventoryProvider = ({ children }) => {
       unsubscribeCloud();
       unsubscribeAuth();
       window.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -234,12 +238,17 @@ export const InventoryProvider = ({ children }) => {
     afterMutation();
   };
 
-  const deleteJobItem = (itemId) => {
-    if (currentJob?.status === 'ARCHIVED') return;
+  const deleteJobItem = (itemId, itemData = null) => {
+    if (currentJob?.status === 'ARCHIVED') {
+      alert('Tato zakázka je archivována. Pro odebírání položek ji nejprve obnovte tlačítkem Obnovit v kontextovém menu zakázky.');
+      return;
+    }
     setSyncStatus('syncing');
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
-    storageService.deleteJobItem(itemId, actorName);
+    storageService.deleteJobItem(itemId, actorName, itemData);
     afterMutation();
+    setSyncNotice('🗑️ Položka byla odebrána ze zakázky a smazána z cloudu.');
+    setTimeout(() => setSyncNotice(null), 3500);
   };
 
   const reportItemDamage = (itemId, severity, notes, photoUrl) => {
@@ -280,7 +289,18 @@ export const InventoryProvider = ({ children }) => {
     setSyncStatus('syncing');
     const actorName = getActorName();
     storageService.finishJob(jobId, actorName);
+
+    // If the finished job was the currently selected job, switch current selection to another active job
+    const allJobs = storageService.getJobs();
+    const otherActiveJobs = allJobs.filter(j => j.status === 'ACTIVE' && j.id !== jobId);
+    if (currentJobId === jobId && otherActiveJobs.length > 0) {
+      storageService.setCurrentJobId(otherActiveJobs[0].id);
+      setCurrentJobIdState(otherActiveJobs[0].id);
+    }
+
     afterMutation();
+    setSyncNotice('📁 Zakázka byla úspěšně uzavřena a přesunuta do Archivu!');
+    setTimeout(() => setSyncNotice(null), 4000);
   };
 
   const reactivateJob = (jobId) => {
@@ -288,6 +308,8 @@ export const InventoryProvider = ({ children }) => {
     const actorName = getActorName();
     storageService.reactivateJob(jobId, actorName);
     afterMutation();
+    setSyncNotice('⚡ Zakázka byla obnovena z archivu do aktivních!');
+    setTimeout(() => setSyncNotice(null), 4000);
   };
 
   const updateJob = (jobId, jobData) => {
@@ -389,11 +411,12 @@ export const InventoryProvider = ({ children }) => {
 
   const forceSyncAll = async () => {
     setSyncStatus('syncing');
+    await storageService.flushPendingSync();
     const pullRes = await firebaseDb.pullFromCloud();
     refreshDataFromLocal();
     setSyncStatus(pullRes.success ? 'synced' : 'offline');
     if (pullRes.success) {
-      setSyncNotice('🔥 Data byla úspěšně stažena a synchronizována s cloudem!');
+      setSyncNotice('🔥 Data byla úspěšně synchronizována s cloudem!');
     } else {
       setSyncNotice(`⚠️ Chyba synchronizace: ${pullRes.error || 'Zkontrolujte připojení'}`);
     }

@@ -5,8 +5,8 @@ import {
   INITIAL_CONSUMABLES,
   INITIAL_AUDIT_LOGS,
   INITIAL_CATALOG
-} from '../mockData/initialData';
-import { firebaseDb } from './firebaseDb';
+} from '../mockData/initialData.js';
+import { firebaseDb } from './firebaseDb.js';
 
 const KEYS = {
   JOBS: 'blp_jobs_v2',
@@ -17,29 +17,114 @@ const KEYS = {
   CATALOG: 'blp_catalog_v2',
   CURRENT_JOB_ID: 'blp_current_job_id_v2',
   CURRENT_USER_ROLE: 'blp_user_role_v2',
+  DELETED_JOB_ITEMS: 'blp_deleted_job_items_v2',
+  DELETED_JOBS: 'blp_deleted_jobs_v2',
+  DELETED_CATALOG: 'blp_deleted_catalog_v2',
 };
 
-// Fast debounce helper — 100ms window ensures instant pushes across devices
+// Fast debounce helper — 100ms window for high-frequency updates (e.g. quantity changes)
 let syncTimeout = null;
 // Guard: tracks whether we have local changes waiting to be pushed
 let hasPendingPush = false;
 
 export const storageService = {
+  // Tombstone management — ensures deleted items/jobs are NEVER resurrected by other devices
+  getDeletedJobItemIds() {
+    try {
+      return JSON.parse(localStorage.getItem(KEYS.DELETED_JOB_ITEMS) || '[]');
+    } catch {
+      return [];
+    }
+  },
+
+  addDeletedJobItemId(...identifiers) {
+    const list = this.getDeletedJobItemIds();
+    const set = new Set(list);
+    identifiers.filter(Boolean).forEach(id => set.add(String(id)));
+    localStorage.setItem(KEYS.DELETED_JOB_ITEMS, JSON.stringify([...set]));
+  },
+
+  removeDeletedJobItemIdentifier(...identifiers) {
+    const list = this.getDeletedJobItemIds();
+    const set = new Set(list);
+    identifiers.filter(Boolean).forEach(id => set.delete(String(id)));
+    localStorage.setItem(KEYS.DELETED_JOB_ITEMS, JSON.stringify([...set]));
+  },
+
+  getDeletedJobIds() {
+    try {
+      return JSON.parse(localStorage.getItem(KEYS.DELETED_JOBS) || '[]');
+    } catch {
+      return [];
+    }
+  },
+
+  addDeletedJobId(jobId) {
+    if (!jobId) return;
+    const list = this.getDeletedJobIds();
+    const set = new Set(list);
+    set.add(String(jobId));
+    localStorage.setItem(KEYS.DELETED_JOBS, JSON.stringify([...set]));
+  },
+
+  getDeletedCatalogIds() {
+    try {
+      return JSON.parse(localStorage.getItem(KEYS.DELETED_CATALOG) || '[]');
+    } catch {
+      return [];
+    }
+  },
+
+  addDeletedCatalogId(catalogId) {
+    if (!catalogId) return;
+    const list = this.getDeletedCatalogIds();
+    const set = new Set(list);
+    set.add(String(catalogId));
+    localStorage.setItem(KEYS.DELETED_CATALOG, JSON.stringify([...set]));
+  },
+
+  removeDeletedCatalogId(catalogId) {
+    if (!catalogId) return;
+    const list = this.getDeletedCatalogIds();
+    const set = new Set(list);
+    set.delete(String(catalogId));
+    localStorage.setItem(KEYS.DELETED_CATALOG, JSON.stringify([...set]));
+  },
+
+  async pushCurrentState() {
+    hasPendingPush = false;
+    return await firebaseDb.pushPayload({
+      jobs: this.getJobs(),
+      jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
+      catalog: this.getCatalog(),
+      consumables: this.getConsumables(),
+      auditLogs: this.getAuditLogs(),
+      deletedJobItemIds: this.getDeletedJobItemIds(),
+      deletedJobIds: this.getDeletedJobIds(),
+      deletedCatalogIds: this.getDeletedCatalogIds(),
+    });
+  },
+
   syncToCloud() {
     hasPendingPush = true;
     if (syncTimeout) clearTimeout(syncTimeout);
     syncTimeout = setTimeout(async () => {
-      await firebaseDb.pushPayload({
-        jobs: this.getJobs(),
-        jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
-        catalog: this.getCatalog(),
-        consumables: this.getConsumables(),
-        auditLogs: this.getAuditLogs(),
-      });
-      hasPendingPush = false;
+      await this.pushCurrentState();
     }, 100);
   },
 
+  /**
+   * Immediate cloud push for critical actions (finishJob, reactivateJob, deleteJobItem, deleteJob, deleteCatalogItem).
+   * Bypasses debounce timer so that switching tabs or phone sleep cannot kill the sync.
+   */
+  async syncToCloudImmediate() {
+    hasPendingPush = false;
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+      syncTimeout = null;
+    }
+    return await this.pushCurrentState();
+  },
 
   /**
    * Flush any pending debounced push immediately (used before pulling from cloud).
@@ -51,40 +136,39 @@ export const storageService = {
       clearTimeout(syncTimeout);
       syncTimeout = null;
     }
-    await firebaseDb.pushPayload({
-      jobs: this.getJobs(),
-      jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
-      catalog: this.getCatalog(),
-      consumables: this.getConsumables(),
-      auditLogs: this.getAuditLogs(),
-    });
-    hasPendingPush = false;
+    await this.pushCurrentState();
     console.log('[StorageService] Flushed pending sync before pull');
   },
 
+  isSyncInProgress() {
+    return hasPendingPush || (firebaseDb.isPushInProgress && firebaseDb.isPushInProgress());
+  },
+
   async syncToCloudManual() {
-    hasPendingPush = false;
-    if (syncTimeout) { clearTimeout(syncTimeout); syncTimeout = null; }
-    return await firebaseDb.pushPayload({
-      jobs: this.getJobs(),
-      jobItems: JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]'),
-      catalog: this.getCatalog(),
-      consumables: this.getConsumables(),
-      auditLogs: this.getAuditLogs(),
-    });
+    return await this.syncToCloudImmediate();
   },
 
   async syncFromCloudManual() {
+    await this.flushPendingSync();
     return await firebaseDb.pullFromCloud();
   },
 
-
-
   consolidateItems(items) {
+    const deletedItems = new Set(this.getDeletedJobItemIds());
+    const deletedJobs = new Set(this.getDeletedJobIds());
     const map = new Map();
     const consolidated = [];
 
     for (const item of items) {
+      if (!item) continue;
+      // Discard any items that belong to deleted jobs or are deleted
+      if (deletedJobs.has(item.jobId)) continue;
+      if (deletedItems.has(String(item.id))) continue;
+      if (item.catalogId && deletedItems.has(`${item.jobId}_cat_${item.catalogId}`)) continue;
+      if (item.name && deletedItems.has(`${item.jobId}_name_${item.name.toLowerCase().trim()}`)) continue;
+      if (item.name && deletedItems.has(`${item.jobId}_${item.name.toLowerCase().trim()}`)) continue;
+      if (item.name && deletedItems.has(`${item.jobId}_${item.name}`)) continue;
+
       const groupKey = item.catalogId
         ? `${item.jobId}_cat_${item.catalogId}_${item.name.toLowerCase().trim()}`
         : `${item.jobId}_name_${item.name.toLowerCase().trim()}`;
@@ -96,6 +180,11 @@ export const storageService = {
 
         if (item.serialNumber && !existing.serialNumber.includes(item.serialNumber)) {
           existing.serialNumber = `${existing.serialNumber}, ${item.serialNumber}`;
+        }
+
+        if (item.updatedAt && (!existing.updatedAt || new Date(item.updatedAt) > new Date(existing.updatedAt))) {
+          existing.updatedAt = item.updatedAt;
+          existing.status = item.status;
         }
 
         if (existing.quantityLoaded >= existing.quantityRequested && existing.quantityRequested > 0) {
@@ -192,7 +281,13 @@ export const storageService = {
   },
 
   getJobs() {
-    return JSON.parse(localStorage.getItem(KEYS.JOBS) || '[]');
+    try {
+      const jobs = JSON.parse(localStorage.getItem(KEYS.JOBS) || '[]');
+      const deletedJobIds = new Set(this.getDeletedJobIds());
+      return jobs.filter(j => !deletedJobIds.has(j.id));
+    } catch {
+      return [];
+    }
   },
 
   getJobItems(jobId) {
@@ -214,7 +309,13 @@ export const storageService = {
   },
 
   getCatalog() {
-    return JSON.parse(localStorage.getItem(KEYS.CATALOG) || '[]');
+    try {
+      const catalog = JSON.parse(localStorage.getItem(KEYS.CATALOG) || '[]');
+      const deletedCatalogIds = new Set(this.getDeletedCatalogIds());
+      return catalog.filter(c => !deletedCatalogIds.has(c.id));
+    } catch {
+      return [];
+    }
   },
 
   getCurrentJobId() {
@@ -270,9 +371,12 @@ export const storageService = {
     const index = jobs.findIndex(j => j.id === jobId);
     if (index === -1) return null;
 
+    const now = new Date().toISOString();
     jobs[index].status = 'ARCHIVED';
+    jobs[index].updatedAt = now;
     this.addAuditLog(user, jobId, 'Ukončení zakázky', `Zakázka ${jobs[index].name} byla dokončena a uzamčena do archivu.`, 'update');
-    this.saveJobs(jobs);
+    localStorage.setItem(KEYS.JOBS, JSON.stringify(jobs));
+    this.syncToCloudImmediate();
 
     return jobs[index];
   },
@@ -282,32 +386,38 @@ export const storageService = {
     const index = jobs.findIndex(j => j.id === jobId);
     if (index === -1) return null;
 
+    const now = new Date().toISOString();
     jobs[index].status = 'ACTIVE';
-    this.addAuditLog(user, jobId, 'Obnovení zakázky', `Zakázka ${jobs[index].name} byla vrátila zpět do aktivního stavu.`, 'update');
-    this.saveJobs(jobs);
+    jobs[index].updatedAt = now;
+    this.addAuditLog(user, jobId, 'Obnovení zakázky', `Zakázka ${jobs[index].name} byla vrácena zpět do aktivního stavu.`, 'update');
+    localStorage.setItem(KEYS.JOBS, JSON.stringify(jobs));
+    this.syncToCloudImmediate();
 
     return jobs[index];
   },
 
   createJob(jobData, user) {
     const jobs = this.getJobs();
+    const now = new Date().toISOString();
     const newJob = {
       id: 'job-' + Date.now(),
       name: jobData.name,
       client: jobData.client || '',
       assignedGaffer: jobData.assignedGaffer || 'Petr M.',
       blpResponsible: jobData.blpResponsible || 'Marek Radolf',
-      riggingDate: jobData.riggingDate || new Date().toISOString().split('T')[0],
-      deriggingDate: jobData.deriggingDate || new Date().toISOString().split('T')[0],
+      riggingDate: jobData.riggingDate || now.split('T')[0],
+      deriggingDate: jobData.deriggingDate || now.split('T')[0],
       vehicleIds: jobData.vehicleIds || ['v1'],
       status: 'ACTIVE',
       mode: 'LOADING',
+      updatedAt: now,
     };
 
     jobs.unshift(newJob);
     this.addAuditLog(user, newJob.id, 'Nová zakázka', `Vytvořena zakázka: ${newJob.name} (BLP: ${newJob.blpResponsible}, Gaffer: ${newJob.assignedGaffer})`, 'add');
-    this.saveJobs(jobs);
+    localStorage.setItem(KEYS.JOBS, JSON.stringify(jobs));
     this.setCurrentJobId(newJob.id);
+    this.syncToCloudImmediate();
 
     return newJob;
   },
@@ -317,9 +427,10 @@ export const storageService = {
     const index = jobs.findIndex(j => j.id === jobId);
     if (index === -1) return null;
 
-    jobs[index] = { ...jobs[index], ...jobData };
+    jobs[index] = { ...jobs[index], ...jobData, updatedAt: new Date().toISOString() };
     this.addAuditLog(user, jobId, 'Úprava zakázky', `Upraveny údaje zakázky ${jobs[index].name} (BLP: ${jobs[index].blpResponsible || 'BLP Tým'}, Gaffer: ${jobs[index].assignedGaffer})`, 'update');
-    this.saveJobs(jobs);
+    localStorage.setItem(KEYS.JOBS, JSON.stringify(jobs));
+    this.syncToCloudImmediate();
 
     return jobs[index];
   },
@@ -328,12 +439,17 @@ export const storageService = {
     const jobs = this.getJobs();
     const targetJob = jobs.find(j => j.id === jobId);
     const updatedJobs = jobs.filter(j => j.id !== jobId);
-    this.saveJobs(updatedJobs);
+    this.addDeletedJobId(jobId);
+    localStorage.setItem(KEYS.JOBS, JSON.stringify(updatedJobs));
 
-    // Remove all associated items for this job
+    // Remove all associated items for this job & mark them in tombstones
     const allJobItems = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
+    const itemsToDelete = allJobItems.filter(i => i.jobId === jobId);
+    itemsToDelete.forEach(i => {
+      this.addDeletedJobItemId(i.id, `${jobId}_name_${(i.name || '').toLowerCase().trim()}`);
+    });
     const remainingItems = allJobItems.filter(i => i.jobId !== jobId);
-    this.saveJobItems(remainingItems);
+    localStorage.setItem(KEYS.JOB_ITEMS, JSON.stringify(remainingItems));
 
     this.addAuditLog(user, jobId, 'Smazána zakázka', `Zakázka ${targetJob?.name || jobId} byla trvale smazána včetně položek`, 'delete');
 
@@ -341,6 +457,7 @@ export const storageService = {
       this.setCurrentJobId(updatedJobs[0]?.id || null);
     }
 
+    this.syncToCloudImmediate();
     return true;
   },
 
@@ -425,9 +542,38 @@ export const storageService = {
     const index = catalog.findIndex(c => c.id === catalogId);
     if (index === -1) return null;
 
+    const oldName = catalog[index].name;
     catalog[index] = { ...catalog[index], ...itemData };
-    this.addAuditLog(user, '', 'Katalog Úprava', `Upravena položka katalogu: ${catalog[index].name}`, 'update');
+    const newName = catalog[index].name;
+
+    const logDetail = oldName !== newName
+      ? `Přejmenována položka katalogu: „${oldName}“ → „${newName}“`
+      : `Upravena položka katalogu: ${newName}`;
+
+    this.addAuditLog(user, '', 'Katalog Úprava', logDetail, 'update');
     this.saveCatalog(catalog);
+
+    // Pokud došlo k přejmenování nebo změně parametrů, synchronizovat i existující položky v zakázkách
+    if (itemData.name && itemData.name !== oldName) {
+      const allJobItems = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
+      let hasJobItemUpdates = false;
+      const updatedJobItems = allJobItems.map(item => {
+        if (item.catalogId === catalogId) {
+          hasJobItemUpdates = true;
+          return {
+            ...item,
+            name: itemData.name,
+            category: itemData.category || item.category,
+            photoUrls: itemData.image ? [itemData.image] : item.photoUrls,
+          };
+        }
+        return item;
+      });
+
+      if (hasJobItemUpdates) {
+        this.saveJobItems(updatedJobItems);
+      }
+    }
 
     return catalog[index];
   },
@@ -438,28 +584,72 @@ export const storageService = {
     if (!itemToDelete) return null;
 
     const filtered = catalog.filter(c => c.id !== catalogId);
+    this.addDeletedCatalogId(catalogId);
     this.addAuditLog(user, '', 'Katalog Mazání', `Smazána položka z katalogu: ${itemToDelete.name}`, 'update');
-    this.saveCatalog(filtered);
+    localStorage.setItem(KEYS.CATALOG, JSON.stringify(filtered));
+    this.syncToCloudImmediate();
 
     return itemToDelete;
   },
 
-  deleteJobItem(itemId, user) {
+  deleteJobItem(itemId, user, jobItemData = null) {
     const allItems = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
-    const itemToDelete = allItems.find(i => i.id === itemId);
-    if (!itemToDelete) return null;
+    let itemToDelete = allItems.find(i => i.id === itemId);
 
-    const filtered = allItems.filter(i => i.id !== itemId);
+    // Fallback pokud položka nebyla nalezena pouze podle ID (např. desync z cloudu)
+    if (!itemToDelete && jobItemData) {
+      itemToDelete = allItems.find(i =>
+        i.jobId === jobItemData.jobId &&
+        ((jobItemData.catalogId && i.catalogId === jobItemData.catalogId) ||
+         i.name.toLowerCase().trim() === (jobItemData.name || '').toLowerCase().trim())
+      );
+    }
+
+    if (!itemToDelete && !jobItemData) return null;
+
+    const targetJobId = itemToDelete?.jobId || jobItemData?.jobId;
+    const targetCatalogId = itemToDelete?.catalogId || jobItemData?.catalogId;
+    const targetName = (itemToDelete?.name || jobItemData?.name || '').toLowerCase().trim();
+    const itemNameForLog = itemToDelete?.name || jobItemData?.name || 'Položka';
+    const itemQtyForLog = itemToDelete?.quantityRequested || jobItemData?.quantityRequested || 1;
+
+    // Record tombstones to ensure NO OTHER CLIENT can bring this item back
+    this.addDeletedJobItemId(
+      itemId,
+      itemToDelete?.id,
+      jobItemData?.id,
+      targetJobId && targetCatalogId ? `${targetJobId}_cat_${targetCatalogId}` : null,
+      targetJobId && targetName ? `${targetJobId}_name_${targetName}` : null,
+      targetJobId && targetName ? `${targetJobId}_${targetName}` : null,
+      targetJobId && itemNameForLog ? `${targetJobId}_${itemNameForLog}` : null
+    );
+
+    // Smazat VŠECHNY záznamy odpovídající této položce v dané zakázce
+    // (tím se zabrání znovuoživení položky, pokud byla složena z duplicitních či dílčích záznamů)
+    const filtered = allItems.filter(i => {
+      if (i.id === itemId) return false;
+      if (itemToDelete?.id && i.id === itemToDelete.id) return false;
+      if (jobItemData?.id && i.id === jobItemData.id) return false;
+      if (targetJobId && i.jobId === targetJobId) {
+        if (targetCatalogId && i.catalogId === targetCatalogId) return false;
+        if (targetName && i.name.toLowerCase().trim() === targetName) return false;
+      }
+      return true;
+    });
+
     this.addAuditLog(
       user,
-      itemToDelete.jobId,
+      targetJobId || '',
       'Odebrání položky',
-      `${itemToDelete.name} (${itemToDelete.quantityRequested} ks) odebrán ze zakázky`,
+      `${itemNameForLog} (${itemQtyForLog} ks) odebrán ze zakázky`,
       'update'
     );
-    this.saveJobItems(filtered);
 
-    return itemToDelete;
+    const consolidated = this.consolidateItems(filtered);
+    localStorage.setItem(KEYS.JOB_ITEMS, JSON.stringify(consolidated));
+    this.syncToCloudImmediate();
+
+    return itemToDelete || jobItemData;
   },
 
   updateItemQuantity(itemId, delta, user, mode = 'LOADING') {
@@ -479,6 +669,7 @@ export const storageService = {
     }
 
     item.quantityLoaded = newQty;
+    item.updatedAt = new Date().toISOString();
     let oldStatus = item.status;
 
     if (mode === 'DERIGGING') {
@@ -518,6 +709,7 @@ export const storageService = {
     const item = { ...allItems[index] };
     item.quantityLoaded = item.quantityRequested;
     item.status = mode === 'DERIGGING' ? 'PACKED' : 'LOADED';
+    item.updatedAt = new Date().toISOString();
 
     allItems[index] = item;
 
@@ -547,6 +739,7 @@ export const storageService = {
       item.quantityLoaded = 0;
       item.status = 'PENDING';
     }
+    item.updatedAt = new Date().toISOString();
 
     allItems[index] = item;
 
@@ -586,6 +779,7 @@ export const storageService = {
     }
 
     item.status = newStatus;
+    item.updatedAt = new Date().toISOString();
     allItems[index] = item;
 
     this.addAuditLog(
@@ -609,6 +803,7 @@ export const storageService = {
     item.status = 'DAMAGED';
     item.damageSeverity = severity;
     item.damageNotes = notes;
+    item.updatedAt = new Date().toISOString();
     if (photoUrl) {
       item.photoUrls = [...(item.photoUrls || []), photoUrl];
     }
@@ -635,8 +830,13 @@ export const storageService = {
       i => i.jobId === jobId && i.name.toLowerCase().trim() === formattedName.toLowerCase().trim()
     );
 
+    const nowIso = new Date().toISOString();
+    this.removeDeletedJobItemIdentifier(`${jobId}_${formattedName}`);
+
     if (existingIndex !== -1) {
       allItems[existingIndex].quantityRequested += parseInt(quantity) || 1;
+      allItems[existingIndex].updatedAt = nowIso;
+      this.removeDeletedJobItemIdentifier(allItems[existingIndex].id);
       this.addAuditLog(
         user,
         jobId,
@@ -645,6 +845,7 @@ export const storageService = {
         'add'
       );
       this.saveJobItems(allItems);
+      this.syncToCloudImmediate();
       return allItems[existingIndex];
     }
 
@@ -662,8 +863,10 @@ export const storageService = {
       isAdHoc: true,
       damageNotes: '',
       photoUrls: [],
+      updatedAt: nowIso,
     };
 
+    this.removeDeletedJobItemIdentifier(newItem.id);
     allItems.push(newItem);
     this.addAuditLog(
       user,
@@ -673,6 +876,7 @@ export const storageService = {
       'add'
     );
     this.saveJobItems(allItems);
+    this.syncToCloudImmediate();
 
     return newItem;
   },
@@ -680,6 +884,7 @@ export const storageService = {
   addCatalogItemToJob(jobId, catalogItem, vehicleId, user) {
     const allItems = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
     const catalogList = this.getCatalog();
+    const nowIso = new Date().toISOString();
 
     if (catalogItem.isBundle && catalogItem.bundleItems && catalogItem.bundleItems.length > 0) {
       const addedSummary = [];
@@ -688,18 +893,24 @@ export const storageService = {
         const subName = sub.name;
         const subQty = sub.qty || 1;
 
+        this.removeDeletedJobItemIdentifier(`${jobId}_${subName}`);
+
         const existingIdx = allItems.findIndex(
           i => i.jobId === jobId && i.name.toLowerCase().trim() === subName.toLowerCase().trim()
         );
 
         if (existingIdx !== -1) {
           allItems[existingIdx].quantityRequested += subQty;
+          allItems[existingIdx].updatedAt = nowIso;
+          this.removeDeletedJobItemIdentifier(allItems[existingIdx].id);
           addedSummary.push(`${subName} (+${subQty} ks)`);
         } else {
           const catalogMatch = catalogList.find(c => c.name.toLowerCase().trim() === subName.toLowerCase().trim());
+          const subId = `ji-sub-${Date.now()}-${idx}`;
+          this.removeDeletedJobItemIdentifier(subId);
 
           const subItem = {
-            id: `ji-sub-${Date.now()}-${idx}`,
+            id: subId,
             jobId,
             catalogId: catalogMatch ? catalogMatch.id : null,
             name: subName,
@@ -714,6 +925,7 @@ export const storageService = {
             isBundle: false,
             damageNotes: '',
             photoUrls: catalogMatch?.image ? [catalogMatch.image] : [catalogItem.image],
+            updatedAt: nowIso,
           };
           allItems.push(subItem);
           addedSummary.push(`${subName} (${subQty} ks)`);
@@ -728,13 +940,18 @@ export const storageService = {
         'add'
       );
       this.saveJobItems(allItems);
+      this.syncToCloudImmediate();
     } else {
+      this.removeDeletedJobItemIdentifier(`${jobId}_${catalogItem.name}`);
+
       const existingIdx = allItems.findIndex(
         i => i.jobId === jobId && (i.catalogId === catalogItem.id || i.name.toLowerCase().trim() === catalogItem.name.toLowerCase().trim())
       );
 
       if (existingIdx !== -1) {
         allItems[existingIdx].quantityRequested += 1;
+        allItems[existingIdx].updatedAt = nowIso;
+        this.removeDeletedJobItemIdentifier(allItems[existingIdx].id);
         this.addAuditLog(
           user,
           jobId,
@@ -743,9 +960,12 @@ export const storageService = {
           'add'
         );
         this.saveJobItems(allItems);
+        this.syncToCloudImmediate();
       } else {
+        const itemId = `ji-cat-${Date.now()}`;
+        this.removeDeletedJobItemIdentifier(itemId);
         const newItem = {
-          id: `ji-cat-${Date.now()}`,
+          id: itemId,
           jobId,
           catalogId: catalogItem.id,
           name: catalogItem.name,
@@ -760,6 +980,7 @@ export const storageService = {
           isBundle: false,
           damageNotes: '',
           photoUrls: catalogItem.image ? [catalogItem.image] : [],
+          updatedAt: nowIso,
         };
         allItems.push(newItem);
         this.addAuditLog(
@@ -770,6 +991,7 @@ export const storageService = {
           'add'
         );
         this.saveJobItems(allItems);
+        this.syncToCloudImmediate();
       }
     }
   },
@@ -816,33 +1038,5 @@ export const storageService = {
     this.saveJobs(jobs);
 
     return jobs[index];
-  },
-
-  createJob(jobData, user) {
-    const jobs = this.getJobs();
-    const newJob = {
-      id: 'job-' + Date.now(),
-      name: jobData.name,
-      client: jobData.client || 'Filmová Produkce',
-      riggingDate: jobData.riggingDate || new Date().toISOString().split('T')[0],
-      deriggingDate: jobData.deriggingDate || new Date().toISOString().split('T')[0],
-      assignedGaffer: jobData.assignedGaffer || user || 'Petr M.',
-      vehicleIds: jobData.vehicleIds || ['v1'],
-      status: 'ACTIVE',
-      mode: 'LOADING',
-    };
-
-    jobs.unshift(newJob);
-    this.addAuditLog(
-      user,
-      newJob.id,
-      'Vytvoření nové zakázky',
-      `Založena nová zakázka: ${newJob.name} (${newJob.client})`,
-      'add'
-    );
-    this.saveJobs(jobs);
-    this.setCurrentJobId(newJob.id);
-
-    return newJob;
   }
 };

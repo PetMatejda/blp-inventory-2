@@ -137,7 +137,7 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
   const handleDelete = (e) => {
     e.stopPropagation();
     if (window.confirm(`Odebrat „${item.name}" ze zakázky?`)) {
-      deleteJobItem(item.id);
+      deleteJobItem(item.id, item);
     }
   };
 
@@ -232,6 +232,13 @@ export const ItemSwipeCard = ({ item, onOpenPhoto }) => {
                 title="Hlásit závadu"
               >
                 <AlertTriangle className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleDelete}
+                className="p-1.5 rounded-lg text-outline hover:text-error hover:bg-error-container/20 transition-colors active:scale-90"
+                title="Odebrat položku ze zakázky"
+              >
+                <Trash2 className="w-4 h-4" />
               </button>
               <button
                 onClick={(e) => {

@@ -169,13 +169,13 @@ export const ContextMenuModal = () => {
             <button
               onClick={() => {
                 if (window.confirm(`Opravdu chcete odebrat ${target.name} ze zakázky?`)) {
-                  deleteJobItem(target.id);
+                  deleteJobItem(target.id, target);
                 }
                 handleClose();
               }}
               className="w-full px-3 py-2.5 bg-surface-container hover:bg-error-container/30 rounded-xl text-xs font-semibold text-error flex items-center gap-2.5 transition-colors"
             >
-              <Trash2 className="w-4 h-4" /> Odebrats ze Zakázky
+              <Trash2 className="w-4 h-4" /> Odebrat ze zakázky
             </button>
           </div>
         )}

@@ -23,6 +23,13 @@ const TEAM_MEMBERS = [
     email: 'jan@blp.cz',
     role: 'ADMIN',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=jank',
+  },
+  {
+    id: 'usr-marco-m',
+    name: 'Marco Matko (Best Boy)',
+    email: 'marcomatko@gmail.com',
+    role: 'ADMIN',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=marcomatko',
   }
 ];
 
