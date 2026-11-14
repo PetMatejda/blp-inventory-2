@@ -72,6 +72,11 @@ Screen ──► InventoryContext (same API as before)
 - **Availability**: owned (warehouse + jobs + service) − requested by other ACTIVE jobs overlapping in dates − requested here; shortage shown on item cards while rigging and when adding from the catalog.
 - **Stocktake**: lines snapshot the expected warehouse count; several people count at once (scanned units via `arrayUnion`); approval applies `counted − expected` as an increment (deliveries during the count are kept) and settles pieces recorded as missing. CSV exports for stock, movements and stocktakes.
 - **Job progress** is counted in pieces.
+- **Labels & scanning** (`src/domain/labels-qr.js`, `stockActions.scanOnJob`, `LabelPrint.jsx`):
+  - Payloads: labelled unit → its code (`FLT-MOD-001`); item tracked by count → `BLP:<catalogId>`; EAN and serial numbers still work.
+  - *Vytvořit štítky* labels pieces already in stock (no count change, `LABEL` movement); codes `<serialPrefix>-001…`.
+  - Print: A4 sheet 3 × 8 labels 70 × 37 mm (`#label-print` print CSS in `index.css`), QR via `qrcode` (loaded on demand).
+  - Scan on a job by phase: Rigging +1 and the unit is recorded on the job (`jobItems.unitIds`, `stockUnits.jobId`), never twice, service/retired refused; Derigging packs (`packedUnitIds`, line packed when all pieces scanned); Restock +1 back (`returnedUnitIds`, unit leaves the job). Units not scanned back are set `MISSING` and listed by code; a stocktake scan or setting the unit back to "Ve skladu" (`FOUND` movement) returns them.
 
 ---
 

@@ -5,17 +5,16 @@ import {
   AlertCircle, Volume2, Plus, Search, CheckCircle2, RefreshCw
 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { phaseOf } from '../../domain/labels';
 
 export const BarcodeScannerModal = () => {
   const {
     isScannerModalOpen,
     setIsScannerModalOpen,
     jobItems,
-    catalog,
     currentJob,
-    updateItemQuantity,
-    updateItemStatus,
-    addCatalogItemToJob
+    addCatalogItemToJob,
+    stock,
   } = useInventory();
 
   const [scannedResult, setScannedResult] = useState(null);
@@ -29,7 +28,7 @@ export const BarcodeScannerModal = () => {
   const lastScannedTimeRef = useRef(0);
   const lastScannedCodeRef = useRef('');
 
-  const isModeDerigging = currentJob?.mode === 'DERIGGING';
+  // Phase decides what a scan means (see stockActions.scanOnJob).
 
   // Play auditory feedback beep on successful scan
   const playSuccessSound = () => {
@@ -79,72 +78,28 @@ export const BarcodeScannerModal = () => {
     lastScannedTimeRef.current = now;
     lastScannedCodeRef.current = code;
 
-    // 1. Search in current job items
-    const match = jobItems.find(i => {
-      if (i.barcode && i.barcode.toLowerCase() === code.toLowerCase()) return true;
-      if (i.serialNumber && i.serialNumber.toLowerCase().includes(code.toLowerCase())) return true;
-      if (i.id && i.id.toLowerCase() === code.toLowerCase()) return true;
-      if (i.name && i.name.toLowerCase() === code.toLowerCase()) return true;
-      return false;
-    });
-
-    if (match) {
+    // Labelled units, catalog labels (BLP:…), EAN and serial numbers; meaning depends on the phase.
+    const r = stock.scanOnJob(currentJob?.id, code);
+    if (r.ok) {
       playSuccessSound();
+      if (navigator.vibrate) navigator.vibrate(60);
       setCatalogMatch(null);
-
-      if (isModeDerigging) {
-        // Derigging flow: mark item packed / increment
-        updateItemQuantity(match.id, 1);
-        if (match.status !== 'PACKED' && match.quantityLoaded <= match.quantityRequested) {
-          updateItemStatus(match.id, 'PACKED');
-        }
-        setScannedResult({
-          type: 'success',
-          text: `Derigging: ${match.name}`,
-          detail: `SN: ${match.serialNumber || 'Bez SN'} • Zaevidováno k odvozu (+1 ks)`
-        });
-      } else {
-        // Rigging flow: increment loaded quantity
-        updateItemQuantity(match.id, 1);
-        setScannedResult({
-          type: 'success',
-          text: `Rigging: ${match.name}`,
-          detail: `SN: ${match.serialNumber || 'Bez SN'} • Naloženo (+1 ks)`
-        });
-      }
-
+      setScannedResult({ type: 'success', text: `${phaseOf(currentJob?.mode).name}: ${r.message}`, detail: r.warning || code });
       setTimeout(() => setScannedResult(null), 4000);
       return;
     }
 
-    // 2. Search in master catalog
-    const catMatch = (catalog || []).find(c => {
-      if (c.barcode && c.barcode.toLowerCase() === code.toLowerCase()) return true;
-      if (c.serialPrefix && c.serialPrefix.toLowerCase() === code.toLowerCase()) return true;
-      if (c.id && c.id.toLowerCase() === code.toLowerCase()) return true;
-      if (c.name && c.name.toLowerCase() === code.toLowerCase()) return true;
-      return false;
-    });
-
-    if (catMatch) {
+    if (r.needsAdd) {
       playSuccessSound();
-      setCatalogMatch(catMatch);
-      setScannedResult({
-        type: 'catalog',
-        text: `Nalezeno v katalogu: ${catMatch.name}`,
-        detail: `Kód: ${code} • Není zatím na této zakázce. Chcete přidat?`
-      });
+      setCatalogMatch(r.needsAdd);
+      setScannedResult({ type: 'catalog', text: r.message, detail: `Kód: ${code} • Přidat na zakázku?` });
       return;
     }
 
-    // 3. Not found
     playNotFoundSound();
+    if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
     setCatalogMatch(null);
-    setScannedResult({
-      type: 'error',
-      text: `Kód nenalezen: ${code}`,
-      detail: `Položka s tímto čárovým kódem nebo SN není na zakázce ani v katalogu.`
-    });
+    setScannedResult({ type: 'error', text: r.message, detail: code });
     setTimeout(() => setScannedResult(null), 4500);
   };
 
@@ -270,7 +225,7 @@ export const BarcodeScannerModal = () => {
             </div>
             <div>
               <span className="text-[10px] font-mono font-bold text-primary uppercase">
-                {isModeDerigging ? 'Derigging Skener' : 'Rigging Skener'}
+                Skener · {phaseOf(currentJob?.mode).name}
               </span>
               <h2 className="text-base sm:text-lg font-bold text-on-surface">Čtečka Čárových & QR Kódů</h2>
             </div>

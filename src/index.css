@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── QR label sheet (LabelPrint.jsx): A4, 3 × 8 labels of 70 × 37 mm ── */
+#label-print { position: fixed; left: -10000px; top: 0; }
+#label-print .label-sheet { display: grid; grid-template-columns: repeat(3, 70mm); grid-auto-rows: 37mm; }
+#label-print .label { box-sizing: border-box; padding: 3mm; display: flex; gap: 2.5mm; align-items: center; overflow: hidden; break-inside: avoid; font-family: Inter, Arial, sans-serif; color: #000; }
+#label-print .label img { width: 28mm; height: 28mm; flex-shrink: 0; }
+#label-print .label-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+#label-print .label-text strong { font: 700 11pt/1.1 ui-monospace, Consolas, monospace; word-break: break-all; }
+#label-print .label-text span { font-size: 8pt; margin-top: 1mm; }
+#label-print .label-text small { font-size: 7pt; color: #444; margin-top: 0.5mm; }
+@media print {
+  @page { size: A4; margin: 10.5mm 0 0 0; }
+  body * { visibility: hidden !important; }
+  #label-print, #label-print * { visibility: visible !important; }
+  #label-print { position: absolute; left: 0; top: 0; }
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

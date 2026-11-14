@@ -4,7 +4,9 @@
 import {
   MOVEMENT_TYPES, trackingOf, issuePlan, restockPlan, buildStocktakeLines, stocktakeResult, levelOf,
 } from '../domain/stock.js';
-import { enterRestock } from '../domain/items.js';
+import { enterRestock, applyQuantityDelta, markDone } from '../domain/items.js';
+import { nextUnitCodes, resolveCode, unitScanProblem, missingUnitIds } from '../domain/labels-qr.js';
+import { phaseOf } from '../domain/labels.js';
 
 const BATCH = 400;
 
@@ -95,17 +97,116 @@ export function createStockActions({ repo, getState, getActor }) {
       return null;
     },
 
+    /**
+     * Labels for pieces that are already in the warehouse (no change of counts).
+     * At most as many as there are unlabelled pieces in stock. Returns the new codes.
+     */
+    labelExistingUnits(catalogId, count) {
+      const { catalog, stockUnits, stockLevels } = getState();
+      const item = catalog.find((c) => c.id === catalogId);
+      if (!item) return [];
+      const labelledInStock = stockUnits.filter((u) => u.catalogId === catalogId && u.status === 'IN_STOCK').length;
+      const free = Math.max(0, levelOf(stockLevels, catalogId).inStock - labelledInStock);
+      const n = Math.min(positive(count), free);
+      if (!n) return [];
+      const codes = nextUnitCodes(item.serialPrefix || item.name.slice(0, 3), stockUnits.map((u) => u.code), n);
+      const ops = codes.map((code) => {
+        const id = repo.newId('stockUnits');
+        return { type: 'set', col: 'stockUnits', id, data: { id, catalogId, code, serialNumber: code, status: 'IN_STOCK', createdAt: now(), updatedAt: now(), updatedBy: getActor() } };
+      });
+      ops.push(movementOp('LABEL', catalogId, n, { note: `Štítky ${codes[0]} – ${codes[codes.length - 1]}` }));
+      commitAll(ops);
+      return codes;
+    },
+
+    /**
+     * A code scanned on a job — behaves according to the job phase:
+     *   Rigging    +1 loaded (labelled unit is recorded on the job, never twice)
+     *   Derigging  packed (labelled units count one by one)
+     *   Restock    +1 back in the warehouse (labelled unit leaves the job)
+     * Returns { ok, message, needsAdd?: catalogItem, warning? } for the UI.
+     */
+    scanOnJob(jobId, code) {
+      const { jobs, jobItems, catalog, stockUnits } = getState();
+      const job = jobs.find((j) => j.id === jobId);
+      if (!job) return { ok: false, message: 'Není vybraná zakázka.' };
+      if (job.status === 'ARCHIVED') return { ok: false, message: 'Zakázka je v archivu.' };
+      const mode = job.mode || 'LOADING';
+      const items = jobItems.filter((i) => i.jobId === jobId);
+      const r = resolveCode(code, { jobItems: items, catalog, units: stockUnits });
+      const audit = (item, detail) => {
+        const id = repo.newId('auditLogs');
+        return { type: 'set', col: 'auditLogs', id, data: { id, timestamp: now(), user: getActor(), jobId, action: `Sken – ${phaseOf(mode).name}`, detail: `${item.name}: ${detail}`, type: 'loaded' } };
+      };
+      const itemUpdate = (item, data) => ({ type: 'update', col: 'jobItems', id: item.id, data: { ...data, updatedAt: now(), updatedBy: getActor() } });
+
+      if (r.kind === 'UNKNOWN') return { ok: false, message: `Neznámý kód ${code}` };
+      if (r.kind === 'CATALOG') return { ok: false, needsAdd: r.catalogItem, message: `${r.catalogItem.name} není na zakázce` };
+      if (r.kind === 'UNIT' && !r.item) {
+        const catalogItem = catalog.find((c) => c.id === r.unit.catalogId);
+        return { ok: false, needsAdd: catalogItem, message: `${catalogItem?.name || r.unit.code} není na zakázce` };
+      }
+
+      const item = r.item;
+      if (r.kind === 'UNIT') {
+        const unit = r.unit;
+        const problem = unitScanProblem(unit, item, mode, jobId);
+        if (problem) return { ok: false, message: problem };
+        const otherJob = unit.jobId && unit.jobId !== jobId ? jobs.find((j) => j.id === unit.jobId && j.status === 'ACTIVE') : null;
+        const warning = otherJob ? `Pozor: ${unit.code} byl veden na zakázce ${otherJob.name}` : null;
+
+        if (mode === 'LOADING') {
+          const patch = applyQuantityDelta(item, 1, mode);
+          repo.commit([
+            itemUpdate(item, { ...patch, unitIds: { __union: [unit.id] } }),
+            { type: 'update', col: 'stockUnits', id: unit.id, data: { jobId, jobName: job.name, updatedAt: now(), updatedBy: getActor() } },
+            audit(item, `naložen kus ${unit.code} (${patch.quantityLoaded}/${patch.quantityRequested})`),
+          ]);
+          return { ok: true, warning, message: `${item.name} · ${unit.code} · ${patch.quantityLoaded}/${patch.quantityRequested}` };
+        }
+        if (mode === 'DERIGGING') {
+          const packed = (item.packedUnitIds?.length || 0) + 1;
+          const done = packed >= (item.quantityRequested || 0);
+          repo.commit([
+            itemUpdate(item, { packedUnitIds: { __union: [unit.id] }, ...(done ? markDone(item, mode) : {}) }),
+            audit(item, `sbalen kus ${unit.code} (${packed}/${item.quantityRequested})`),
+          ]);
+          return { ok: true, warning, message: `${item.name} · ${unit.code} · sbaleno ${packed}/${item.quantityRequested}` };
+        }
+        // RESTOCK
+        const patch = applyQuantityDelta(item, 1, mode);
+        repo.commit([
+          itemUpdate(item, { ...patch, returnedUnitIds: { __union: [unit.id] } }),
+          { type: 'update', col: 'stockUnits', id: unit.id, data: { jobId: null, jobName: null, ...(unit.status === 'MISSING' ? { status: 'IN_STOCK' } : {}), updatedAt: now(), updatedBy: getActor() } },
+          audit(item, `naskladněn kus ${unit.code} (${patch.quantityLoaded}/${patch.quantityRequested})`),
+        ]);
+        return { ok: true, warning, message: `${item.name} · ${unit.code} · zpět ${patch.quantityLoaded}/${patch.quantityRequested}` };
+      }
+
+      // Job line identified by a catalog label / barcode / serial number
+      if (mode === 'DERIGGING') {
+        repo.commit([itemUpdate(item, markDone(item, mode)), audit(item, 'sbaleno (sken)')]);
+        return { ok: true, message: `${item.name} · sbaleno` };
+      }
+      const patch = applyQuantityDelta(item, 1, mode);
+      repo.commit([itemUpdate(item, patch), audit(item, `+1 (${patch.quantityLoaded}/${patch.quantityRequested})`)]);
+      return { ok: true, message: `${item.name} · ${patch.quantityLoaded}/${patch.quantityRequested}` };
+    },
+
     /** Unit to service / back / retired — keeps the counts in step. */
     setUnitStatus(unitId, status, note = '') {
       const unit = getState().stockUnits.find((u) => u.id === unitId);
       if (!unit || unit.status === status) return;
-      const field = { IN_STOCK: 'inStock', IN_SERVICE: 'inService', RETIRED: null };
+      const field = { IN_STOCK: 'inStock', IN_SERVICE: 'inService', MISSING: 'missing', RETIRED: null };
       const deltas = {};
       if (field[unit.status]) deltas[field[unit.status]] = -1;
       if (field[status]) deltas[field[status]] = (deltas[field[status]] || 0) + 1;
-      const type = status === 'IN_SERVICE' ? 'TO_SERVICE' : status === 'RETIRED' ? 'RETIRE' : 'FROM_SERVICE';
+      const type = status === 'IN_SERVICE' ? 'TO_SERVICE'
+        : status === 'RETIRED' ? 'RETIRE'
+          : status === 'MISSING' ? 'MISSING'
+            : unit.status === 'MISSING' ? 'FOUND' : 'FROM_SERVICE';
       repo.commit([
-        { type: 'update', col: 'stockUnits', id: unitId, data: { status, updatedAt: now(), updatedBy: getActor() } },
+        { type: 'update', col: 'stockUnits', id: unitId, data: { status, ...(status === 'IN_STOCK' ? { jobId: null, jobName: null } : {}), updatedAt: now(), updatedBy: getActor() } },
         levelOp(unit.catalogId, deltas),
         movementOp(type, unit.catalogId, 1, { unitId, unitCode: unit.code, note }),
       ]);
@@ -129,9 +230,13 @@ export function createStockActions({ repo, getState, getActor }) {
 
     /** Job goes back to rigging: the issue is cancelled (pieces back in stock). */
     unissueJob(jobId) {
-      const job = getState().jobs.find((j) => j.id === jobId);
+      const { jobs, jobItems } = getState();
+      const job = jobs.find((j) => j.id === jobId);
       if (!job?.issued) return null;
       const ops = [{ type: 'update', col: 'jobs', id: jobId, data: { issued: null, issuedAt: null, updatedAt: now(), updatedBy: getActor() } }];
+      // Packing started in derigging is forgotten when going back to rigging.
+      jobItems.filter((i) => i.jobId === jobId && i.packedUnitIds?.length)
+        .forEach((i) => ops.push({ type: 'update', col: 'jobItems', id: i.id, data: { packedUnitIds: [] } }));
       for (const [catalogId, qty] of Object.entries(job.issued)) {
         ops.push(levelOp(catalogId, { inStock: qty, onJob: -qty }));
         ops.push(movementOp('RETURN', catalogId, qty, { jobId, jobName: job.name, note: 'Zrušení výdeje (zpět na rigging)' }));
@@ -147,7 +252,7 @@ export function createStockActions({ repo, getState, getActor }) {
       if (!job) return;
       const ops = [{ type: 'update', col: 'jobs', id: jobId, data: { mode: 'RESTOCK', updatedAt: now(), updatedBy: getActor() } }];
       for (const item of jobItems.filter((i) => i.jobId === jobId)) {
-        const patch = enterRestock(item);
+        const patch = { ...enterRestock(item), ...(item.unitIds?.length ? { returnedUnitIds: [] } : {}) };
         if (Object.keys(patch).length) ops.push({ type: 'update', col: 'jobItems', id: item.id, data: { ...patch, updatedAt: now(), updatedBy: getActor() } });
       }
       commitAll(ops);
@@ -177,8 +282,20 @@ export function createStockActions({ repo, getState, getActor }) {
         if (r.toService) ops.push(movementOp('TO_SERVICE', catalogId, r.toService, { ...extra, note: 'Závada ze zakázky' }));
         if (tracked && r.missing) ops.push(movementOp('MISSING', catalogId, r.missing, extra));
       }
+      // Labelled units scanned onto the job that did not come back are missing by name.
+      const { stockUnits } = getState();
+      const missingUnits = [];
+      for (const item of jobItems.filter((i) => i.jobId === jobId)) {
+        for (const unitId of missingUnitIds(item)) {
+          const unit = stockUnits.find((u) => u.id === unitId);
+          if (!unit) continue;
+          missingUnits.push(unit.code);
+          ops.push({ type: 'update', col: 'stockUnits', id: unitId, data: { status: item.status === 'DAMAGED' ? 'IN_SERVICE' : 'MISSING', updatedAt: now(), updatedBy: getActor() } });
+        }
+      }
+      if (missingUnits.length) ops[0].data.missingUnits = missingUnits;
       commitAll(ops);
-      return plan;
+      return { ...plan, ...(missingUnits.length ? { __missingUnits: missingUnits } : {}) };
     },
 
     // ── Stocktake ────────────────────────────────────────────
@@ -250,6 +367,14 @@ export function createStockActions({ repo, getState, getActor }) {
         }));
       }
       for (const l of lines) ops.push({ type: 'update', col: 'stocktakeLines', id: l.id, data: { open: false } });
+      // Labelled units found in the warehouse are in stock again (e.g. missing after a job).
+      const { stockUnits } = getState();
+      const found = new Set(lines.flatMap((l) => l.scannedUnitIds || []));
+      for (const u of stockUnits) {
+        if (found.has(u.id) && (u.status === 'MISSING' || u.jobId)) {
+          ops.push({ type: 'update', col: 'stockUnits', id: u.id, data: { status: 'IN_STOCK', jobId: null, jobName: null, updatedAt: now(), updatedBy: getActor() } });
+        }
+      }
       commitAll(ops);
       return result;
     },

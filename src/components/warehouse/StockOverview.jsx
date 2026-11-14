@@ -6,20 +6,28 @@ import { ItemThumbnail } from '../common/ItemThumbnail';
 import { CATEGORIES, getCategoryMeta } from '../../utils/categoryIcons';
 import { levelOf, ownedCount, trackingOf, toCsv } from '../../domain/stock';
 import { plural } from '../../domain/labels';
+import { catalogLabelPayload } from '../../domain/labels-qr';
+import { LabelPrint } from './LabelPrint';
 import {
-  Search, Download, PackagePlus, PackageMinus, Wrench, Undo2, Tag, Hash, Warehouse, ChevronRight,
+  Search, Download, PackagePlus, PackageMinus, Wrench, Undo2, Tag, Hash, Warehouse, ChevronRight, Printer, QrCode,
 } from 'lucide-react';
 
-const UNIT_STATUS = { IN_STOCK: 'Ve skladu', IN_SERVICE: 'V servisu', RETIRED: 'Vyřazen' };
+const UNIT_STATUS = { IN_STOCK: 'Ve skladu', IN_SERVICE: 'V servisu', MISSING: 'Chybí', RETIRED: 'Vyřazen' };
+
+const unitLabel = (unit, item) => ({ payload: unit.code, code: unit.code, title: item.name, subtitle: 'BLP' });
+const itemLabel = (item) => ({ payload: catalogLabelPayload(item), code: item.serialPrefix || 'BLP', title: item.name, subtitle: getCategoryMeta(item.category).label });
 const fmtDate = (iso) => (iso ? new Date(iso).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
 const StockItemSheet = ({ item, onClose }) => {
   const { stockLevels, stockUnits, movements, stock } = useInventory();
   const { askNumber, confirm, toast } = useDialogs();
   const [addingUnit, setAddingUnit] = useState(false);
+  const [printLabels, setPrintLabels] = useState(null);
   const level = levelOf(stockLevels, item.id);
   const tracking = trackingOf(item);
   const units = stockUnits.filter((u) => u.catalogId === item.id);
+  const unlabelled = Math.max(0, level.inStock - units.filter((u) => u.status === 'IN_STOCK').length);
+  const printableUnits = units.filter((u) => u.status !== 'RETIRED');
   const history = movements.filter((m) => m.catalogId === item.id).slice(0, 15);
 
   const ask = async (title, max) => askNumber({ title: item.name, message: title, value: 1, max });
@@ -60,6 +68,27 @@ const StockItemSheet = ({ item, onClose }) => {
             }} />
           </>
         )}
+        {tracking === 'SERIAL' ? (
+          <>
+            <SheetAction icon={QrCode} label="Vytvořit štítky pro kusy ve skladu" disabled={!unlabelled}
+              hint={unlabelled ? `${unlabelled} ${plural(unlabelled, 'kus nemá', 'kusy nemají', 'kusů nemá')} štítek · počty se nemění` : 'Všechny kusy ve skladu mají štítek'}
+              onClick={async () => {
+                const n = await askNumber({ title: item.name, message: 'Kolik kusů označit štítkem', value: unlabelled, max: unlabelled });
+                if (!n) return;
+                const codes = stock.labelExistingUnits(item.id, n);
+                if (codes.length) toast({ text: `Vytvořeno ${codes.length} štítků (${codes[0]} – ${codes[codes.length - 1]})` });
+              }} />
+            <SheetAction icon={Printer} label="Tisknout štítky kusů" disabled={!printableUnits.length}
+              hint={`${printableUnits.length} štítků · arch A4 3 × 8`}
+              onClick={() => setPrintLabels(printableUnits.map((u) => unitLabel(u, item)))} />
+          </>
+        ) : (
+          <SheetAction icon={Printer} label="Tisknout štítek položky" hint="Na krabici nebo regál – sken přičte kus na zakázku"
+            onClick={async () => {
+              const n = await askNumber({ title: item.name, message: 'Počet štítků', value: 1, max: 24 });
+              if (n) setPrintLabels(Array.from({ length: n }, () => itemLabel(item)));
+            }} />
+        )}
         <SheetAction icon={Hash} label={tracking === 'SERIAL' ? 'Sledovat jen počtem' : 'Sledovat po kusech (štítky)'}
           hint="Změna způsobu evidence této položky"
           onClick={() => stock.setTracking(item.id, tracking === 'SERIAL' ? 'QUANTITY' : 'SERIAL')} />
@@ -72,7 +101,10 @@ const StockItemSheet = ({ item, onClose }) => {
           <ul className="flex flex-col gap-1">
             {units.map((u) => (
               <li key={u.id} className="flex items-center justify-between gap-2 rounded-xl border border-outline-variant px-3 py-2">
-                <span className="font-mono text-sm text-on-surface">{u.code}</span>
+                <span className="min-w-0">
+                  <span className="font-mono text-sm text-on-surface">{u.code}</span>
+                  {u.jobName && <span className="block text-xs text-on-surface-variant truncate">na zakázce {u.jobName}</span>}
+                </span>
                 <select
                   value={u.status}
                   onChange={async (e) => {
@@ -104,17 +136,19 @@ const StockItemSheet = ({ item, onClose }) => {
           </ul>
         )}
       </div>
+      {printLabels && <LabelPrint labels={printLabels} onDone={() => setPrintLabels(null)} />}
     </Sheet>
   );
 };
 
 export const StockOverview = () => {
-  const { catalog, stockLevels, stock } = useInventory();
+  const { catalog, stockLevels, stockUnits, stock } = useInventory();
   const { confirm, toast } = useDialogs();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('ALL');
   const [onlyProblems, setOnlyProblems] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [bulkLabels, setBulkLabels] = useState(null);
 
   const rows = useMemo(() => catalog
     .filter((c) => !c.isBundle)
@@ -164,6 +198,20 @@ export const StockOverview = () => {
     downloadText(`BLP_stav_skladu_${new Date().toISOString().slice(0, 10)}.csv`, csv);
   };
 
+  // Bulk print: every labelled unit (not retired) of the visible items + one label per item tracked by count.
+  const printVisible = async () => {
+    const labels = visible.flatMap(({ item, tracking }) => (tracking === 'SERIAL'
+      ? stockUnits.filter((u) => u.catalogId === item.id && u.status !== 'RETIRED').map((u) => unitLabel(u, item))
+      : [itemLabel(item)]));
+    if (!labels.length) { toast({ text: 'Žádné štítky k tisku' }); return; }
+    const sheets = Math.ceil(labels.length / 24);
+    if (await confirm({
+      title: `Tisknout ${labels.length} štítků?`,
+      message: `${sheets} ${plural(sheets, 'arch', 'archy', 'archů')} A4 (3 × 8 štítků 70 × 37 mm). Kusy bez štítku nejdřív označte v detailu položky.`,
+      confirmLabel: 'Tisknout',
+    })) setBulkLabels(labels);
+  };
+
   const totals = rows.reduce((t, r) => ({ inStock: t.inStock + r.level.inStock, onJob: t.onJob + r.level.onJob, problems: t.problems + (r.level.missing || r.level.inService ? 1 : 0) }), { inStock: 0, onJob: 0, problems: 0 });
 
   return (
@@ -185,7 +233,11 @@ export const StockOverview = () => {
         <button onClick={exportCsv} className="h-12 px-3 rounded-xl border border-outline-variant bg-card-bg text-sm font-semibold flex items-center gap-1.5" aria-label="Export stavu skladu do CSV">
           <Download className="w-5 h-5" /> CSV
         </button>
+        <button onClick={printVisible} className="h-12 px-3 rounded-xl border border-outline-variant bg-card-bg text-sm font-semibold flex items-center gap-1.5" aria-label="Tisk štítků zobrazených položek">
+          <Printer className="w-5 h-5" /> Štítky
+        </button>
       </div>
+      {bulkLabels && <LabelPrint labels={bulkLabels} onDone={() => setBulkLabels(null)} />}
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {[{ id: 'ALL', label: 'Vše' }, ...CATEGORIES].map((c) => (

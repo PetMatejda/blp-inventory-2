@@ -3,6 +3,7 @@ import { useInventory } from '../../context/InventoryContext';
 import { Sheet, useDialogs } from '../common/Dialogs';
 import { phaseOf, phaseSummary, plural } from '../../domain/labels';
 import { restockPlan } from '../../domain/stock';
+import { missingUnitIds } from '../../domain/labels-qr';
 import { AlertTriangle, CheckCircle2, FileText, Lock, Warehouse } from 'lucide-react';
 
 const Stat = ({ value, label, tone }) => (
@@ -22,7 +23,7 @@ const Stat = ({ value, label, tone }) => (
  */
 export const FinishJobSheet = () => {
   const {
-    finishingJob: job, setFinishingJob, allJobItems, finishJob, reactivateJob, catalog,
+    finishingJob: job, setFinishingJob, allJobItems, finishJob, reactivateJob, catalog, stockUnits,
     setCurrentJobId, setIsProtocolModalOpen, setActiveTab, finishRestock, changeJobPhase,
   } = useInventory();
   const { toast, confirm } = useDialogs();
@@ -50,6 +51,8 @@ export const FinishJobSheet = () => {
       returned: t.returned + r.returned, toService: t.toService + r.toService, missing: t.missing + r.missing,
     }), { returned: 0, toService: 0, missing: 0 });
     const problems = rows.filter(([, r]) => r.missing || r.toService);
+    const missingCodes = items.flatMap(missingUnitIds)
+      .map((id) => stockUnits.find((u) => u.id === id)?.code).filter(Boolean);
 
     const finish = async () => {
       if (totals.missing && !(await confirm({
@@ -81,6 +84,11 @@ export const FinishJobSheet = () => {
             ))}
             {problems.length > 8 && <li>… a další</li>}
           </ul>
+        )}
+        {missingCodes.length > 0 && (
+          <p className="text-sm rounded-xl border border-error/40 bg-error-container/20 p-3 text-on-surface">
+            Nenaskenované kusy se štítkem: <strong className="font-mono">{missingCodes.join(', ')}</strong>
+          </p>
         )}
         {!job.issued && <p className="text-sm text-on-surface-variant">Tato zakázka se nevydávala ze skladu, proto se upraví jen kusy se závadou (přesun do servisu).</p>}
         <div className="flex flex-col gap-2">

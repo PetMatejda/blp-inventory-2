@@ -18,6 +18,8 @@ export const MOVEMENT_TYPES = {
   FROM_SERVICE: 'Ze servisu',
   RETIRE: 'Vyřazení',
   STOCKTAKE: 'Inventurní rozdíl',
+  LABEL: 'Označení štítky',
+  FOUND: 'Nalezeno',
 };
 
 export const trackingOf = (catalogItem) =>
