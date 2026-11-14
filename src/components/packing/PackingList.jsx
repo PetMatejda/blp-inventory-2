@@ -3,7 +3,7 @@ import { useInventory } from '../../context/InventoryContext';
 import { ItemSwipeCard } from './ItemSwipeCard';
 import {
   Search, QrCode, Plus, Package, Lock, Unlock,
-  Truck, Copy, X, AlertTriangle, BookOpen
+  Truck, Copy, X, AlertTriangle, BookOpen, FileText
 } from 'lucide-react';
 
 
@@ -23,6 +23,7 @@ export const PackingList = () => {
     reactivateJob,
     setTemplateJob,
     setEditingJob,
+    setIsProtocolModalOpen,
   } = useInventory();
 
   const [fabOpen, setFabOpen] = useState(false);
@@ -197,6 +198,14 @@ export const PackingList = () => {
             title="QR / Barcode Skener"
           >
             <QrCode className="w-5 h-5 text-secondary" />
+          </button>
+          <button
+            onClick={() => setIsProtocolModalOpen(true)}
+            className="w-10 h-10 bg-card-bg border border-outline-variant rounded-xl flex items-center justify-center text-primary hover:border-primary/50 active:scale-90 transition-transform shrink-0 shadow-sm"
+            title="Předávací protokol (PDF)"
+            aria-label="Předávací protokol (PDF)"
+          >
+            <FileText className="w-5 h-5" />
           </button>
         </div>
 

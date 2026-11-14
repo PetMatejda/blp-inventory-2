@@ -1,6 +1,6 @@
 import React from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { FolderOpen, Edit2, Copy, FileText, Lock, Unlock, Image as ImageIcon, AlertTriangle, Trash2, Plus, Check, RefreshCw, X, Hash } from 'lucide-react';
+import { FolderOpen, Edit2, Copy, FileText, Lock, Unlock, Image as ImageIcon, AlertTriangle, Trash2, Check, RefreshCw, X, Hash } from 'lucide-react';
 
 export const ContextMenuModal = () => {
   const {
@@ -16,10 +16,6 @@ export const ContextMenuModal = () => {
     deleteJobItem,
     deleteJob,
     setDamageReportItem,
-
-    addCatalogItemToJob,
-    setIsMasterCatalogModalOpen,
-    deleteCatalogItem,
     updateConsumableState,
     setItemExactQuantity,
   } = useInventory();
@@ -84,8 +80,16 @@ export const ContextMenuModal = () => {
               <Copy className="w-4 h-4 text-secondary" /> Použít jako vzor (Kopírovat)
             </button>
 
-
-
+            <button
+              onClick={() => {
+                setCurrentJobId(target.id);
+                setIsProtocolModalOpen(true);
+                handleClose();
+              }}
+              className="w-full px-3 py-2.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-xs font-semibold text-on-surface flex items-center gap-2.5 transition-colors"
+            >
+              <FileText className="w-4 h-4 text-primary" /> Předávací protokol (PDF)
+            </button>
 
             {target.status === 'ARCHIVED' ? (
               <button
@@ -95,7 +99,7 @@ export const ContextMenuModal = () => {
                 }}
                 className="w-full px-3 py-2.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-xs font-semibold text-primary flex items-center gap-2.5 transition-colors"
               >
-                <Unlock className="w-4 h-4" /> Obnovit do Aktivního Stavuu
+                <Unlock className="w-4 h-4" /> Obnovit do aktivního stavu
               </button>
             ) : (
               <button
@@ -176,43 +180,6 @@ export const ContextMenuModal = () => {
               className="w-full px-3 py-2.5 bg-surface-container hover:bg-error-container/30 rounded-xl text-xs font-semibold text-error flex items-center gap-2.5 transition-colors"
             >
               <Trash2 className="w-4 h-4" /> Odebrat ze zakázky
-            </button>
-          </div>
-        )}
-
-        {/* CATALOG ITEM Context Menu */}
-        {type === 'CATALOG_ITEM' && (
-          <div className="flex flex-col gap-1.5">
-            <button
-              onClick={() => {
-                addCatalogItemToJob(target);
-                handleClose();
-              }}
-              className="w-full px-3 py-2.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-xs font-semibold text-on-surface flex items-center gap-2.5 transition-colors"
-            >
-              <Plus className="w-4 h-4 text-secondary" /> Vložit do Cílové Zakázky
-            </button>
-
-            <button
-              onClick={() => {
-                setIsMasterCatalogModalOpen(true);
-                handleClose();
-              }}
-              className="w-full px-3 py-2.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-xs font-semibold text-on-surface flex items-center gap-2.5 transition-colors"
-            >
-              <Edit2 className="w-4 h-4 text-primary" /> Upravit v Centrálním Katalogu
-            </button>
-
-            <button
-              onClick={() => {
-                if (window.confirm(`Opravdu chcete smazat položku "${target.name}" z celého katalogu?`)) {
-                  deleteCatalogItem(target.id);
-                }
-                handleClose();
-              }}
-              className="w-full px-3 py-2.5 bg-surface-container hover:bg-error-container/30 rounded-xl text-xs font-semibold text-error flex items-center gap-2.5 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" /> Smazat z Globálního Katalogu
             </button>
           </div>
         )}

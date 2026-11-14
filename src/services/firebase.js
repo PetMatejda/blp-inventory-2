@@ -28,6 +28,8 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 // Firebase configuration with environment variables and production fallbacks
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 const firebaseConfig = {
@@ -70,6 +72,9 @@ export const googleProvider = new GoogleAuthProvider();
 // Initialize Firestore safely
 export const db = getFirestore(app);
 
+// Cloud Storage for photos (damage reports, catalog images)
+export const storage = getStorage(app);
+
 
 export {
   GoogleAuthProvider,
@@ -88,5 +93,8 @@ export {
   onSnapshot,
   updateDoc,
   deleteDoc,
+  storageRef,
+  uploadBytes,
+  getDownloadURL,
 };
 

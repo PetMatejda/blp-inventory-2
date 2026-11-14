@@ -46,10 +46,9 @@ export const InventoryProvider = ({ children }) => {
   const [isAdHocModalOpen, setIsAdHocModalOpen] = useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [damageReportItem, setDamageReportItem] = useState(null);
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isMasterCatalogModalOpen, setIsMasterCatalogModalOpen] = useState(false);
+  const [isProtocolModalOpen, setIsProtocolModalOpen] = useState(false);
 
   // Job Editing & Template Modals
   const [editingJob, setEditingJob] = useState(null);
@@ -216,7 +215,7 @@ export const InventoryProvider = ({ children }) => {
     if (currentJob?.status === 'ARCHIVED') return;
     setSyncStatus('syncing');
     const mode = currentJob?.mode || 'LOADING';
-    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
+    const actorName = getActorName();
     storageService.updateItemQuantity(itemId, delta, actorName, mode);
     afterMutation();
   };
@@ -234,7 +233,7 @@ export const InventoryProvider = ({ children }) => {
     if (currentJob?.status === 'ARCHIVED') return;
     setSyncStatus('syncing');
     const mode = currentJob?.mode || 'LOADING';
-    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
+    const actorName = getActorName();
     storageService.setItemLoadedOrPacked(itemId, actorName, mode);
     afterMutation();
   };
@@ -243,7 +242,7 @@ export const InventoryProvider = ({ children }) => {
     if (currentJob?.status === 'ARCHIVED') return;
     setSyncStatus('syncing');
     const mode = currentJob?.mode || 'LOADING';
-    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
+    const actorName = getActorName();
     storageService.setItemPending(itemId, actorName, mode);
     afterMutation();
   };
@@ -252,7 +251,7 @@ export const InventoryProvider = ({ children }) => {
     if (currentJob?.status === 'ARCHIVED') return;
     setSyncStatus('syncing');
     const mode = currentJob?.mode || 'LOADING';
-    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
+    const actorName = getActorName();
     storageService.toggleItemStatus(itemId, actorName, mode);
     afterMutation();
   };
@@ -263,7 +262,7 @@ export const InventoryProvider = ({ children }) => {
       return;
     }
     setSyncStatus('syncing');
-    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
+    const actorName = getActorName();
     storageService.deleteJobItem(itemId, actorName, itemData);
     afterMutation();
     setSyncNotice('🗑️ Položka byla odebrána ze zakázky a smazána z cloudu.');
@@ -273,7 +272,7 @@ export const InventoryProvider = ({ children }) => {
   const reportItemDamage = (itemId, severity, notes, photoUrl) => {
     if (currentJob?.status === 'ARCHIVED') return;
     setSyncStatus('syncing');
-    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
+    const actorName = getActorName();
     storageService.reportItemDamage(itemId, severity, notes, photoUrl, actorName);
     afterMutation();
     setDamageReportItem(null);
@@ -282,7 +281,7 @@ export const InventoryProvider = ({ children }) => {
   const addAdHocItem = (name, category, quantity) => {
     if (!currentJobId || currentJob?.status === 'ARCHIVED') return;
     setSyncStatus('syncing');
-    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
+    const actorName = getActorName();
     storageService.addAdHocItem(currentJobId, name, category, 'v1', quantity, actorName);
     afterMutation();
     setIsAdHocModalOpen(false);
@@ -291,7 +290,7 @@ export const InventoryProvider = ({ children }) => {
   const addCatalogItemToJob = (catalogItem) => {
     if (!currentJobId || currentJob?.status === 'ARCHIVED') return;
     setSyncStatus('syncing');
-    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Petr M.';
+    const actorName = getActorName();
     storageService.addCatalogItemToJob(currentJobId, catalogItem, 'v1', actorName);
     afterMutation();
   };
@@ -300,7 +299,7 @@ export const InventoryProvider = ({ children }) => {
     if (currentUser?.name) {
       return `${currentUser.name} (${currentUser.role || 'USER'})`;
     }
-    return 'Petr M. (Lead Gaffer)';
+    return 'Neznámý uživatel';
   };
 
   // Job Status & Template Operations
@@ -515,15 +514,13 @@ export const InventoryProvider = ({ children }) => {
         setIsScannerModalOpen,
         damageReportItem,
         setDamageReportItem,
-        isRoleModalOpen,
-        setIsRoleModalOpen,
 
         isAuthModalOpen,
         setIsAuthModalOpen,
         isSettingsModalOpen,
         setIsSettingsModalOpen,
-        isMasterCatalogModalOpen,
-        setIsMasterCatalogModalOpen,
+        isProtocolModalOpen,
+        setIsProtocolModalOpen,
         editingJob,
         setEditingJob,
         templateJob,

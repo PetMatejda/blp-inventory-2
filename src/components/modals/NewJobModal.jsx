@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { Plus, X, Calendar } from 'lucide-react';
 
 export const NewJobModal = () => {
-  const { isNewJobModalOpen, setIsNewJobModalOpen, createJob } = useInventory();
+  const { isNewJobModalOpen, setIsNewJobModalOpen, createJob, currentUser } = useInventory();
 
   const [name, setName] = useState('');
   const [client, setClient] = useState('');
-  const [blpResponsible, setBlpResponsible] = useState('Marek Radolf');
-  const [gaffer, setGaffer] = useState('Petr M.');
+  const [blpResponsible, setBlpResponsible] = useState('');
+  const [gaffer, setGaffer] = useState('');
   const [riggingDate, setRiggingDate] = useState(new Date().toISOString().split('T')[0]);
   const [deriggingDate, setDeriggingDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Fresh form each time it opens; the signed-in user is the default BLP contact.
+  useEffect(() => {
+    if (!isNewJobModalOpen) return;
+    const today = new Date().toISOString().split('T')[0];
+    setName('');
+    setClient('');
+    setBlpResponsible(currentUser?.name || '');
+    setGaffer('');
+    setRiggingDate(today);
+    setDeriggingDate(today);
+  }, [isNewJobModalOpen, currentUser?.name]);
 
   if (!isNewJobModalOpen) return null;
 

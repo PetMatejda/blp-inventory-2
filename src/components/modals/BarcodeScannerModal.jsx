@@ -362,7 +362,8 @@ export const BarcodeScannerModal = () => {
           </button>
         </form>
 
-        {/* Quick Simulation items list for test without physical barcodes */}
+        {/* Quick simulation list for testing without physical barcodes — dev builds only */}
+        {import.meta.env.DEV && (
         <div className="border-t border-outline-variant/60 pt-3">
           <label className="block text-[11px] font-mono text-outline mb-1.5 uppercase">
             Položky na zakázce (klikněte pro rychlé nasimulování skenu):
@@ -394,6 +395,7 @@ export const BarcodeScannerModal = () => {
             )}
           </div>
         </div>
+        )}
 
         {/* Footer */}
         <button

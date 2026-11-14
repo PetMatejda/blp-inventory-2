@@ -69,7 +69,7 @@ const JobCardItem = ({ job, isSelected }) => {
             {/* Info badges: BLP Responsible, Gaffer & Rigging/Derigging Dates */}
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-xs text-on-surface-variant">
               <span className="flex items-center gap-1.5 font-semibold text-primary">
-                <User className="w-3.5 h-3.5" /> BLP: {job.blpResponsible || 'Marek Radolf'}
+                <User className="w-3.5 h-3.5" /> BLP: {job.blpResponsible || 'Nezadáno'}
               </span>
               <span className="flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-outline" /> Gaffer: {job.assignedGaffer || 'Nezadáno'}

@@ -7,8 +7,8 @@ export const DuplicateJobModal = () => {
 
   const [name, setName] = useState('');
   const [client, setClient] = useState('');
-  const [blpResponsible, setBlpResponsible] = useState('Marek Radolf');
-  const [gaffer, setGaffer] = useState('Petr M.');
+  const [blpResponsible, setBlpResponsible] = useState('');
+  const [gaffer, setGaffer] = useState('');
   const [riggingDate, setRiggingDate] = useState(new Date().toISOString().split('T')[0]);
   const [deriggingDate, setDeriggingDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -16,8 +16,8 @@ export const DuplicateJobModal = () => {
     if (templateJob) {
       setName(`${templateJob.name} (Kopie)`);
       setClient(templateJob.client || '');
-      setBlpResponsible(templateJob.blpResponsible || 'Marek Radolf');
-      setGaffer(templateJob.assignedGaffer || 'Petr M.');
+      setBlpResponsible(templateJob.blpResponsible || '');
+      setGaffer(templateJob.assignedGaffer || '');
       setRiggingDate(new Date().toISOString().split('T')[0]);
       setDeriggingDate(new Date().toISOString().split('T')[0]);
     }

@@ -13,9 +13,8 @@ import { NewJobModal } from './components/modals/NewJobModal';
 import { AdHocModal } from './components/modals/AdHocModal';
 import { BarcodeScannerModal } from './components/modals/BarcodeScannerModal';
 import { DamageReportModal } from './components/damage/DamageReportModal';
-import { RoleSwitcherModal } from './components/modals/RoleSwitcherModal';
 import { SettingsModal } from './components/modals/SettingsModal';
-import { MasterCatalogModal } from './components/modals/MasterCatalogModal';
+import { ProtocolModal } from './components/protocol/ProtocolModal';
 import { EditJobModal } from './components/modals/EditJobModal';
 import { DuplicateJobModal } from './components/modals/DuplicateJobModal';
 import { ContextMenuModal } from './components/modals/ContextMenuModal';
@@ -31,9 +30,8 @@ const ModalLayer = () => {
       <AdHocModal />
       <BarcodeScannerModal />
       <DamageReportModal />
-      <RoleSwitcherModal />
       <SettingsModal />
-      <MasterCatalogModal />
+      <ProtocolModal />
       <EditJobModal />
       <DuplicateJobModal />
       <ContextMenuModal />

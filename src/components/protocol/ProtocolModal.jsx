@@ -14,17 +14,35 @@ export const ProtocolModal = () => {
   const [gafferHasSigned, setGafferHasSigned] = useState(false);
   const [custodianHasSigned, setCustodianHasSigned] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pdfError, setPdfError] = useState('');
 
   if (!isProtocolModalOpen || !currentJob) return null;
+
+  // Canvas is drawn at a fixed resolution but stretched by CSS, so scale the
+  // pointer position into canvas coordinates (otherwise the line is offset).
+  const getPoint = (canvas, e) => {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: ((clientX - rect.left) * canvas.width) / rect.width,
+      y: ((clientY - rect.top) * canvas.height) / rect.height,
+    };
+  };
+
+  const handleClose = () => {
+    setGafferHasSigned(false);
+    setCustodianHasSigned(false);
+    setPdfError('');
+    setIsProtocolModalOpen(false);
+  };
 
   // Simple Canvas Drawing handlers
   const startDrawing = (canvasRef, setDrawingState, setSignedState) => (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    const { x, y } = getPoint(canvas, e);
 
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -40,9 +58,7 @@ export const ProtocolModal = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    const { x, y } = getPoint(canvas, e);
 
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -62,21 +78,27 @@ export const ProtocolModal = () => {
 
   const handleDownloadPDF = async () => {
     setIsGenerating(true);
+    setPdfError('');
 
-    const gafferData = gafferHasSigned && canvasGafferRef.current ? canvasGafferRef.current.toDataURL() : null;
-    const custodianData = custodianHasSigned && canvasCustodianRef.current ? canvasCustodianRef.current.toDataURL() : null;
+    const gafferData = gafferHasSigned && canvasGafferRef.current ? canvasGafferRef.current.toDataURL('image/png') : null;
+    const custodianData = custodianHasSigned && canvasCustodianRef.current ? canvasCustodianRef.current.toDataURL('image/png') : null;
 
-    await pdfService.generateHandoverProtocolPDF(
-      currentJob,
-      jobItems,
-      vehicles,
-      userRole,
-      gafferData,
-      custodianData
-    );
-
-    setIsGenerating(false);
-    setIsProtocolModalOpen(false);
+    try {
+      await pdfService.generateHandoverProtocolPDF(
+        currentJob,
+        jobItems,
+        vehicles,
+        userRole,
+        gafferData,
+        custodianData
+      );
+      handleClose();
+    } catch (err) {
+      console.error('[Protocol] PDF generation failed:', err);
+      setPdfError('PDF se nepodařilo vytvořit. Zkuste to prosím znovu.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -92,7 +114,7 @@ export const ProtocolModal = () => {
             <p className="text-xs text-outline font-mono">Klient: {currentJob.client} • Gaffer: {currentJob.assignedGaffer}</p>
           </div>
           <button
-            onClick={() => setIsProtocolModalOpen(false)}
+            onClick={handleClose}
             className="text-outline hover:text-on-surface p-1 rounded-full hover:bg-surface-variant transition-colors"
           >
             <X className="w-5 h-5" />
@@ -192,11 +214,15 @@ export const ProtocolModal = () => {
           </div>
         </div>
 
+        {pdfError && (
+          <p className="text-sm text-error font-semibold bg-error-container/20 border border-error/30 rounded-xl p-3">{pdfError}</p>
+        )}
+
         {/* Export Buttons */}
         <div className="flex gap-2 mt-2">
           <button
             type="button"
-            onClick={() => setIsProtocolModalOpen(false)}
+            onClick={handleClose}
             className="flex-1 py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-sm"
           >
             Zavřít

@@ -6,6 +6,7 @@ import {
   Weight, Zap, Package, ChevronDown, Camera, Search, QrCode
 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { uploadPhoto, photoPath } from '../../services/photoService';
 
 const PRESET_PHOTOS = [
   { label: 'SkyPanel', url: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80' },
@@ -34,6 +35,8 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [showPresets, setShowPresets] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageError, setImageError] = useState('');
 
   // Barcode Camera Scanner state
   const [isScanningBarcode, setIsScanningBarcode] = useState(false);
@@ -77,21 +80,23 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
     setIsDirty(true);
   };
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+  // Photos are compressed and uploaded to Storage; the catalog keeps only the URL.
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => set({ image: reader.result });
-    reader.readAsDataURL(file);
+    setImageError('');
+    setImageUploading(true);
+    try {
+      const url = await uploadPhoto(file, photoPath('catalog', isEditing ? item.id : 'new'));
+      set({ image: url });
+    } catch (err) {
+      setImageError(err.message || 'Fotku se nepodařilo nahrát.');
+    } finally {
+      setImageUploading(false);
+    }
   };
-
-  const handleCameraCapture = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => set({ image: reader.result });
-    reader.readAsDataURL(file);
-  };
+  const handleCameraCapture = handleFileUpload;
 
   // Barcode Scanner in Drawer
   const startBarcodeScanner = async () => {
@@ -141,6 +146,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
 
   const handleSave = (e) => {
     e.preventDefault();
+    if (imageUploading) return; // wait for the photo URL
     stopBarcodeScanner();
     if (isNew) {
       createCatalogItem(formData);
@@ -260,6 +266,8 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                 <Camera className="w-3.5 h-3.5" /> Vyfotit techniku
                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCameraCapture} />
               </label>
+              {imageUploading && <span className="text-xs text-outline">Nahrávám fotku…</span>}
+              {imageError && <span className="text-xs text-error font-semibold">{imageError}</span>}
               <button
                 type="button"
                 onClick={() => setShowPresets(!showPresets)}
