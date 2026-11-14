@@ -119,13 +119,22 @@ class ErrorBoundary extends React.Component {
             {this.state.error?.message || 'Neznámá chyba'}
           </p>
           <button
-            onClick={() => {
-              localStorage.clear();
-              window.location.reload();
-            }}
+            onClick={() => window.location.reload()}
             className="px-5 py-2.5 bg-emerald-500 text-black font-bold text-sm rounded-xl active:scale-95 shadow"
           >
-            Obnovit a resetovat data
+            Načíst aplikaci znovu
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm('Smazat data uložená v tomto telefonu a načíst je znovu z cloudu?\n\nZměny, které se ještě neodeslaly do cloudu, budou ztraceny.')) {
+                ['blp_jobs_v2', 'blp_job_items_v2', 'blp_catalog_v2', 'blp_consumables_v2', 'blp_audit_logs_v2']
+                  .forEach((key) => localStorage.removeItem(key));
+                window.location.reload();
+              }
+            }}
+            className="mt-4 text-xs text-slate-400 underline"
+          >
+            Nepomohlo to? Smazat data v telefonu a stáhnout z cloudu
           </button>
         </div>
       );

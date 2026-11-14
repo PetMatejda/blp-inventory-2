@@ -6,7 +6,7 @@ import {
   getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInAnonymously,
+  sendEmailVerification,
   signOut,
   onAuthStateChanged,
   db,
@@ -124,48 +124,30 @@ export const firebaseAuth = {
 
 
   /**
-   * Real Email & Password Login (with strict password verification for blp / blpblp)
+   * Email & Password Login.
+   * Access to the data is granted by Firestore rules only to verified e-mails
+   * on the approved list, so unverified accounts are stopped here with a hint.
    */
   async loginWithEmail(email, password) {
     try {
-      const cleanEmail = (email || '').trim().toLowerCase();
-      const cleanPass = (password || '').trim();
-
-      // Generic test login requested for testing phase (blp / blpblp)
-      if (
-        cleanEmail === 'blp' || cleanEmail === 'aaaa' || cleanEmail === 'admin' || cleanEmail === 'test'
-      ) {
-        if (cleanPass !== 'blpblp' && cleanPass !== 'bbbb') {
-          return { success: false, error: 'Nesprávné heslo pro účet blp. (Správné heslo: blpblp)' };
-        }
-
-        const testAdminUser = {
-          id: auth.currentUser?.uid || 'test-admin-blp',
-          name: 'BLP Admin (Test)',
-          email: 'admin@balloonlightprag.cz',
-          role: 'ADMIN',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin_blp_test',
-          provider: 'test_auth',
-        };
-        localStorage.setItem('blp_auth_user_v2', JSON.stringify(testAdminUser));
-
-        try {
-          if (!auth.currentUser) {
-            await signInAnonymously(auth);
-          }
-        } catch (anonErr) {
-          console.warn('[FirebaseAuth] Anonymous auth note:', anonErr.message);
-        }
-
-        return { success: true, user: testAdminUser };
+      const cleanEmail = (email || '').trim();
+      if (!cleanEmail.includes('@')) {
+        return { success: false, error: 'Zadejte e-mailovou adresu. Sdílený účet „blp“ už není podporován.' };
       }
-
-
-      if (!cleanPass) {
+      if (!(password || '').trim()) {
         return { success: false, error: 'Zadejte prosím heslo.' };
       }
 
-      const result = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const result = await signInWithEmailAndPassword(auth, cleanEmail, password);
+
+      if (!result.user.emailVerified) {
+        await sendEmailVerification(result.user).catch(() => {});
+        await signOut(auth);
+        return {
+          success: false,
+          error: `E-mail ${result.user.email} ještě není ověřený. Poslali jsme na něj odkaz pro ověření – klikněte na něj a přihlaste se znovu.`,
+        };
+      }
       const role = resolveRole(result.user.email);
       syncUserProfile(result.user, role);
       const userObj = buildUserObj(result.user, role, result.user.displayName, result.user.photoURL);
@@ -192,21 +174,15 @@ export const firebaseAuth = {
   async registerWithEmail(name, email, password, role = 'USER') {
     try {
       const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      const assignedRole = resolveRole(email);
-      const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
-
-      const userObj = {
-        id: result.user.uid,
-        name,
-        email: result.user.email,
-        role: assignedRole,
-        avatar,
-        provider: 'email',
+      // The account can see data only after the e-mail address is verified
+      // (Firestore rules), so send the verification link and sign out.
+      await sendEmailVerification(result.user).catch(() => {});
+      await signOut(auth);
+      return {
+        success: false,
+        verificationSent: true,
+        error: `Účet vytvořen. Na ${result.user.email} jsme poslali odkaz pro ověření e-mailu. Po kliknutí na odkaz se přihlaste. Přístup k datům mají jen e-maily schválené správcem.`,
       };
-
-      syncUserProfile(result.user, assignedRole);
-      localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
-      return { success: true, user: userObj };
     } catch (err) {
       console.error('[FirebaseAuth] Registration Error:', err);
       let message = err.message || 'Chyba při vytváření účtu.';
@@ -256,58 +232,25 @@ export const firebaseAuth = {
       }
     });
 
+    // Firebase keeps the session in browserLocalPersistence (survives restarts,
+    // phone sleep and offline cold starts), so a null user here really means
+    // "not signed in". Anonymous sessions came from the retired shared "blp"
+    // login and no longer have access to data, so they are signed out.
     return onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser && !firebaseUser.isAnonymous) {
-        // Real authenticated user (Google OAuth or Email/Password)
         const role = resolveRole(firebaseUser.email);
         syncUserProfile(firebaseUser, role);
         const userObj = buildUserObj(firebaseUser, role, firebaseUser.displayName, firebaseUser.photoURL);
         localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
         callback(userObj);
-      } else if (firebaseUser && firebaseUser.isAnonymous) {
-        // Anonymous Firebase session (used for test login & cloud sync)
-        const localUserRaw = localStorage.getItem('blp_auth_user_v2');
-        if (localUserRaw) {
-          try {
-            const localUser = JSON.parse(localUserRaw);
-            if (localUser && (localUser.id || localUser.name)) {
-              // Preserve the already authenticated local user profile
-              callback(localUser);
-              return;
-            }
-          } catch (e) {}
-        }
-        // If no user in local storage at all, create a default BLP admin test session
-        const defaultUser = {
-          id: firebaseUser.uid,
-          name: 'BLP Admin (Test)',
-          email: 'admin@balloonlightprag.cz',
-          role: 'ADMIN',
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
-          provider: 'anonymous',
-        };
-        localStorage.setItem('blp_auth_user_v2', JSON.stringify(defaultUser));
-        callback(defaultUser);
-      } else {
-        // firebaseUser is null (token expired, device asleep/offline, or cold start)
-        const localUserRaw = localStorage.getItem('blp_auth_user_v2');
-        if (localUserRaw) {
-          try {
-            const localUser = JSON.parse(localUserRaw);
-            if (localUser && (localUser.id || localUser.name)) {
-              // User has an active local session: DO NOT LOG THEM OUT!
-              // Silently ensure anonymous session in background for Firestore transport if needed
-              if (!auth.currentUser) {
-                signInAnonymously(auth).catch(() => {});
-              }
-              callback(localUser);
-              return;
-            }
-          } catch (e) {}
-        }
-        // Genuinely no user logged in (or explicit logout)
-        callback(null);
+        return;
       }
+
+      if (firebaseUser && firebaseUser.isAnonymous) {
+        signOut(auth).catch(() => {});
+      }
+      localStorage.removeItem('blp_auth_user_v2');
+      callback(null);
     });
   }
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { firebaseAuth } from '../../services/firebaseAuth';
+import { auth } from '../../services/firebase';
 import {
   checkWebAuthnSupport,
   hasRegisteredCredential,
@@ -68,6 +69,12 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
     setError('');
     const result = await authenticateWithBiometric();
     setBioLoading(false);
+    // Biometrics only unlock an existing Firebase session; without one the
+    // database would refuse access, so ask for a regular sign-in instead.
+    if (result.success && (!auth.currentUser || auth.currentUser.isAnonymous)) {
+      setError('Přihlášení vypršelo. Přihlaste se prosím přes Google nebo e-mail.');
+      return;
+    }
     if (result.success) {
       onLoginSuccess(result.user, 'biometrie');
     } else {
@@ -123,6 +130,10 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
     setLoading(false);
     if (result.success) {
       onLoginSuccess(result.user, 'registrace');
+    } else if (result.verificationSent) {
+      setSuccessMsg(result.error);
+      setLoginEmail(regEmail);
+      setActiveTab('login');
     } else {
       setError(result.error);
     }
@@ -378,11 +389,12 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
             {activeTab === 'login' && (
               <form onSubmit={handleLoginSubmit} className="flex flex-col gap-2.5">
                 <input
-                  type="text"
+                  type="email"
+                  autoComplete="email"
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="E-mail nebo uživatel (např. blp)"
+                  placeholder="E-mail"
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none font-mono"
                 />
                 <input
@@ -390,7 +402,8 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Heslo (např. blpblp)"
+                  autoComplete="current-password"
+                  placeholder="Heslo"
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none font-mono"
                 />
                 <button
@@ -401,20 +414,6 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
                   {loading ? 'Přihlašuji...' : 'Přihlásit se'}
                 </button>
 
-                {/* Quick 1-click Test Login helper for testing phase */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginEmail('blp');
-                    setLoginPassword('blpblp');
-                    firebaseAuth.loginWithEmail('blp', 'blpblp').then(res => {
-                      if (res.success) onLoginSuccess(res.user, 'BLP Admin');
-                    });
-                  }}
-                  className="mt-1 py-1.5 px-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-emerald-300 text-[11px] font-mono rounded-lg transition-colors text-center active:scale-95"
-                >
-                  ⚡ Rychlý test login: <strong className="text-white">blp</strong> / <strong className="text-white">blpblp</strong> (Admin)
-                </button>
               </form>
             )}
 

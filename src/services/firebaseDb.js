@@ -5,7 +5,8 @@ import {
   getDoc,
   onSnapshot,
 } from './firebase.js';
-import { INITIAL_CATALOG, INITIAL_JOBS } from '../mockData/initialData.js';
+import { INITIAL_CATALOG } from '../mockData/initialData.js';
+import { indexTombstones, isItemTombstoned } from './tombstones.js';
 
 const GLOBAL_STORE_DOC_ID = 'blp_main_store';
 
@@ -39,22 +40,6 @@ const getStoredArray = (key) => {
   }
 };
 
-const isItemTombstoned = (item, tombstonedJobItemSet, tombstonedJobSet) => {
-  if (!item) return true;
-  if (item.jobId && tombstonedJobSet.has(item.jobId)) return true;
-  if (item.id && tombstonedJobItemSet.has(String(item.id))) return true;
-  if (item.jobId && item.catalogId && tombstonedJobItemSet.has(`${item.jobId}_cat_${item.catalogId}`)) return true;
-  if (item.jobId && item.name) {
-    const rawName = String(item.name).trim();
-    const lowerName = rawName.toLowerCase();
-    if (tombstonedJobItemSet.has(`${item.jobId}_name_${lowerName}`)) return true;
-    if (tombstonedJobItemSet.has(`${item.jobId}_${lowerName}`)) return true;
-    if (tombstonedJobItemSet.has(`${item.jobId}_${rawName}`)) return true;
-    if (tombstonedJobItemSet.has(`${item.jobId}_name_${rawName}`)) return true;
-  }
-  return false;
-};
-
 const writeLocalCache = (data) => {
   if (!data) return false;
 
@@ -65,7 +50,7 @@ const writeLocalCache = (data) => {
   }
   const mergedDeletedJobItems = [...localDeletedJobItems].slice(-500);
   localStorage.setItem(KEYS.DELETED_JOB_ITEMS, JSON.stringify(mergedDeletedJobItems));
-  const tombstonedJobItemSet = new Set(mergedDeletedJobItems);
+  const tombstoneIndex = indexTombstones(mergedDeletedJobItems);
 
   const localDeletedJobs = new Set(getStoredArray(KEYS.DELETED_JOBS));
   if (Array.isArray(data.deletedJobIds)) {
@@ -141,14 +126,14 @@ const writeLocalCache = (data) => {
 
     localItems.forEach(item => {
       if (!item) return;
-      if (!isItemTombstoned(item, tombstonedJobItemSet, tombstonedJobSet)) {
+      if (!isItemTombstoned(item, tombstoneIndex, tombstonedJobSet)) {
         itemMap.set(getItemKey(item), item);
       }
     });
 
     data.jobItems.forEach(remoteItem => {
       if (!remoteItem) return;
-      if (isItemTombstoned(remoteItem, tombstonedJobItemSet, tombstonedJobSet)) return;
+      if (isItemTombstoned(remoteItem, tombstoneIndex, tombstonedJobSet)) return;
 
       const key = getItemKey(remoteItem);
       const existingLocal = itemMap.get(key);

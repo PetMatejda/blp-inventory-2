@@ -58,6 +58,16 @@ export const InventoryProvider = ({ children }) => {
   // Global Context Menu state (Long Press)
   const [contextMenu, setContextMenu] = useState(null);
 
+  // Tell the user when the cloud refuses access (account not on the approved list)
+  const reportCloudError = useCallback((res) => {
+    if (!res?.success && /permission|insufficient/i.test(res?.error || '')) {
+      setSyncStatus('error');
+      setSyncNotice('🔒 Tento účet nemá přístup k datům BLP. Požádejte správce o přidání vašeho e-mailu.');
+      return true;
+    }
+    return false;
+  }, []);
+
   // Read local cache into React state
   const refreshDataFromLocal = useCallback(() => {
     setJobs(storageService.getJobs());
@@ -76,22 +86,21 @@ export const InventoryProvider = ({ children }) => {
     storageService.init();
     refreshDataFromLocal();
 
-    // Step 2: Real-time Firestore subscription (instant multi-device sync)
-    const unsubscribeCloud = firebaseDb.subscribeToCloud(() => {
-      console.log('[Context] 🔔 Realtime remote update received from Firestore.');
-      setSyncStatus('synced');
-      refreshDataFromLocal();
-    });
+    // Step 2: Real-time Firestore subscription (instant multi-device sync).
+    // Started once a user is signed in (Step 4): Firestore rules reject
+    // unauthenticated listeners and a rejected listener never recovers.
+    let unsubscribeCloud = () => {};
+    const startCloudListener = () => {
+      unsubscribeCloud();
+      unsubscribeCloud = firebaseDb.subscribeToCloud(() => {
+        console.log('[Context] 🔔 Realtime remote update received from Firestore.');
+        setSyncStatus('synced');
+        refreshDataFromLocal();
+      });
+    };
 
-    // Step 3: Pull fresh state from cloud on startup
+    // Step 3: The startup cloud pull happens in Step 4, once Firebase confirms a signed-in user.
     setSyncStatus('syncing');
-    firebaseDb.pullFromCloud().then((res) => {
-      if (res.success) {
-        console.log('[Context] Startup cloud pull OK.');
-      }
-      refreshDataFromLocal();
-      setSyncStatus(res.success ? 'synced' : 'offline');
-    });
 
     // Step 4: Subscribe to Firebase Auth state
     const unsubscribeAuth = firebaseAuth.onAuthChange((user) => {
@@ -99,9 +108,19 @@ export const InventoryProvider = ({ children }) => {
         setCurrentUserState(user);
         storageService.setUserRole(user.role);
         setIsAuthModalOpen(false);
+        startCloudListener();
+        // Data reads require a signed-in, approved account — pull now that we have one.
+        storageService.flushPendingSync().then(() => firebaseDb.pullFromCloud()).then((res) => {
+          if (reportCloudError(res)) return;
+          if (res.success) refreshDataFromLocal();
+          setSyncStatus(res.success ? 'synced' : 'offline');
+        });
       } else {
+        unsubscribeCloud();
+        unsubscribeCloud = () => {};
         setCurrentUserState(null);
         setIsAuthModalOpen(true);
+        setSyncStatus('offline');
       }
       setAuthLoading(false);
     });
@@ -148,7 +167,7 @@ export const InventoryProvider = ({ children }) => {
       window.removeEventListener('offline', handleOffline);
     };
 
-  }, [refreshDataFromLocal]);
+  }, [refreshDataFromLocal, reportCloudError]);
 
 
   useEffect(() => {
@@ -414,6 +433,7 @@ export const InventoryProvider = ({ children }) => {
     await storageService.flushPendingSync();
     const pullRes = await firebaseDb.pullFromCloud();
     refreshDataFromLocal();
+    if (reportCloudError(pullRes)) return;
     setSyncStatus(pullRes.success ? 'synced' : 'offline');
     if (pullRes.success) {
       setSyncNotice('🔥 Data byla úspěšně synchronizována s cloudem!');

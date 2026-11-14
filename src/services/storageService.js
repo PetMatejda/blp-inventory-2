@@ -7,6 +7,7 @@ import {
   INITIAL_CATALOG
 } from '../mockData/initialData.js';
 import { firebaseDb } from './firebaseDb.js';
+import { matchKeysFor, stampKeys, indexTombstones, isItemTombstoned } from './tombstones.js';
 
 const KEYS = {
   JOBS: 'blp_jobs_v2',
@@ -154,20 +155,15 @@ export const storageService = {
   },
 
   consolidateItems(items) {
-    const deletedItems = new Set(this.getDeletedJobItemIds());
+    const tombstones = indexTombstones(this.getDeletedJobItemIds());
     const deletedJobs = new Set(this.getDeletedJobIds());
     const map = new Map();
     const consolidated = [];
 
     for (const item of items) {
-      if (!item) continue;
+      if (!item || !item.name) continue;
       // Discard any items that belong to deleted jobs or are deleted
-      if (deletedJobs.has(item.jobId)) continue;
-      if (deletedItems.has(String(item.id))) continue;
-      if (item.catalogId && deletedItems.has(`${item.jobId}_cat_${item.catalogId}`)) continue;
-      if (item.name && deletedItems.has(`${item.jobId}_name_${item.name.toLowerCase().trim()}`)) continue;
-      if (item.name && deletedItems.has(`${item.jobId}_${item.name.toLowerCase().trim()}`)) continue;
-      if (item.name && deletedItems.has(`${item.jobId}_${item.name}`)) continue;
+      if (isItemTombstoned(item, tombstones, deletedJobs)) continue;
 
       const groupKey = item.catalogId
         ? `${item.jobId}_cat_${item.catalogId}_${item.name.toLowerCase().trim()}`
@@ -178,8 +174,10 @@ export const storageService = {
         existing.quantityRequested += item.quantityRequested;
         existing.quantityLoaded += item.quantityLoaded;
 
-        if (item.serialNumber && !existing.serialNumber.includes(item.serialNumber)) {
-          existing.serialNumber = `${existing.serialNumber}, ${item.serialNumber}`;
+        if (item.serialNumber && !(existing.serialNumber || '').includes(item.serialNumber)) {
+          existing.serialNumber = existing.serialNumber
+            ? `${existing.serialNumber}, ${item.serialNumber}`
+            : item.serialNumber;
         }
 
         if (item.updatedAt && (!existing.updatedAt || new Date(item.updatedAt) > new Date(existing.updatedAt))) {
@@ -446,7 +444,7 @@ export const storageService = {
     const allJobItems = JSON.parse(localStorage.getItem(KEYS.JOB_ITEMS) || '[]');
     const itemsToDelete = allJobItems.filter(i => i.jobId === jobId);
     itemsToDelete.forEach(i => {
-      this.addDeletedJobItemId(i.id, `${jobId}_name_${(i.name || '').toLowerCase().trim()}`);
+      this.addDeletedJobItemId(i.id, ...stampKeys(matchKeysFor(i)));
     });
     const remainingItems = allJobItems.filter(i => i.jobId !== jobId);
     localStorage.setItem(KEYS.JOB_ITEMS, JSON.stringify(remainingItems));
@@ -477,6 +475,7 @@ export const storageService = {
       vehicleIds: sourceJob.vehicleIds || ['v1'],
       status: 'ACTIVE',
       mode: 'LOADING',
+      updatedAt: new Date().toISOString(),
     };
 
 
@@ -493,7 +492,9 @@ export const storageService = {
         quantityLoaded: 0,
         status: 'PENDING',
         damageNotes: '',
+        damageSeverity: null,
         photoUrls: [],
+        updatedAt: newJob.updatedAt,
       };
       allJobItems.push(copiedItem);
     });
@@ -613,15 +614,14 @@ export const storageService = {
     const itemNameForLog = itemToDelete?.name || jobItemData?.name || 'Položka';
     const itemQtyForLog = itemToDelete?.quantityRequested || jobItemData?.quantityRequested || 1;
 
-    // Record tombstones to ensure NO OTHER CLIENT can bring this item back
+    // Record tombstones so no other client can bring this item back.
+    // IDs are permanent; name/catalog matches are time-stamped so the same
+    // equipment can be added to the job again later (see tombstones.js).
     this.addDeletedJobItemId(
       itemId,
       itemToDelete?.id,
       jobItemData?.id,
-      targetJobId && targetCatalogId ? `${targetJobId}_cat_${targetCatalogId}` : null,
-      targetJobId && targetName ? `${targetJobId}_name_${targetName}` : null,
-      targetJobId && targetName ? `${targetJobId}_${targetName}` : null,
-      targetJobId && itemNameForLog ? `${targetJobId}_${itemNameForLog}` : null
+      ...stampKeys(matchKeysFor({ jobId: targetJobId, catalogId: targetCatalogId, name: itemNameForLog }))
     );
 
     // Smazat VŠECHNY záznamy odpovídající této položce v dané zakázce
@@ -772,9 +772,12 @@ export const storageService = {
       item.quantityLoaded = item.quantityRequested;
       newStatus = mode === 'DERIGGING' ? 'PACKED' : 'LOADED';
     } else if (item.status === 'DAMAGED') {
-      item.quantityLoaded = item.quantityRequested;
-      newStatus = mode === 'DERIGGING' ? 'PACKED' : 'LOADED';
+      // Clear damage (spec 4.2 rule 4): keep the counted quantity; the item is
+      // done only if the full quantity is present, otherwise back to PENDING.
+      const isComplete = item.quantityRequested > 0 && item.quantityLoaded >= item.quantityRequested;
+      newStatus = isComplete ? (mode === 'DERIGGING' ? 'PACKED' : 'LOADED') : 'PENDING';
       item.damageNotes = '';
+      item.damageSeverity = null;
       item.photoUrls = [];
     }
 
@@ -1027,6 +1030,8 @@ export const storageService = {
     const currentMode = jobs[index].mode || 'LOADING';
     const newMode = currentMode === 'LOADING' ? 'DERIGGING' : 'LOADING';
     jobs[index].mode = newMode;
+    // Bump updatedAt so other devices accept the new mode when merging.
+    jobs[index].updatedAt = new Date().toISOString();
 
     this.addAuditLog(
       user,

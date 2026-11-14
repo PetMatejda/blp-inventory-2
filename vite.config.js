@@ -10,5 +10,10 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true
+  },
+  test: {
+    environment: 'jsdom',
+    include: ['tests/**/*.test.{js,jsx}'],
+    clearMocks: true,
   }
 });
