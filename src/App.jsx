@@ -1,13 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { InventoryProvider, useInventory } from './context/InventoryContext';
 import { TopAppBar } from './components/layout/TopAppBar';
 import { BottomNavBar } from './components/layout/BottomNavBar';
 
 import { JobDashboard } from './components/dashboard/JobDashboard';
 import { PackingList } from './components/packing/PackingList';
-import { WarehouseScreen } from './components/warehouse/WarehouseScreen';
-import { ConsumableKit } from './components/bracha/ConsumableKit';
-import { AuditTimeline } from './components/audit/AuditTimeline';
+// Screens that are not needed at start are loaded on first use (smaller start-up bundle).
+const WarehouseScreen = lazy(() => import('./components/warehouse/WarehouseScreen').then((m) => ({ default: m.WarehouseScreen })));
+const ConsumableKit = lazy(() => import('./components/bracha/ConsumableKit').then((m) => ({ default: m.ConsumableKit })));
+const AuditTimeline = lazy(() => import('./components/audit/AuditTimeline').then((m) => ({ default: m.AuditTimeline })));
 
 import { NewJobModal } from './components/modals/NewJobModal';
 import { AdHocModal } from './components/modals/AdHocModal';
@@ -162,7 +163,9 @@ export function App() {
 
             {/* Main Dynamic View — fills space between TopAppBar and BottomNavBar */}
             <main className="flex-1 w-full max-w-5xl mx-auto">
-              <MainContent />
+              <Suspense fallback={<p className="p-6 text-center text-on-surface-variant">Načítám…</p>}>
+                <MainContent />
+              </Suspense>
             </main>
 
 

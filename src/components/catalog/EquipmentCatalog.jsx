@@ -9,6 +9,9 @@ import {
 } from 'lucide-react';
 import { CatalogItemDrawer } from './CatalogItemDrawer';
 import { useDialogs } from '../common/Dialogs';
+import { RestoreCatalogCard } from '../warehouse/RestoreCatalogCard';
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
+import { resolveCode } from '../../domain/labels-qr';
 
 // ─────────────────────────────────────────────────────────────────────
 // CATALOG CARD — compact, no "edit mode" concept
@@ -171,8 +174,9 @@ export const EquipmentCatalog = () => {
     setActiveTab,
     deleteCatalogItem,
     isAdmin,
+    stockUnits,
   } = useInventory();
-  const { confirm } = useDialogs();
+  const { confirm, toast } = useDialogs();
 
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -204,6 +208,15 @@ export const EquipmentCatalog = () => {
     setAddedItemSuccess(item.name);
     setTimeout(() => setAddedItemSuccess(null), 2500);
   };
+
+  // Hardware barcode reader: scanning a label / EAN adds the item to the selected job.
+  useBarcodeScanner((code) => {
+    const r = resolveCode(code, { jobItems: [], catalog, units: stockUnits });
+    const item = r.kind === 'UNIT' ? catalog.find((c) => c.id === r.unit.catalogId) : r.kind === 'CATALOG' ? r.catalogItem : null;
+    if (!item) { toast({ text: `✗ Neznámý kód ${code}` }); return; }
+    if (!currentJob || currentJob.status === 'ARCHIVED') { setSearchQuery(item.name); return; }
+    handleAdd(item);
+  }, { enabled: !drawerItem });
 
   const handleDelete = async (itemId, itemName) => {
     if (await confirm({
@@ -354,7 +367,9 @@ export const EquipmentCatalog = () => {
       </div>
 
       {/* ── Catalog grid ── */}
-      {filteredCatalog.length === 0 ? (
+      {catalog.length === 0 ? (
+        <RestoreCatalogCard />
+      ) : filteredCatalog.length === 0 ? (
         <div className="bg-card-bg border border-outline-variant rounded-2xl p-10 text-center text-outline flex flex-col items-center gap-3">
           <Package className="w-10 h-10 text-outline/40" />
           <p className="text-sm">

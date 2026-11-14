@@ -4,7 +4,7 @@ import {
   QrCode, X, Check, Camera, Zap, SwitchCamera,
   AlertCircle, Volume2, Plus, Search, CheckCircle2, RefreshCw
 } from 'lucide-react';
-import { Html5Qrcode } from 'html5-qrcode';
+// html5-qrcode (~370 kB) is loaded only when the camera scanner opens.
 import { phaseOf } from '../../domain/labels';
 
 export const BarcodeScannerModal = () => {
@@ -132,6 +132,8 @@ export const BarcodeScannerModal = () => {
         setCameraError(null);
         setIsScanning(true);
 
+        const { Html5Qrcode } = await import('html5-qrcode');
+        if (!isMounted) return;
         const html5QrCode = new Html5Qrcode(scannerId);
         scannerRef.current = html5QrCode;
 

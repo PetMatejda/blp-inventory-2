@@ -72,6 +72,10 @@ Screen ──► InventoryContext (same API as before)
 - **Availability**: owned (warehouse + jobs + service) − requested by other ACTIVE jobs overlapping in dates − requested here; shortage shown on item cards while rigging and when adding from the catalog.
 - **Stocktake**: lines snapshot the expected warehouse count; several people count at once (scanned units via `arrayUnion`); approval applies `counted − expected` as an increment (deliveries during the count are kept) and settles pieces recorded as missing. CSV exports for stock, movements and stocktakes.
 - **Job progress** is counted in pieces.
+- **Hardware barcode readers** (`src/hooks/useBarcodeScanner.js`): USB/Bluetooth readers type fast + Enter; a burst detector turns that into a scan anywhere on the screen (not while typing in a field or with a dialog open). Packing → `scanOnJob`; Sklad › Stav → item detail; Inventura → unit counted / count dialog; Katalog → add to the selected job.
+- **Catalog repair** (`migration.restoreCatalog`): if the shared catalog (or Brácha) is empty, "Obnovit katalog" copies it from the legacy backup document or, when that has none, from the built-in default catalog; existing items are never overwritten. Settings › Stav dat shows migration counts.
+- **Brácha refill order** (`src/domain/refill.js`, `RefillOrderSheet.jsx`): missing (and optionally 50 %) consumables as text → share / copy / e-mail; logged in history.
+- **Bundle**: camera scanner (`html5-qrcode`), PDF, QR generator and the Sklad / Brácha / Historie screens load on demand; Firebase and React are separate cached chunks.
 - **Labels & scanning** (`src/domain/labels-qr.js`, `stockActions.scanOnJob`, `LabelPrint.jsx`):
   - Payloads: labelled unit → its code (`FLT-MOD-001`); item tracked by count → `BLP:<catalogId>`; EAN and serial numbers still work.
   - *Vytvořit štítky* labels pieces already in stock (no count change, `LABEL` movement); codes `<serialPrefix>-001…`.

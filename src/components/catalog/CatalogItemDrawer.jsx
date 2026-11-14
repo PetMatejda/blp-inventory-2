@@ -5,7 +5,7 @@ import {
   X, Check, Plus, Trash2, Layers, Upload, Image as ImageIcon,
   Weight, Zap, Package, ChevronDown, Camera, Search, QrCode
 } from 'lucide-react';
-import { Html5Qrcode } from 'html5-qrcode';
+// html5-qrcode is loaded on demand (see startBarcodeScanner).
 import { savePhoto, usePhotoSrc } from '../../services/photoService';
 import { useDialogs } from '../common/Dialogs';
 
@@ -107,6 +107,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
     setTimeout(async () => {
       try {
         const scannerId = "drawer-barcode-reader";
+        const { Html5Qrcode } = await import('html5-qrcode');
         const scanner = new Html5Qrcode(scannerId);
         barcodeScannerRef.current = scanner;
 

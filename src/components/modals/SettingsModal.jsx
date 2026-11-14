@@ -8,6 +8,7 @@ export const SettingsModal = () => {
   const {
     isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode,
     forceSyncAll, hasPendingWrites, isOffline, currentUser, setCurrentUser, setIsAuthModalOpen,
+    migrationInfo, catalog, jobs, stockLevels, restoreCatalogFromBackup,
   } = useInventory();
   const { confirm } = useDialogs();
   const [syncStatus, setSyncStatus] = useState(null);
@@ -189,6 +190,17 @@ export const SettingsModal = () => {
             </button>
           </div>
         </div>
+
+        {/* Data diagnostics */}
+        <details className="bg-surface-container p-3 rounded-xl border border-outline-variant text-sm">
+          <summary className="font-semibold text-on-surface cursor-pointer">Stav dat</summary>
+          <ul className="mt-2 text-on-surface-variant flex flex-col gap-0.5">
+            <li>Zakázky: {jobs.length} · Katalog: {catalog.length} · Položky skladu: {stockLevels.length}</li>
+            <li>Převod dat: {migrationInfo ? (migrationInfo.status === 'done' ? 'dokončen' : migrationInfo.status) : 'neproběhl'}{migrationInfo?.finishedAt ? ` ${new Date(migrationInfo.finishedAt).toLocaleString('cs-CZ')}` : ''}{migrationInfo?.by ? ` · ${migrationInfo.by}` : ''}</li>
+            {migrationInfo?.counts && <li>Převedeno: {Object.entries(migrationInfo.counts).map(([k, v]) => `${k} ${v}`).join(', ')}</li>}
+          </ul>
+          <button onClick={restoreCatalogFromBackup} className="mt-2 h-11 px-3 rounded-xl border border-outline-variant bg-card-bg font-semibold">Doplnit chybějící katalog ze zálohy</button>
+        </details>
 
         {/* System Info */}
         <div className="bg-surface-container p-3 rounded-xl border border-outline-variant text-xs font-mono text-outline flex items-center justify-between">

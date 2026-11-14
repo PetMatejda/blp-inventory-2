@@ -4,9 +4,9 @@ import { createFirestoreRepo } from '../services/inventoryRepo';
 import { createInventoryActions } from '../services/inventoryActions';
 import { createStockActions } from '../services/stockActions';
 import { availability } from '../domain/stock';
-import { migrateLegacyStore, MIGRATION_DOC } from '../services/migration';
+import { migrateLegacyStore, restoreCatalog, MIGRATION_DOC } from '../services/migration';
 import { db, doc, getDoc, runTransaction, writeBatch } from '../services/firebase';
-import { INITIAL_VEHICLES } from '../mockData/initialData';
+import { INITIAL_VEHICLES, INITIAL_CATALOG, INITIAL_CONSUMABLES } from '../mockData/initialData';
 import { CATEGORIES, getCategoryMeta } from '../utils/categoryIcons';
 
 const InventoryContext = createContext();
@@ -62,6 +62,7 @@ export const InventoryProvider = ({ children }) => {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [accessDenied, setAccessDenied] = useState(false);
   const [migrationState, setMigrationState] = useState(null); // null | 'running' | 'done'
+  const [migrationInfo, setMigrationInfo] = useState(null); // full marker (counts) for Settings
   const [themeMode, setThemeMode] = useState('light');
   const [syncNotice, setSyncNotice] = useState(null);
 
@@ -145,7 +146,7 @@ export const InventoryProvider = ({ children }) => {
       );
 
       unsubscribeMarker = repo.watchDoc(MIGRATION_DOC[0], MIGRATION_DOC[1],
-        (marker) => setMigrationState(marker?.status || null),
+        (marker) => { setMigrationState(marker?.status || null); setMigrationInfo(marker); },
         (err) => { if (isPermissionError(err)) denyAccess(); });
 
       // One-time move from the legacy shared document (needs a connection).
@@ -361,6 +362,27 @@ export const InventoryProvider = ({ children }) => {
   const deleteCatalogItem = (catalogId) => actions.deleteCatalogItem(catalogId);
   const updateConsumableState = (consumableId, newState) => actions.updateConsumableState(consumableId, newState);
 
+  /** Fills a missing catalog from the legacy backup (or the built-in default catalog). */
+  const restoreCatalogFromBackup = async () => {
+    if (!navigator.onLine) { showNotice('📴 Obnova katalogu potřebuje připojení.'); return null; }
+    try {
+      const fs = { db, doc, getDoc, writeBatch };
+      const res = await restoreCatalog(fs, { existingIds: catalog.map((c) => c.id), defaults: INITIAL_CATALOG });
+      // Brácha (consumables) may be missing for the same reason — restore only when empty.
+      if (consumables.length === 0) {
+        await restoreCatalog(fs, { collection: 'consumables', existingIds: [], defaults: INITIAL_CONSUMABLES });
+      }
+      showNotice(res.count
+        ? `✅ Obnoveno ${res.count} položek katalogu (${res.source === 'legacy' ? 'ze zálohy' : 'z výchozího katalogu'}).`
+        : 'Katalog je úplný, nebylo co obnovit.', 6000);
+      return res;
+    } catch (err) {
+      console.error('[Context] restoreCatalog', err);
+      showNotice(isPermissionError(err) ? '🔒 Na obnovu katalogu nemáte oprávnění.' : '⚠️ Katalog se nepodařilo obnovit.');
+      return null;
+    }
+  };
+
   /** Waits until every local change is on the server. */
   const forceSyncAll = async () => {
     if (accessDenied) { denyAccess(); return; }
@@ -403,6 +425,9 @@ export const InventoryProvider = ({ children }) => {
         syncNotice,
         hasPendingWrites,
         migrationState,
+        migrationInfo,
+        restoreCatalogFromBackup,
+        logAudit: actions.audit,
         themeMode,
         setThemeMode,
         activeTab,

@@ -26,8 +26,9 @@ await env.withSecurityRulesDisabled(async (ctx) => {
   const legacy = {
     jobs: INITIAL_JOBS,
     jobItems: [...INITIAL_JOB_ITEMS, { ...INITIAL_JOB_ITEMS[0], id: 'deleted-dup' }],
-    catalog: INITIAL_CATALOG,
-    consumables: INITIAL_CONSUMABLES,
+    // SEED_EMPTY_CATALOG=1 reproduces a legacy store without catalog / consumables.
+    catalog: process.env.SEED_EMPTY_CATALOG ? [] : INITIAL_CATALOG,
+    consumables: process.env.SEED_EMPTY_CATALOG ? [] : INITIAL_CONSUMABLES,
     auditLogs: INITIAL_AUDIT_LOGS,
     deletedJobItemIds: ['deleted-dup'],
     deletedJobIds: [],

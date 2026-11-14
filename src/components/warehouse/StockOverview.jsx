@@ -6,8 +6,10 @@ import { ItemThumbnail } from '../common/ItemThumbnail';
 import { CATEGORIES, getCategoryMeta } from '../../utils/categoryIcons';
 import { levelOf, ownedCount, trackingOf, toCsv } from '../../domain/stock';
 import { plural } from '../../domain/labels';
-import { catalogLabelPayload } from '../../domain/labels-qr';
+import { catalogLabelPayload, resolveCode } from '../../domain/labels-qr';
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { LabelPrint } from './LabelPrint';
+import { RestoreCatalogCard } from './RestoreCatalogCard';
 import {
   Search, Download, PackagePlus, PackageMinus, Wrench, Undo2, Tag, Hash, Warehouse, ChevronRight, Printer, QrCode,
 } from 'lucide-react';
@@ -150,6 +152,13 @@ export const StockOverview = () => {
   const [selected, setSelected] = useState(null);
   const [bulkLabels, setBulkLabels] = useState(null);
 
+  // Hardware barcode reader: scanning a label / EAN opens the item detail.
+  useBarcodeScanner((code) => {
+    const r = resolveCode(code, { jobItems: [], catalog, units: stockUnits });
+    const item = r.kind === 'UNIT' ? catalog.find((c) => c.id === r.unit.catalogId) : r.kind === 'CATALOG' ? r.catalogItem : null;
+    if (item) { setSelected(item); if (r.kind === 'UNIT') toast({ text: `Kus ${r.unit.code}` }); } else toast({ text: `✗ Neznámý kód ${code}` });
+  }, { enabled: catalog.length > 0 && !selected });
+
   const rows = useMemo(() => catalog
     .filter((c) => !c.isBundle)
     .map((c) => ({ item: c, level: levelOf(stockLevels, c.id), tracking: trackingOf(c) })), [catalog, stockLevels]);
@@ -160,6 +169,8 @@ export const StockOverview = () => {
     const q = query.trim().toLowerCase();
     return !q || item.name.toLowerCase().includes(q);
   });
+
+  if (catalog.length === 0) return <RestoreCatalogCard />;
 
   if (stockLevels.length === 0) {
     return (

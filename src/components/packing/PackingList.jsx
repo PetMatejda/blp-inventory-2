@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { useDialogs } from '../common/Dialogs';
 import { ItemSwipeCard } from './ItemSwipeCard';
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { phaseOf, filtersFor, filterCounts, matchesFilter, phaseSummary, plural } from '../../domain/labels';
 import {
   Search, QrCode, Plus, Package, Lock, Unlock, Truck, Copy, X, BookOpen, FileText, CheckCircle2, ArrowRight, Warehouse,
@@ -19,6 +20,7 @@ export const PackingList = () => {
     currentJob, jobItems, selectedStatusFilter, setSelectedStatusFilter, searchQuery, setSearchQuery,
     setIsAdHocModalOpen, setIsScannerModalOpen, setActiveTab, changeJobPhase, reactivateJob,
     setTemplateJob, setIsProtocolModalOpen, setFinishingJob, availabilityFor, stockLevels, setWarehouseTab,
+    stock, addCatalogItemToJob, isScannerModalOpen,
   } = useInventory();
   const { confirm, toast } = useDialogs();
   const [fabOpen, setFabOpen] = useState(false);
@@ -28,6 +30,15 @@ export const PackingList = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [fabOpen]);
+
+  // Hardware barcode reader: scan anywhere on the packing screen (no dialog needed).
+  useBarcodeScanner((code) => {
+    const r = stock.scanOnJob(currentJob.id, code);
+    if (navigator.vibrate) navigator.vibrate(r.ok ? 60 : [80, 60, 80]);
+    if (r.ok) toast({ text: `✓ ${r.message}${r.warning ? ` — ${r.warning}` : ''}` });
+    else if (r.needsAdd) toast({ text: r.message, actionLabel: 'Přidat', onAction: () => addCatalogItemToJob(r.needsAdd) });
+    else toast({ text: `✗ ${r.message}` });
+  }, { enabled: !!currentJob && currentJob.status !== 'ARCHIVED' && !isScannerModalOpen });
 
   if (!currentJob) {
     return (

@@ -96,6 +96,31 @@ export function buildMigrationPlan(legacy = {}) {
 }
 
 /**
+ * Repairs an empty or incomplete catalog: copies catalog items from the legacy
+ * document (backup); when that has none, uses the built-in default catalog.
+ * Never overwrites items that already exist. Returns { count, source }.
+ */
+export async function restoreCatalog(fs, { existingIds = [], defaults = [], collection = 'catalog' } = {}) {
+  const { db, doc, getDoc, writeBatch } = fs;
+  const existing = new Set(existingIds.map(String));
+  let source = 'legacy';
+  let items = [];
+  const legacySnap = await getDoc(doc(db, ...LEGACY_DOC));
+  if (legacySnap.exists()) items = buildMigrationPlan(legacySnap.data())[collection] || [];
+  if (!items.length) {
+    source = 'default';
+    items = defaults.filter((c) => c && c.id).map((c) => clean({ ...c, id: String(c.id) }));
+  }
+  const missing = items.filter((c) => !existing.has(c.id));
+  for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    for (const c of missing.slice(i, i + BATCH_SIZE)) batch.set(doc(db, collection, c.id), c);
+    await batch.commit();
+  }
+  return { count: missing.length, source, available: items.length };
+}
+
+/**
  * Runs the migration once for the whole team. Safe to call on every start:
  * a marker document makes later calls (and parallel devices) skip it.
  * `fs` is the Firestore API object (injected so tests can use a fake).

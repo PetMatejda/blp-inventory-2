@@ -5,6 +5,8 @@ import { CodeInput, downloadText } from '../common/CodeInput';
 import { CATEGORIES, getCategoryMeta } from '../../utils/categoryIcons';
 import { countedOf, stocktakeResult, toCsv } from '../../domain/stock';
 import { plural } from '../../domain/labels';
+import { resolveCode } from '../../domain/labels-qr';
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { ClipboardCheck, CheckCircle2, Eye, EyeOff, Download, X, Tag, ChevronRight } from 'lucide-react';
 
 const fmt = (iso) => (iso ? new Date(iso).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
@@ -97,7 +99,7 @@ const LINE_FILTERS = [
 ];
 
 export const StocktakeView = () => {
-  const { stocktakes, stocktakeLines, stock, stockLevels } = useInventory();
+  const { stocktakes, stocktakeLines, stock, stockLevels, catalog, stockUnits } = useInventory();
   const { askNumber, confirm, toast } = useDialogs();
   const [category, setCategory] = useState('ALL');
   const [filter, setFilter] = useState('TODO');
@@ -109,6 +111,21 @@ export const StocktakeView = () => {
   const open = stocktakes.find((s) => s.status === 'OPEN');
   const lines = useMemo(() => (open ? stocktakeLines.filter((l) => l.stocktakeId === open.id) : []), [open, stocktakeLines]);
   const isCounted = (l) => (l.tracking === 'SERIAL' ? !!l.touched || countedOf(l) > 0 : countedOf(l) !== null);
+
+  // Hardware barcode reader: unit label → counted; item label / EAN → enter the count.
+  useBarcodeScanner(async (code) => {
+    const r = resolveCode(code, { jobItems: [], catalog, units: stockUnits });
+    if (r.kind === 'UNIT') {
+      const res = stock.scanUnitCode(open.id, code);
+      toast({ text: res.ok ? (res.duplicate ? `Už započítáno: ${res.message}` : `✓ ${res.message}`) : `✗ ${res.message}` });
+      return;
+    }
+    const line = r.kind === 'CATALOG' ? lines.find((l) => l.catalogId === r.catalogItem.id) : null;
+    if (!line) { toast({ text: `✗ ${r.kind === 'CATALOG' ? `${r.catalogItem.name} není v této inventuře` : `Neznámý kód ${code}`}` }); return; }
+    if (line.tracking === 'SERIAL') { setSerialLine(line.id); return; }
+    const n = await askNumber({ title: line.name, message: 'Napočítáno ve skladu', value: countedOf(line) ?? 0 });
+    if (n != null) stock.countLine(line.id, n);
+  }, { enabled: !!open && !serialLine && !showResult });
 
   if (stockLevels.length === 0) {
     return <p className="text-base text-on-surface-variant p-4 text-center">Nejdřív založte stav skladu v záložce „Stav“.</p>;

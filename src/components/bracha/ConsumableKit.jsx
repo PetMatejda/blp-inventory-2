@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { ConsumableSwipeCard } from './ConsumableSwipeCard';
-import { Package, AlertTriangle, CheckCircle, Search } from 'lucide-react';
+import { Package, AlertTriangle, CheckCircle, Search, ShoppingCart } from 'lucide-react';
+import { RefillOrderSheet } from './RefillOrderSheet';
 
 export const ConsumableKit = () => {
-  const { consumables } = useInventory();
+  const { consumables, restoreCatalogFromBackup } = useInventory();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
 
@@ -21,13 +22,30 @@ export const ConsumableKit = () => {
 
   const refillItems = consumables.filter(c => c.state === 2);
   const halfItems = consumables.filter(c => c.state === 1);
+  const [showOrder, setShowOrder] = useState(false);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-4 flex flex-col gap-4 pb-28">
       {/* Header */}
-      <div>
-        <p className="text-xs text-outline">← Swipe doleva = zhoršit stav  |  Swipe doprava = zlepšit →</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-on-surface-variant">← Swipe doleva = zhoršit stav · Swipe doprava = zlepšit →</p>
+        <button
+          onClick={() => setShowOrder(true)}
+          disabled={refillItems.length + halfItems.length === 0}
+          className="h-12 px-4 rounded-xl bg-primary text-on-primary-container font-bold flex items-center gap-2 shrink-0 disabled:opacity-40"
+        >
+          <ShoppingCart className="w-5 h-5" /> Objednat ({refillItems.length + halfItems.length})
+        </button>
       </div>
+      {showOrder && <RefillOrderSheet onClose={() => setShowOrder(false)} />}
+      {consumables.length === 0 && (
+        <div className="bg-card-bg border border-tertiary/40 rounded-2xl p-5 text-center flex flex-col items-center gap-3">
+          <p className="text-base font-bold text-on-surface">Seznam spotřebního materiálu je prázdný</p>
+          <button onClick={restoreCatalogFromBackup} className="h-12 px-5 rounded-xl bg-primary text-on-primary-container font-bold">
+            Obnovit ze zálohy
+          </button>
+        </div>
+      )}
 
 
       {/* Summary KPI Cards */}
@@ -35,7 +53,7 @@ export const ConsumableKit = () => {
         <div className="bg-card-bg border-2 border-emerald-500/50 p-3 rounded-xl flex flex-col items-center shadow-sm">
           <span className="text-xs font-mono text-emerald-400 font-bold uppercase">100% OK</span>
           <span className="text-2xl font-bold font-mono text-emerald-400">
-            {consumables.filter(c => c.state === 0).length}
+            {consumables.filter(c => (c.state || 0) === 0).length}
           </span>
         </div>
         <div className="bg-card-bg border-2 border-amber-500/50 p-3 rounded-xl flex flex-col items-center shadow-sm">

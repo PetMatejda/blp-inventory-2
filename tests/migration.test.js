@@ -1,6 +1,6 @@
 // One-time migration from the legacy single document to collections.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { buildMigrationPlan, migrateLegacyStore, AUDIT_LIMIT } from '../src/services/migration.js';
+import { buildMigrationPlan, migrateLegacyStore, restoreCatalog, AUDIT_LIMIT } from '../src/services/migration.js';
 import { INITIAL_JOBS, INITIAL_JOB_ITEMS, INITIAL_CATALOG, INITIAL_CONSUMABLES } from '../src/mockData/initialData.js';
 import { makeJob, makeItem, makeCatalogItem } from './helpers.js';
 
@@ -125,6 +125,20 @@ describe('běh migrace', () => {
     const empty = fakeFirestore();
     expect((await migrateLegacyStore(empty.fs)).status).toBe('empty');
     expect(empty.docs.get('meta/migration_v3')).toMatchObject({ status: 'done', empty: true });
+  });
+
+  it('obnova katalogu: ze zálohy (starý dokument), existující položky nepřepíše', async () => {
+    f.docs.set('catalog/cat-sky', { name: 'Upraveno ručně' });
+    const res = await restoreCatalog(f.fs, { existingIds: ['cat-sky'], defaults: INITIAL_CATALOG });
+    expect(res).toMatchObject({ source: 'legacy', count: 0, available: 1 });
+    expect(f.docs.get('catalog/cat-sky').name).toBe('Upraveno ručně');
+  });
+
+  it('obnova katalogu: bez katalogu v záloze použije výchozí katalog aplikace', async () => {
+    const g = fakeFirestore({ 'inventory_store/blp_main_store': { ...legacy(), catalog: [] } });
+    const res = await restoreCatalog(g.fs, { existingIds: [], defaults: INITIAL_CATALOG });
+    expect(res).toMatchObject({ source: 'default', count: INITIAL_CATALOG.length });
+    expect(g.docs.get(`catalog/${INITIAL_CATALOG[0].id}`)).toMatchObject({ name: INITIAL_CATALOG[0].name });
   });
 
   it('velká data zapisuje po dávkách menších než 500', async () => {
