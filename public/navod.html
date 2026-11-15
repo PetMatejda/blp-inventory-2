@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BLP Inventory • Rychlý návod & Testování</title>
+  <title>BLP Inventory • Návod pro tým</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -118,6 +118,7 @@
 
     .url-input {
       flex: 1;
+      min-width: 0;
       background: #0B1120;
       border: 1px solid var(--card-border);
       border-radius: 10px;
@@ -253,7 +254,7 @@
 
     .flow-content p {
       color: var(--text-muted);
-      font-size: 13.5px;
+      font-size: 14.5px;
     }
 
     /* Platform Cards */
@@ -286,7 +287,7 @@
     .step-list {
       padding-left: 20px;
       color: var(--text-muted);
-      font-size: 13.5px;
+      font-size: 14.5px;
     }
 
     .step-list li {
@@ -355,6 +356,90 @@
       color: var(--primary);
     }
 
+    /* What's new + plain lists */
+    .new-card {
+      border-color: var(--secondary);
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.08), var(--card-bg) 140px);
+    }
+
+    .date-tag {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--secondary);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.12);
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .plain-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .plain-list li {
+      position: relative;
+      padding-left: 22px;
+      color: var(--text-muted);
+      font-size: 14.5px;
+    }
+
+    .plain-list li::before {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 9px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--secondary);
+    }
+
+    .plain-list strong, .card-text strong {
+      color: #FFF;
+    }
+
+    .card-text {
+      color: var(--text-muted);
+      font-size: 14.5px;
+      margin-bottom: 14px;
+    }
+
+    .nav-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .nav-pill {
+      text-align: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 8px 2px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #FFF;
+    }
+
+    .nav-pill span {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+
+    .nav-pill.new {
+      border-color: var(--secondary);
+      color: var(--secondary);
+    }
+
     /* Footer */
     .footer {
       text-align: center;
@@ -373,15 +458,15 @@
         <span class="logo-dot"></span>
         BLP INVENTORY 2.0
       </div>
-      <h1>Testovací manuál pro partu</h1>
-      <p class="lead">Čau lidi, testujeme novou appku na balení a evidenci techniky. Přečti si pár rychlých bodů níže a zkus to s náma projet.</p>
+      <h1>Návod pro tým</h1>
+      <p class="lead">Aplikace na balení a evidenci techniky, sklad, auta a nově i docházku. Tady je krátce, jak se ovládá a co se za poslední dva dny změnilo.</p>
     </header>
 
     <!-- App URL Box -->
     <div class="url-card">
       <div class="url-label">🔗 Odkaz na aplikaci pro otevření v mobilu:</div>
       <div class="url-row">
-        <input type="text" id="appUrl" class="url-input" readonly value="">
+        <input type="text" id="appUrl" class="url-input" readonly value="" aria-label="Adresa aplikace">
         <button type="button" class="copy-btn" id="copyBtn" onclick="copyAppUrl()">Kopírovat odkaz</button>
       </div>
     </div>
@@ -395,32 +480,65 @@
     <div class="notice-banner">
       <span class="notice-icon">💡</span>
       <div>
-        <strong>Poznámka k testování:</strong> Může být drobný rozdíl mezi webovou verzí (v prohlížeči) a instalovanou aplikací (APK / Přidat na plochu) v některých detailech. Otestujte klidně obojí!
+        <strong>Nevidíš novinky?</strong> Aplikaci úplně zavři a otevři znovu, klidně dvakrát. Nová verze se stahuje na pozadí při spuštění s připojením.
       </div>
     </div>
 
-    <!-- 1. O co vlastně jde -->
+    <!-- 0. Co je nového -->
+    <div class="card new-card">
+      <div class="card-title">
+        <span class="badge-icon">✨</span> Co je nového <span class="date-tag">14.–15. 11. 2026</span>
+      </div>
+      <div class="nav-row" aria-label="Spodní lišta aplikace">
+        <div class="nav-pill"><span>🗂️</span>Zakázky</div>
+        <div class="nav-pill"><span>📦</span>Balení</div>
+        <div class="nav-pill"><span>🏬</span>Sklad</div>
+        <div class="nav-pill"><span>🚚</span>Auta</div>
+        <div class="nav-pill new"><span>👤</span>Osobní</div>
+      </div>
+      <ul class="plain-list">
+        <li><strong>Osobní</strong> – nová záložka: zápis docházky, přehled celého týmu a kalendář jobů. Do konce roku dobrovolně, od 1. 1. 2027 se docházka bere jen odtud.</li>
+        <li><strong>Sklad</strong> – stav skladu, inventura, pohyby, katalog a Brácha jsou teď pod jednou záložkou.</li>
+        <li><strong>Tři fáze zakázky</strong> – Rigging → Derigging → Naskladnění. Sklad se podle nich sám odepisuje a vrací.</li>
+        <li><strong>Skener přes celou obrazovku</strong> – se svítilnou a velkým výsledkem. Najdeš ho v Balení a nově i u hledání ve Skladu a v Katalogu.</li>
+        <li><strong>Auta</strong> – firemní vozy s termínem STK a dálniční známky. Aplikace upozorní předem.</li>
+        <li><strong>Zvonek nahoře</strong> – všechna upozornění na jednom místě (auta, sklad, zakázky, Brácha).</li>
+        <li><strong>Funguje i bez signálu</strong> – změny se uloží v telefonu a odešlou se samy. Vpravo nahoře vidíš Uloženo / Ukládám / Offline.</li>
+        <li><strong>Pohodlnější ovládání na mobilu</strong> – větší písmo a tlačítka, formuláře vyjíždějí zdola, tlačítko Zpět zavře okno místo celé aplikace.</li>
+        <li><strong>Předávací protokol</strong> – PDF s podpisy přímo z Balení. K závadě jde přidat fotka.</li>
+        <li><strong>Historie změn</strong> se přesunula do Nastavení (kolečko s profilem vlevo nahoře).</li>
+      </ul>
+    </div>
+
+    <!-- 1. Jak zakázka probíhá -->
     <div class="card">
       <div class="card-title">
-        <span class="badge-icon">🎯</span> O co jde (Cíl systému)
+        <span class="badge-icon">🎯</span> Jak zakázka probíhá
       </div>
-      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 14px;">
-        Abychom měli na place i ve skladu 100% přehled co kde je a neztrácely se nám drahý světla, balasty, sukně, difuze ani kabely.
+      <p class="card-text">
+        Cílem je mít na place i ve skladu přehled, co kde je, aby se neztrácela světla, balasty, sukně, difuze ani kabely. Každá zakázka má tři fáze, do další se přepíná tlačítkem nahoře v Balení.
       </p>
 
       <div class="flow-grid">
         <div class="flow-item">
           <div class="flow-num">1</div>
           <div class="flow-content">
-            <strong>Rigging (Nakládka & Příjezd)</strong>
-            <p>Ve skladu se nakládá do auta (Sklad ➔ Auto). Na place se auto vyloží a zkontroluje (Auto ➔ Plac).</p>
+            <strong>Rigging – nakládka ze skladu do aut</strong>
+            <p>U každé položky označíš, co je naložené. Počet kusů v plánu jde upravit klepnutím na „Plán“.</p>
           </div>
         </div>
         <div class="flow-item">
           <div class="flow-num">2</div>
           <div class="flow-content">
-            <strong>Derigging (Balení & Návrat)</strong>
-            <p>Po točení se balí z placu do auta (Plac ➔ Auto) a ve skladu se vyloží zpátky do regálů (Auto ➔ Sklad).</p>
+            <strong>Derigging – balení na place a odvoz</strong>
+            <p>Po zahájení se naložené kusy odepíšou ze skladu. Označuješ, co je sbalené k odvozu.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">3</div>
+          <div class="flow-content">
+            <strong>Naskladnění – vrácení do skladu</strong>
+            <p>Sbalená technika je předvyplněná jako naskladněná, opravíš jen rozdíly. Po dokončení se zakázka uloží do archivu.</p>
           </div>
         </div>
       </div>
@@ -429,89 +547,175 @@
     <!-- 2. Jak to ovládat -->
     <div class="card">
       <div class="card-title">
-        <span class="badge-icon">⚡</span> Jak se to ovládá v rychlosti
+        <span class="badge-icon">⚡</span> Ovládání v Balení
       </div>
       <div class="flow-grid">
         <div class="flow-item">
           <div class="flow-num">👉</div>
           <div class="flow-content">
-            <strong>Swipe doprava na položce (Gesto)</strong>
-            <p>Přejeď prstem doprava po řádku s technikou a stav se okamžitě posune na <em>Naloženo / Vyloženo</em>.</p>
+            <strong>Přejetí prstem po položce</strong>
+            <p>Doprava = hotovo (<em>Naloženo / Sbaleno / Naskladněno</em>), doleva = vrátit. Telefon krátce zavibruje a dole se objeví tlačítko <strong>Vrátit</strong>, kdyby to byl omyl.</p>
           </div>
         </div>
         <div class="flow-item">
-          <div class="flow-num">⏱️</div>
+          <div class="flow-num">±</div>
           <div class="flow-content">
-            <strong>Dlouhé podržení (Long Press)</strong>
-            <p>Podrž prst na libovolný položce — vyskočí rychlý menu pro <strong>nahlášení poškození</strong> nebo rozbitýho kusu.</p>
+            <strong>Počty kusů</strong>
+            <p>Tlačítka − a + mění počet po jednom. Klepnutím na číslo zadáš počet na klávesnici.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">⋮</div>
+          <div class="flow-content">
+            <strong>Tři tečky nebo dlouhé podržení</strong>
+            <p>Otevře nabídku položky – hlavně <strong>nahlášení závady</strong> s popisem a fotkou.</p>
           </div>
         </div>
         <div class="flow-item">
           <div class="flow-num">➕</div>
           <div class="flow-content">
-            <strong>Katalog & Přidávání techniky</strong>
-            <p>Dole v záložce <em>Katalog</em> můžeš vyhledat jakýkoli světlo a jedním klikem ho přihodit do aktivního jobu.</p>
+            <strong>Přidání techniky</strong>
+            <p>Zelené plus vpravo dole: <strong>Z katalogu</strong> (technika ze skladu), nebo <strong>Vlastní položka</strong> – ta platí jen pro danou zakázku a sklad ani katalog nemění.</p>
           </div>
         </div>
         <div class="flow-item">
-          <div class="flow-num">🧰</div>
+          <div class="flow-num">📷</div>
           <div class="flow-content">
-            <strong>Brácha (Spotřební materiál)</strong>
-            <p>Gaffy, pásky, spreje, baterky, fólie. Můžeš jednoduše odepisovat spotřebovaný kusy.</p>
+            <strong>Skener kódů</strong>
+            <p>Ikona QR vedle hledání. Namiř na štítek nebo čárový kód; výsledek je velký a barevný dole. Ve tmě zapni svítilnu vpravo nahoře. Kód jde zadat i ručně.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">📄</div>
+          <div class="flow-content">
+            <strong>Předávací protokol</strong>
+            <p>Ikona dokumentu vedle skeneru: oba se podepíšou prstem a stáhne se PDF.</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 3. Jak to hodit do telefonu -->
+    <!-- 3. Osobní -->
     <div class="card">
       <div class="card-title">
-        <span class="badge-icon">📲</span> Jak to zprovoznit na mobilu (10 vteřin)
+        <span class="badge-icon">👤</span> Osobní – docházka a kalendář
+      </div>
+      <div class="flow-grid">
+        <div class="flow-item">
+          <div class="flow-num">1</div>
+          <div class="flow-content">
+            <strong>Zapsat dnešek</strong>
+            <p>Vyber, co jsi dělal (<em>Točba, Rigging, Travel, Sklad</em>), zkontroluj čas od–do a ulož. Čas se předvyplní podle tvého posledního zápisu. Do poznámky napiš zakázku nebo místo.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">2</div>
+          <div class="flow-content">
+            <strong>Nepřítomnost</strong>
+            <p><em>Volno M, Dovolená, Nemoc</em> platí na celý den a čas se nevyplňuje.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">3</div>
+          <div class="flow-content">
+            <strong>Oprava a zpětné doplnění</strong>
+            <p>Klepni na den v kalendáři měsíce. Záznam jde změnit i smazat. Když jsi dělal půl dne sklad a půl dne točbu, přidej „další část dne“.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">👥</div>
+          <div class="flow-content">
+            <strong>Tým</strong>
+            <p>Hodiny a dny celého týmu za měsíc. Vidí je všichni, upravit jde jen vlastní záznamy.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num">📅</div>
+          <div class="flow-content">
+            <strong>Kalendář</strong>
+            <p>Co se bude dělat v příštích 14 nebo 30 dnech a odkaz na celý BLP kalendář.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Sklad, auta, upozornění -->
+    <div class="card">
+      <div class="card-title">
+        <span class="badge-icon">🏬</span> Sklad, auta a upozornění
+      </div>
+      <ul class="plain-list">
+        <li><strong>Sklad › Stav</strong> – kolik čeho je ve skladu, na zakázkách, v servisu a co chybí. Ikonou QR u hledání načteš štítek a otevře se detail položky. Štítky se tisknou z detailu.</li>
+        <li><strong>Sklad › Inventura</strong> – počítání skladu; kusy se štítkem stačí naskenovat.</li>
+        <li><strong>Sklad › Pohyby</strong> – co kdy odešlo a vrátilo se.</li>
+        <li><strong>Sklad › Katalog</strong> – veškerá technika. Plusem ji přidáš do vybrané zakázky; funguje i skener u hledání.</li>
+        <li><strong>Sklad › Brácha</strong> – spotřební materiál (gaffy, pásky, spreje, baterie, fólie). Klepnutím označíš, že dochází nebo je potřeba doplnit.</li>
+        <li><strong>Auta</strong> – seznam vozů s termínem STK a dálniční známky. Při zakládání zakázky vybereš, která auta jedou.</li>
+        <li><strong>Zvonek nahoře</strong> – upozornění, co potřebuje pozornost: propadlá STK, chybějící technika, závady, Brácha k doplnění.</li>
+      </ul>
+    </div>
+
+    <!-- 5. Jak to hodit do telefonu -->
+    <div class="card">
+      <div class="card-title">
+        <span class="badge-icon">📲</span> Instalace na mobil (10 vteřin)
       </div>
 
       <!-- iPhone -->
       <div class="platform-card apple">
         <div class="platform-header">
-          🍏 iPhone / iPad (Apple)
+          🍏 iPhone / iPad
         </div>
         <ol class="step-list">
           <li>
-            Otevři v prohlížeči <strong>Safari</strong> webovou adresu aplikace:
+            Otevři v prohlížeči <strong>Safari</strong> adresu aplikace:
             <div>
               <a href="/" class="step-link inline-app-url">https://... (Klepni pro otevření) ➔</a>
             </div>
           </li>
-          <li>Dole uprostřed klepni na tlačítko <strong>Sdílet</strong> (čtvereček se šipkou nahoru ⎋).</li>
-          <li>Sjeď kousek dolů a zvol <strong>„Přidat na plochu“</strong> (Add to Home Screen).</li>
-          <li>Hotovo! Appka se spustí na celou obrazovku jako samostatná aplikace s BLP ikonou.</li>
+          <li>Dole klepni na tlačítko <strong>Sdílet</strong> (čtvereček se šipkou nahoru).</li>
+          <li>Zvol <strong>„Přidat na plochu“</strong>.</li>
+          <li>Hotovo. Aplikace se spouští na celou obrazovku s ikonou BLP.</li>
         </ol>
       </div>
 
       <!-- Android -->
       <div class="platform-card android">
         <div class="platform-header">
-          🤖 Android (Samsung, Xiaomi, Pixel...)
+          🤖 Android (Samsung, Xiaomi, Pixel…)
         </div>
         <ol class="step-list">
           <li>
-            Otevři v prohlížeči <strong>Chrome</strong> webovou adresu aplikace:
+            Otevři v prohlížeči <strong>Chrome</strong> adresu aplikace:
             <div>
               <a href="/" class="step-link inline-app-url">https://... (Klepni pro otevření) ➔</a>
             </div>
           </li>
-          <li><strong>Možnost A (Přidat na plochu / PWA):</strong> V Chrome klepni na vyskakovací hlášku <em>„Přidat na plochu / Instalovat aplikaci“</em> (nebo vpravo nahoře 3 tečky ➔ <em>Přidat na plochu</em>).</li>
-          <li><strong>Možnost B (Nativní APK balíček):</strong> V aplikaci klikni na ikonu <strong>Nastavení ⚙️</strong> a zvol <strong>Stáhnout APK</strong> pro přímou instalaci do Androidu. <span class="apk-tag">APK INSTALACE</span></li>
+          <li>Klepni na nabídku <em>„Instalovat aplikaci“</em>, nebo vpravo nahoře na tři tečky ➔ <strong>Přidat na plochu</strong>.</li>
+          <li>Jde to i z aplikace: profil vlevo nahoře ➔ <strong>Nainstalovat na telefon</strong>.</li>
         </ol>
       </div>
-
 
       <!-- Login Info -->
       <div class="login-box">
         <div><strong>🔑 Přihlášení do aplikace:</strong></div>
-        <div>1. Nejjednodušeji jedním klikem přes svůj <strong>Google účet</strong></div>
-        <div>2. Nebo e-mailem a heslem: zaregistruj se a klikni na ověřovací odkaz, který ti přijde do e-mailu</div>
+        <div>1. Nejjednodušeji jedním klepnutím přes svůj <strong>Google účet</strong></div>
+        <div>2. Nebo e-mailem a heslem: zaregistruj se a klepni na ověřovací odkaz, který ti přijde do e-mailu</div>
         <div>⚠️ Přístup mají jen e-maily schválené správcem. Pokud aplikace hlásí „nemá přístup“, napiš Petrovi, jaký e-mail používáš.</div>
       </div>
+    </div>
+
+    <!-- 6. Kdyz neco nefunguje -->
+    <div class="card">
+      <div class="card-title">
+        <span class="badge-icon">🛟</span> Když něco nefunguje
+      </div>
+      <ul class="plain-list">
+        <li><strong>Vypadá to postaru</strong> – aplikaci zavři a znovu otevři.</li>
+        <li><strong>Vpravo nahoře svítí Offline</strong> – pracuj dál, změny se odešlou, až bude signál.</li>
+        <li><strong>Aplikace zamrzá</strong> – profil vlevo nahoře ➔ Stav dat ➔ Vymazat offline data v tomto zařízení. V cloudu zůstane všechno.</li>
+        <li><strong>Cokoli dalšího</strong> nebo nápad na zlepšení napiš Petrovi.</li>
+      </ul>
     </div>
 
     <!-- Bottom Button -->
@@ -520,7 +724,7 @@
     </a>
 
     <footer class="footer">
-      BLP Film & Event Lighting • 2026
+      BLP Film & Event Lighting • návod aktualizován 15. 11. 2026
     </footer>
   </div>
 
