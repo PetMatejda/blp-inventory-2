@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { createInventoryActions } from '../../src/services/inventoryActions.js';
 import { planJobItems, describePlan } from '../../src/domain/jobPlan.js';
 import { availability, competingJobs } from '../../src/domain/availability.js';
+import { teamMonth, typeOf, hoursOf, daysOfMonth, ATTENDANCE_TYPES } from '../../src/domain/attendance.js';
+import { validateCalendar, buildAgenda } from '../../src/domain/productionCalendar.js';
 
 export const SERVER_INFO = { name: 'blp-inventory', version: '0.2.0' };
 
@@ -17,7 +19,11 @@ Fáze zakázky: LOADING (příprava a nakládka), DERIGGING, RESTOCK; status ACT
 Postup pro přípravu zakázky: najdi zakázku (list_jobs / get_job), dohledej vybavení v katalogu (search_catalog),
 zavolej plan_job_items BEZ confirm (náhled), ukaž uživateli změny a nedostatky skladu, a teprve po jeho souhlasu
 zavolej plan_job_items znovu se stejnými řádky, confirm: true a previewId z náhledu.
-Zápisové nástroje nikdy nevolej s confirm: true bez výslovného souhlasu uživatele.`;
+Zápisové nástroje nikdy nevolej s confirm: true bez výslovného souhlasu uživatele.
+Docházka týmu (Osobní v aplikaci): get_attendance vrací za měsíc nebo rok hodiny, normu, rozdíl a dny po typech práce
+za každého člověka i jednotlivé záznamy – slouží pro měsíční výkaz bez ručního přepisování.
+Kalendář jobů z Tabulky prací: get_production_calendar čte, set_production_calendar ukládá celý nový stav
+(data ve tvaru YYYY-MM-DD; nejdřív náhled bez confirm).`;
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 const text = (data) => ({ content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] });
@@ -227,6 +233,59 @@ export function createBlpMcpServer({ identity, ds, now = () => new Date() }) {
     return text(rows.map((r) => ({ timestamp: r.timestamp, user: r.user, action: r.action, detail: r.detail })));
   });
 
+  // ── Osobní: attendance and the production calendar ─────────
+  const attendanceView = (p, withRecords) => ({
+    person: p.userName, hours: p.hours, norm: p.norm, diff: p.diff, jobDays: p.jobDays,
+    days: Object.fromEntries(ATTENDANCE_TYPES.map((t) => [t.label, p.days[t.id]])),
+    filledDays: p.filledDays, missingWorkdays: p.missing,
+    ...(withRecords ? {
+      records: Object.keys(p.byDate).sort().flatMap((date) => p.byDate[date].map((r) => ({
+        date, type: typeOf(r.type)?.label || r.type, from: r.from || null, to: r.to || null, hours: hoursOf(r), note: r.note || '',
+      }))),
+    } : {}),
+  });
+
+  server.registerTool('get_attendance', {
+    title: 'Docházka týmu',
+    description: 'Attendance the crew entered in the app (Osobní). Give month (YYYY-MM) for one month with every record, or year (YYYY) for a month-by-month summary. Per person: hours, norm (working days × 8 h − 8 h per day of holiday), difference, days by type of work (Točba, Rigging, Travel, Sklad, Volno M, Dovolená, Nemoc; a day with two records counts ½ + ½) and working days without any record. Until 31 Dec 2026 entering attendance in the app is voluntary, so missing days do not mean absence.',
+    inputSchema: {
+      month: z.string().regex(/^\d{4}-\d{2}$/).optional().describe('One month, e.g. 2026-11 (default: the current month)'),
+      year: z.string().regex(/^\d{4}$/).optional().describe('Whole year summary instead of one month'),
+      person: z.string().max(80).optional().describe('Only people whose name contains this text'),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, async ({ month, year, person }) => {
+    const today = now().toISOString().slice(0, 10);
+    const wanted = (list) => (person ? list.filter((p) => norm(p.userName).includes(norm(person))) : list);
+    if (year) {
+      const records = await ds.getAttendance(`${year}-01-01`, `${year}-12-31`);
+      const months = [];
+      for (let m = 1; m <= 12; m += 1) {
+        const team = wanted(teamMonth(records, Number(year), m, { today }));
+        if (team.length) months.push({ month: `${year}-${String(m).padStart(2, '0')}`, people: team.map((p) => attendanceView(p, false)) });
+      }
+      return text({ year, months });
+    }
+    const key = month || today.slice(0, 7);
+    const [y, m] = key.split('-').map(Number);
+    const all = daysOfMonth(y, m);
+    const records = await ds.getAttendance(all[0], all[all.length - 1]);
+    return text({ month: key, people: wanted(teamMonth(records, y, m, { today })).map((p) => attendanceView(p, true)) });
+  });
+
+  server.registerTool('get_production_calendar', {
+    title: 'Kalendář jobů',
+    description: 'The production calendar shown in the app (Osobní › Kalendář): the stored plan from the weekly table of jobs plus a day-by-day agenda from the given date.',
+    inputSchema: { from: DATE.optional().describe('First day of the agenda (default: today)'), days: z.number().int().min(1).max(120).default(30) },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, async ({ from, days }) => {
+    const calendar = await ds.getMeta('productionCalendar');
+    const jobs = (await ds.listJobs()).filter((j) => j.status === 'ACTIVE');
+    const agenda = buildAgenda({ calendar, jobs, from: from || now().toISOString().slice(0, 10), days })
+      .map((d) => ({ date: d.date, items: d.items.map((i) => ({ phase: i.label, title: i.title, project: i.project, location: i.location, ...(i.jobId ? { jobId: i.jobId } : {}) })) }));
+    return text({ stored: calendar ? { source: calendar.source || '', tableDate: calendar.tableDate || '', updatedAt: calendar.updatedAt, projects: calendar.projects } : null, agenda });
+  });
+
   if (!canWrite) return server;
 
   // ── Write (preview → confirm) ──────────────────────────────
@@ -363,6 +422,45 @@ export function createBlpMcpServer({ identity, ds, now = () => new Date() }) {
     const result = actionsFor({ jobs: [job], jobItems, catalog: [], consumables: [] }).addAdHocItem(jobId, name, category, quantity);
     await ds.repo.flush();
     return text({ applied: true, item: itemView(result) });
+  });
+
+  const PHASE = z.object({
+    type: z.enum(['prep', 'travel', 'rigging', 'prelight', 'shoot', 'camera', 'derigg', 'vfx']),
+    label: z.string().max(60).optional(),
+    start: DATE, end: DATE,
+  });
+  server.registerTool('set_production_calendar', {
+    title: 'Uložit kalendář jobů',
+    description: 'Replaces the production calendar shown in the app (Osobní › Kalendář) with a new complete state built from the weekly table of jobs. Dates must be YYYY-MM-DD (add the year). It is only an overview of dates: jobs with equipment are not changed. Preview without confirm, save with confirm: true.',
+    inputSchema: {
+      source: z.string().max(200).optional().describe('File the data comes from, e.g. "7.10. Tabulka prací.pdf"'),
+      tableDate: z.string().max(40).optional().describe('Date of the table as written on it, e.g. "7. 10. 2026"'),
+      projects: z.array(z.object({
+        id: z.string().max(80).optional(), name: z.string().min(1).max(120), color: z.string().max(20).optional(),
+        jobs: z.array(z.object({
+          id: z.string().max(80).optional(), title: z.string().min(1).max(200), location: z.string().max(200).nullish(),
+          status: z.enum(['confirmed', 'tbc', 'not_confirmed']).nullish(), gear: z.string().max(600).nullish(),
+          crew: z.string().max(80).nullish(), notes: z.string().max(600).nullish(),
+          phases: z.array(PHASE).max(40).default([]),
+        })).max(80),
+      })).max(40),
+      confirm: z.boolean().default(false),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async ({ confirm, source, tableDate, projects }) => {
+    const calendar = { source: source || '', tableDate: tableDate || '', projects };
+    const error = validateCalendar(calendar);
+    if (error) return fail(error);
+    const jobCount = projects.reduce((n, p) => n + p.jobs.length, 0);
+    const dates = projects.flatMap((p) => p.jobs.flatMap((j) => j.phases.flatMap((ph) => [ph.start, ph.end]))).sort();
+    const summary = { projects: projects.length, jobs: jobCount, from: dates[0] || null, to: dates[dates.length - 1] || null };
+    if (!confirm) {
+      const old = await ds.getMeta('productionCalendar');
+      return text({ preview: true, summary, replaces: old ? { tableDate: old.tableDate || '', updatedAt: old.updatedAt } : null, next: 'Po souhlasu uživatele zavolej znovu se stejnými daty a confirm: true.' });
+    }
+    ds.repo.set('meta', 'productionCalendar', { ...calendar, updatedAt: now().toISOString(), updatedBy: actor });
+    await ds.repo.flush();
+    return text({ saved: true, summary });
   });
 
   return server;

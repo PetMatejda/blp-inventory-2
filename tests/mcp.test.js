@@ -94,7 +94,7 @@ describe('MCP auth', () => {
 
   it('read token sees only read tools; write token also write tools', async () => {
     const reader = await connect(READ);
-    expect((await reader.listTools()).tools.map((t) => t.name).sort()).toEqual(['check_availability', 'get_job', 'get_job_history', 'list_jobs', 'ping', 'search_catalog']);
+    expect((await reader.listTools()).tools.map((t) => t.name).sort()).toEqual(['check_availability', 'get_attendance', 'get_job', 'get_job_history', 'get_production_calendar', 'list_jobs', 'ping', 'search_catalog']);
     await reader.close();
     const writer = await connect(WRITE);
     const names = (await writer.listTools()).tools.map((t) => t.name);
@@ -224,5 +224,57 @@ describe('MCP endpoint basics', () => {
     const r = await fetch(`http://127.0.0.1:${bare.address().port}/api/mcp`, { method: 'POST', body: '{}' });
     expect(r.status).toBe(503);
     await new Promise((resolve) => bare.close(resolve));
+  });
+});
+
+describe('MCP – docházka a kalendář jobů', () => {
+  const att = (id, uid, userName, date, type, from = '', to = '') => ({ id, uid, userName, date, type, from, to, note: '' });
+  beforeEach(() => {
+    ds.mem.repo.set('attendance', 'a1', att('a1', 'u1', 'Petr', '2026-11-02', 'SKLAD', '08:00', '16:00'));
+    ds.mem.repo.set('attendance', 'a2', att('a2', 'u1', 'Petr', '2026-11-03', 'DOVOLENA'));
+    ds.mem.repo.set('attendance', 'a3', att('a3', 'u2', 'Marek', '2026-11-02', 'RIGGING', '07:00', '19:00'));
+    ds.mem.repo.set('attendance', 'a4', att('a4', 'u2', 'Marek', '2026-10-30', 'TOCBA', '08:00', '18:00'));
+  });
+
+  it('get_attendance: month with records, norm reduced by holiday', async () => {
+    const client = await connect(READ);
+    const { data } = await call(client, 'get_attendance', { month: '2026-11' });
+    expect(data.people.map((p) => p.person)).toEqual(['Marek', 'Petr']);
+    const petr = data.people[1];
+    expect(petr).toMatchObject({ hours: 8, norm: 20 * 8 - 8, jobDays: 0 });
+    expect(petr.days).toMatchObject({ Sklad: 1, 'Dovolená': 1 });
+    expect(petr.records).toHaveLength(2);
+    expect(petr.missingWorkdays).toContain('2026-11-04');
+    const one = await call(client, 'get_attendance', { month: '2026-11', person: 'mar' });
+    expect(one.data.people.map((p) => p.person)).toEqual(['Marek']);
+    const year = await call(client, 'get_attendance', { year: '2026' });
+    expect(year.data.months.map((m) => m.month)).toEqual(['2026-10', '2026-11']);
+    await client.close();
+  });
+
+  const calendar = {
+    source: 'Tabulka prací.pdf', tableDate: '15. 11. 2026',
+    projects: [{ id: 'bw', name: 'Birdwatch', jobs: [{ id: 'snow', title: 'Snowcat', location: 'Stage D', phases: [{ type: 'rigging', start: '2026-11-16', end: '2026-11-17' }] }] }],
+  };
+
+  it('set_production_calendar: read token cannot, write token previews then saves', async () => {
+    const reader = await connect(READ);
+    expect((await reader.listTools()).tools.map((t) => t.name)).not.toContain('set_production_calendar');
+    await reader.close();
+
+    const client = await connect(WRITE);
+    const p = await call(client, 'set_production_calendar', calendar);
+    expect(p.data).toMatchObject({ preview: true, summary: { projects: 1, jobs: 1, from: '2026-11-16', to: '2026-11-17' } });
+    expect(ds.mem.all('meta')).toHaveLength(0);
+    const bad = await call(client, 'set_production_calendar', { projects: [{ name: 'X', jobs: [{ title: 'Y', phases: [{ type: 'shoot', start: '2026-11-20', end: '2026-11-19' }] }] }], confirm: true });
+    expect(bad.isError).toBe(true);
+    const c = await call(client, 'set_production_calendar', { ...calendar, confirm: true });
+    expect(c.data.saved).toBe(true);
+    expect(ds.mem.all('meta')[0]).toMatchObject({ id: 'productionCalendar', tableDate: '15. 11. 2026', updatedBy: 'Petr (MCP)' });
+
+    const g = await call(client, 'get_production_calendar', { from: '2026-11-16', days: 7 });
+    expect(g.data.stored.projects).toHaveLength(1);
+    expect(g.data.agenda[0]).toMatchObject({ date: '2026-11-16', items: [{ phase: 'Rigging', title: 'Snowcat', project: 'Birdwatch' }] });
+    await client.close();
   });
 });

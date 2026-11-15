@@ -119,3 +119,29 @@ describe('starý sdílený dokument a profily', () => {
     await assertFails(setDoc(doc(member(), 'users/someone-else'), { name: 'X' }));
   });
 });
+
+describe('docházka', () => {
+  const entry = (uid) => ({ uid, userName: 'Petr', date: '2026-11-16', type: 'SKLAD', from: '08:00', to: '16:00' });
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'attendance/mine'), entry('member'));
+      await setDoc(doc(ctx.firestore(), 'attendance/theirs'), entry('someone-else'));
+    });
+  });
+  it('všichni schválení čtou docházku celého týmu', async () => {
+    await assertSucceeds(getDoc(doc(member(), 'attendance/theirs')));
+    await assertFails(getDoc(doc(db('u', { email: 'cizi@example.com', email_verified: true }), 'attendance/mine')));
+  });
+  it('vlastní záznam jde založit, opravit i smazat', async () => {
+    await assertSucceeds(setDoc(doc(member(), 'attendance/new'), entry('member')));
+    await assertSucceeds(updateDoc(doc(member(), 'attendance/mine'), { to: '17:00' }));
+    await assertSucceeds(deleteDoc(doc(member(), 'attendance/mine')));
+  });
+  it('cizí záznam nejde založit, opravit, přivlastnit ani smazat', async () => {
+    await assertFails(setDoc(doc(member(), 'attendance/fake'), entry('someone-else')));
+    await assertFails(updateDoc(doc(member(), 'attendance/theirs'), { to: '17:00' }));
+    await assertFails(updateDoc(doc(member(), 'attendance/theirs'), { uid: 'member' }));
+    await assertFails(updateDoc(doc(member(), 'attendance/mine'), { uid: 'someone-else' }));
+    await assertFails(deleteDoc(doc(member(), 'attendance/theirs')));
+  });
+});

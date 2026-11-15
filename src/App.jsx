@@ -10,6 +10,7 @@ import { PackingList } from './components/packing/PackingList';
 const WarehouseScreen = lazy(() => import('./components/warehouse/WarehouseScreen').then((m) => ({ default: m.WarehouseScreen })));
 const VehiclesScreen = lazy(() => import('./components/vehicles/VehiclesScreen').then((m) => ({ default: m.VehiclesScreen })));
 const AlertsScreen = lazy(() => import('./components/alerts/AlertsScreen').then((m) => ({ default: m.AlertsScreen })));
+const PersonalScreen = lazy(() => import('./components/personal/PersonalScreen').then((m) => ({ default: m.PersonalScreen })));
 const AuditTimeline = lazy(() => import('./components/audit/AuditTimeline').then((m) => ({ default: m.AuditTimeline })));
 
 import { NewJobModal } from './components/modals/NewJobModal';
@@ -72,6 +73,8 @@ const MainContent = () => {
       return <VehiclesScreen />;
     case 'alerts':
       return <AlertsScreen />;
+    case 'personal':
+      return <PersonalScreen />;
     case 'history':
       return <AuditTimeline />;
     default:

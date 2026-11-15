@@ -49,6 +49,14 @@ export function createFirestoreDataSource(db) {
       const snap = await db.collection('users').doc(uid).get();
       return snap.exists ? snap.data() : null;
     },
+    // ── Osobní: attendance (range on one field – no composite index) and single meta documents ──
+    async getAttendance(from, to) {
+      return docs(await db.collection('attendance').where('date', '>=', from).where('date', '<=', to).get());
+    },
+    async getMeta(id) {
+      const snap = await db.collection('meta').doc(id).get();
+      return snap.exists ? snap.data() : null;
+    },
     // ── Personal MCP tokens (collection mcpTokens, doc id = SHA-256 of the token) ──
     async getToken(hash) {
       const snap = await db.collection('mcpTokens').doc(hash).get();

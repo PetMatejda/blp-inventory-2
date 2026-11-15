@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { useDialogs } from '../common/Dialogs';
+import { useDialogs, Sheet, SheetAction } from '../common/Dialogs';
 import { ItemSwipeCard } from './ItemSwipeCard';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { useHideOnScroll } from '../../hooks/useHideOnScroll';
-import { useBackLayer } from '../../hooks/useBackLayer';
+
 import { phaseOf, filtersFor, filterCounts, matchesFilter, phaseSummary, plural } from '../../domain/labels';
 import {
   Search, QrCode, Plus, Package, Lock, Unlock, Truck, Copy, X, BookOpen, FileText, CheckCircle2, ArrowRight, Warehouse,
@@ -29,13 +29,6 @@ export const PackingList = () => {
   const [searchFocused, setSearchFocused] = useState(false);
   // Scrolling down hides search + filters so more of the list fits on a phone.
   const toolsHidden = useHideOnScroll({ enabled: !searchQuery && !searchFocused });
-  useBackLayer(fabOpen, () => setFabOpen(false));
-
-  useEffect(() => {
-    const handleScroll = () => { if (fabOpen) setFabOpen(false); };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [fabOpen]);
 
   // Hardware barcode reader: scan anywhere on the packing screen (no dialog needed).
   useBarcodeScanner((code) => {
@@ -249,24 +242,20 @@ export const PackingList = () => {
       {/* Add item (FAB) */}
       {!isArchived && (
         <>
-          {fabOpen && <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setFabOpen(false)} />}
+          {/* The choices open as a bottom sheet, so nothing overlaps them */}
           {fabOpen && (
-            <div className="fixed right-4 z-50 flex flex-col items-end gap-2" style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>
-              <button onClick={() => { setWarehouseTab('catalog'); setActiveTab('catalog'); setFabOpen(false); }} className="flex items-center gap-2.5 bg-card-bg border border-outline-variant text-on-surface font-semibold text-base px-4 h-14 rounded-2xl shadow-xl">
-                <BookOpen className="w-5 h-5 text-primary" /> Z katalogu
-              </button>
-              <button onClick={() => { setIsAdHocModalOpen(true); setFabOpen(false); }} className="flex items-center gap-2.5 bg-card-bg border border-outline-variant text-on-surface font-semibold text-base px-4 h-14 rounded-2xl shadow-xl">
-                <Plus className="w-5 h-5 text-secondary" /> Vlastní položka
-              </button>
-            </div>
+            <Sheet title="Přidat techniku" subtitle={currentJob.name} onClose={() => setFabOpen(false)}>
+              <SheetAction icon={BookOpen} label="Z katalogu" hint="Technika ze skladu BLP"
+                onClick={() => { setFabOpen(false); setWarehouseTab('catalog'); setActiveTab('catalog'); }} />
+              <SheetAction icon={Plus} label="Vlastní položka" hint="Jen pro tuto zakázku – sklad ani katalog se nemění"
+                onClick={() => { setFabOpen(false); setIsAdHocModalOpen(true); }} />
+            </Sheet>
           )}
           <button
-            onClick={() => setFabOpen(!fabOpen)}
-            className={`fixed right-4 z-50 w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-200 active:scale-90 ${
-              fabOpen ? 'bg-error-container border-2 border-error/60 text-error rotate-45' : 'bg-secondary border-2 border-secondary/60 text-on-secondary'
-            }`}
+            onClick={() => setFabOpen(true)}
+            className="fixed right-4 z-30 w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 bg-secondary border-2 border-secondary/60 text-on-secondary"
             style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 0.5rem)' }}
-            aria-label={fabOpen ? 'Zavřít' : 'Přidat techniku do zakázky'}
+            aria-label="Přidat techniku do zakázky"
           >
             <Plus className="w-8 h-8 stroke-[2.5]" />
           </button>

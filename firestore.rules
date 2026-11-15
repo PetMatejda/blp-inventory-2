@@ -64,6 +64,17 @@ service cloud.firestore {
       allow read, write: if isApprovedUser();
     }
 
+    // Docházka: číst mohou všichni schválení (tým vidí přehled za všechny),
+    // zapisovat, opravovat a mazat jen vlastní záznamy (pole uid = přihlášený uživatel).
+    match /attendance/{id} {
+      allow read: if isApprovedUser();
+      allow create: if isApprovedUser() && request.resource.data.uid == request.auth.uid;
+      allow update: if isApprovedUser()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if isApprovedUser() && resource.data.uid == request.auth.uid;
+    }
+
     // Pohyby skladu jsou neměnná historie (stejně jako audit).
     match /movements/{id} {
       allow read, create: if isApprovedUser();

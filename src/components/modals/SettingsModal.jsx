@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Moon, Sun, CloudUpload, Download, ShieldCheck, LogOut, User } from 'lucide-react';
+import { Moon, Sun, CloudUpload, Download, ShieldCheck, LogOut, User, History, ChevronRight } from 'lucide-react';
 import { useDialogs, Sheet } from '../common/Dialogs';
 import { firebaseAuth } from '../../services/firebaseAuth';
 import { McpAccessSection } from '../settings/McpAccessSection';
@@ -9,7 +9,7 @@ export const SettingsModal = () => {
   const {
     isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode,
     forceSyncAll, hasPendingWrites, isOffline, currentUser, setCurrentUser, setIsAuthModalOpen,
-    migrationInfo, catalog, jobs, stockLevels,
+    migrationInfo, catalog, jobs, stockLevels, setActiveTab,
   } = useInventory();
   const { confirm } = useDialogs();
   const [loading, setLoading] = useState(false);
@@ -146,6 +146,19 @@ export const SettingsModal = () => {
           {loading ? 'Odesílám…' : 'Odeslat a ověřit uložení'}
         </button>
       </div>
+
+      {/* Change history (moved here from the bottom bar) */}
+      <button
+        onClick={() => { close(); setActiveTab('history'); }}
+        className="w-full min-h-[56px] px-4 py-2 bg-surface-container border border-outline-variant rounded-xl flex items-center gap-3 text-left active:scale-[0.98]"
+      >
+        <History className="w-5 h-5 text-primary shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-base font-semibold text-on-surface">Historie změn</span>
+          <span className="block text-sm text-on-surface-variant">Kdo, kdy a co v aplikaci změnil</span>
+        </span>
+        <ChevronRight className="w-5 h-5 text-outline shrink-0" />
+      </button>
 
       {/* Install as an app */}
       {!isInstalled && (

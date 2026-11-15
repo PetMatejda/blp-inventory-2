@@ -17,6 +17,8 @@ export function createMemoryDataSource(seed = {}) {
     getAuditForJob: async (jobId, max = 20) => col('auditLogs').filter((a) => a.jobId === jobId)
       .sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp))).slice(0, max),
     getUserProfile: async (uid) => col('users').find((u) => u.id === uid) || null,
+    getAttendance: async (from, to) => col('attendance').filter((r) => r.date >= from && r.date <= to),
+    getMeta: async (id) => { const d = col('meta').find((m) => m.id === id); if (!d) return null; const { id: _id, ...rest } = d; return rest; },
     getToken: async (hash) => col('mcpTokens').find((t) => t.id === hash) || null,
     createToken: async (hash, data) => { await mem.repo.set('mcpTokens', hash, data); },
     updateToken: async (hash, data) => { await mem.repo.update('mcpTokens', hash, data); },

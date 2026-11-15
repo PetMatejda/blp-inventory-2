@@ -4,6 +4,7 @@ import { createFirestoreRepo } from '../services/inventoryRepo';
 import { createInventoryActions } from '../services/inventoryActions';
 import { createStockActions } from '../services/stockActions';
 import { createVehicleActions } from '../services/vehicleActions';
+import { createAttendanceActions } from '../services/attendanceActions';
 import { availability } from '../domain/stock';
 import { buildAlerts } from '../domain/alerts';
 import { todayIso } from '../domain/vehicles';
@@ -17,8 +18,11 @@ const CURRENT_JOB_KEY = 'blp_current_job_id_v2';
 const EMPTY_DATA = {
   jobs: [], jobItems: [], catalog: [], consumables: [], auditLogs: [],
   stockLevels: [], stockUnits: [], movements: [], stocktakes: [], stocktakeLines: [],
-  vehicles: [],
+  vehicles: [], attendance: [],
 };
+// Single documents in `meta` used by the Osobní screen.
+const PERSONAL_LINKS_DOC = ['meta', 'personalLinks'];
+const PRODUCTION_CALENDAR_DOC = ['meta', 'productionCalendar'];
 
 // Stable, readable order (Firestore returns documents by ID).
 // Older data uses Czech category names; getCategoryMeta maps them to the same IDs.
@@ -40,6 +44,7 @@ const SORTERS = {
   stockLevels: () => 0,
   stockUnits: (a, b) => String(a.code || '').localeCompare(String(b.code || ''), 'cs', { numeric: true }),
   stocktakeLines: byCategoryThenName,
+  attendance: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(a.from || '').localeCompare(String(b.from || '')),
   vehicles: (a, b) => (a.active === false) - (b.active === false) || (a.order || 0) - (b.order || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'cs'),
 };
 
@@ -69,6 +74,8 @@ export const InventoryProvider = ({ children }) => {
   const [migrationInfo, setMigrationInfo] = useState(null); // full marker (counts) for Settings
   const [themeMode, setThemeMode] = useState('light');
   const [syncNotice, setSyncNotice] = useState(null);
+  const [personalLinks, setPersonalLinksState] = useState({}); // { attendanceUrl, calendarUrl }
+  const [productionCalendar, setProductionCalendar] = useState(null);
 
   // Filters & Nav state
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -113,8 +120,10 @@ export const InventoryProvider = ({ children }) => {
   actorRef.current = currentUser?.name ? `${currentUser.name} (${currentUser.role || 'USER'})` : 'Neznámý uživatel';
 
   const repo = useMemo(() => createFirestoreRepo({
-    onWriteError: (err) => {
-      if (isPermissionError(err)) denyAccess();
+    onWriteError: (err, what = '') => {
+      // A refused attendance write (e.g. rules not published yet) must not lock the whole app.
+      if (isPermissionError(err) && /attendance/.test(what)) showNotice('⚠️ Docházku se nepodařilo uložit – chybí oprávnění.');
+      else if (isPermissionError(err)) denyAccess();
       else showNotice('⚠️ Změnu se nepodařilo uložit do cloudu. Zkuste to prosím znovu.');
     },
   }), [denyAccess, showNotice]);
@@ -131,6 +140,17 @@ export const InventoryProvider = ({ children }) => {
     getActor: () => actorRef.current,
   }), [repo]);
 
+  const userRef = useRef(null);
+  userRef.current = currentUser;
+  const attendanceActions = useMemo(() => createAttendanceActions({
+    repo,
+    getState: () => dataRef.current,
+    getUser: () => userRef.current,
+  }), [repo]);
+  const setPersonalLinks = useCallback((patch) => repo.commit([
+    { type: 'merge', col: PERSONAL_LINKS_DOC[0], id: PERSONAL_LINKS_DOC[1], data: patch },
+  ]), [repo]);
+
   const vehicleActions = useMemo(() => createVehicleActions({
     repo,
     getState: () => dataRef.current,
@@ -140,10 +160,12 @@ export const InventoryProvider = ({ children }) => {
   useEffect(() => {
     let unsubscribeData = () => {};
     let unsubscribeMarker = () => {};
+    let unsubscribePersonal = () => {};
 
     const startData = (user) => {
       unsubscribeData();
       unsubscribeMarker();
+      unsubscribePersonal();
       setAccessDenied(false);
 
       unsubscribeData = repo.subscribe(
@@ -163,6 +185,11 @@ export const InventoryProvider = ({ children }) => {
         (marker) => { setMigrationState(marker?.status || null); setMigrationInfo(marker); },
         (err) => { if (isPermissionError(err)) denyAccess(); });
 
+      // Osobní: shared links and the production calendar (single documents).
+      const offLinks = repo.watchDoc(PERSONAL_LINKS_DOC[0], PERSONAL_LINKS_DOC[1], (d) => setPersonalLinksState(d || {}), () => {});
+      const offCalendar = repo.watchDoc(PRODUCTION_CALENDAR_DOC[0], PRODUCTION_CALENDAR_DOC[1], (d) => setProductionCalendar(d), () => {});
+      unsubscribePersonal = () => { offLinks(); offCalendar(); };
+
       // One-time move from the legacy shared document (needs a connection).
       if (navigator.onLine) {
         migrateLegacyStore({ db, doc, getDoc, runTransaction, writeBatch }, { user: user.email || user.name })
@@ -179,8 +206,12 @@ export const InventoryProvider = ({ children }) => {
     const stopData = () => {
       unsubscribeData();
       unsubscribeMarker();
+      unsubscribePersonal();
       unsubscribeData = () => {};
       unsubscribeMarker = () => {};
+      unsubscribePersonal = () => {};
+      setPersonalLinksState({});
+      setProductionCalendar(null);
       setData(EMPTY_DATA);
       setPending({});
     };
@@ -222,7 +253,7 @@ export const InventoryProvider = ({ children }) => {
   // ── Derived state ──────────────────────────────────────────
   const {
     jobs, jobItems: allJobItems, catalog, consumables, auditLogs,
-    stockLevels, stockUnits, movements, stocktakes, stocktakeLines, vehicles,
+    stockLevels, stockUnits, movements, stocktakes, stocktakeLines, vehicles, attendance,
   } = data;
   // The chosen job; an archived one only when it was opened on purpose in this
   // session (from the archive). Otherwise the first active job, or none at all —
@@ -436,6 +467,13 @@ export const InventoryProvider = ({ children }) => {
         updateVehicle: vehicleActions.updateVehicle,
         setVehicleActive: vehicleActions.setVehicleActive,
         deleteVehicle: vehicleActions.deleteVehicle,
+        attendance,
+        saveAttendance: attendanceActions.saveEntry,
+        deleteAttendance: attendanceActions.deleteEntry,
+        fillAttendanceDays: attendanceActions.fillDays,
+        personalLinks,
+        setPersonalLinks,
+        productionCalendar,
         alerts,
         navFocus,
         setNavFocus,

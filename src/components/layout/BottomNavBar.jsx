@@ -1,6 +1,6 @@
 import React from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { LayoutDashboard, PackageCheck, Warehouse, Truck, History } from 'lucide-react';
+import { LayoutDashboard, PackageCheck, Warehouse, Truck, UserRound } from 'lucide-react';
 
 export const BottomNavBar = () => {
   const { activeTab, setActiveTab, alerts } = useInventory();
@@ -15,7 +15,8 @@ export const BottomNavBar = () => {
     { id: 'packing', label: 'Balení', icon: PackageCheck },
     { id: 'catalog', label: 'Sklad', icon: Warehouse },
     { id: 'vehicles', label: 'Auta', icon: Truck, badge: vehicleBadge, critical: vehicleCritical },
-    { id: 'history', label: 'Historie', icon: History },
+    // Historie změn moved to Nastavení.
+    { id: 'personal', label: 'Osobní', icon: UserRound },
   ];
 
   return (

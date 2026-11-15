@@ -2,7 +2,7 @@
 //
 //   jobs  jobItems  catalog  consumables  auditLogs  photos
 //   stockLevels/{catalogId}  stockUnits  movements  stocktakes  stocktakeLines
-//   vehicles
+//   vehicles  attendance (docházka; everyone writes only their own records)
 //
 // Writes are not awaited by the UI. With the persistent cache they apply locally
 // at once (listeners fire immediately), are queued while offline and are sent
@@ -20,10 +20,13 @@ import {
 export const COLLECTIONS = [
   'jobs', 'jobItems', 'catalog', 'consumables', 'auditLogs',
   'stockLevels', 'stockUnits', 'movements', 'stocktakes', 'stocktakeLines',
-  'vehicles',
+  'vehicles', 'attendance',
 ];
 export const AUDIT_LIMIT = 300;
 export const MOVEMENTS_LIMIT = 500;
+/** Attendance is loaded this many days back (current year overview + browsing a few months). */
+export const ATTENDANCE_DAYS = 400;
+const daysAgoIso = (days) => new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
 
 /** Firestore rejects `undefined`; markers become FieldValues. */
 export function toFirestoreData(obj) {
@@ -45,6 +48,7 @@ const sourceFor = (col) => {
   if (col === 'auditLogs') return query(ref, orderBy('timestamp', 'desc'), limit(AUDIT_LIMIT));
   if (col === 'movements') return query(ref, orderBy('timestamp', 'desc'), limit(MOVEMENTS_LIMIT));
   if (col === 'stocktakeLines') return query(ref, where('open', '==', true));
+  if (col === 'attendance') return query(ref, where('date', '>=', daysAgoIso(ATTENDANCE_DAYS)));
   return ref;
 };
 
@@ -84,7 +88,7 @@ export function createFirestoreRepo({ onWriteError = () => {} } = {}) {
         else if (op.type === 'update') batch.update(ref, toFirestoreData(op.data));
         else if (op.type === 'delete') batch.delete(ref);
       }
-      return guard(batch.commit(), `batch of ${ops.length}`);
+      return guard(batch.commit(), `batch of ${ops.length} (${[...new Set(ops.map((o) => o.col))].join(', ')})`);
     },
 
     /** Resolves when all queued local writes reached the server (needs a connection). */
