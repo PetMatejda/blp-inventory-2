@@ -67,11 +67,11 @@ export function createTokensHandler({ getDs, verifyIdToken, now = () => new Date
 let handler;
 export default async function mcpTokens(req, res) {
   if (!handler) {
-    const { adminDb, adminAuth, isAdminConfigured } = await import('./_lib/firestoreAdmin.js');
+    const { adminDb, verifyFirebaseIdToken, isAdminConfigured } = await import('./_lib/firestoreAdmin.js');
     if (!isAdminConfigured()) return send(res, 503, { error: 'Server nemá nastavený přístup k databázi.' });
     const { createFirestoreDataSource } = await import('./_lib/dataSource.js');
     const ds = createFirestoreDataSource(adminDb());
-    handler = createTokensHandler({ getDs: () => ds, verifyIdToken: (t) => adminAuth().verifyIdToken(t) });
+    handler = createTokensHandler({ getDs: () => ds, verifyIdToken: (t) => verifyFirebaseIdToken(t) });
   }
   return handler(req, res);
 }
