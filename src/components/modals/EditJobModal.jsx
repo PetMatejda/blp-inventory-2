@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { Edit2, X, Calendar } from 'lucide-react';
+import { VehiclePicker } from '../vehicles/VehiclePicker';
 
 export const EditJobModal = () => {
   const { editingJob, setEditingJob, updateJob } = useInventory();
@@ -11,6 +12,7 @@ export const EditJobModal = () => {
   const [gaffer, setGaffer] = useState('');
   const [riggingDate, setRiggingDate] = useState('');
   const [deriggingDate, setDeriggingDate] = useState('');
+  const [vehicleIds, setVehicleIds] = useState([]);
 
   useEffect(() => {
     if (editingJob) {
@@ -20,6 +22,7 @@ export const EditJobModal = () => {
       setGaffer(editingJob.assignedGaffer || '');
       setRiggingDate(editingJob.riggingDate || editingJob.date || new Date().toISOString().split('T')[0]);
       setDeriggingDate(editingJob.deriggingDate || new Date().toISOString().split('T')[0]);
+      setVehicleIds(editingJob.vehicleIds || []);
     }
   }, [editingJob]);
 
@@ -36,6 +39,7 @@ export const EditJobModal = () => {
       assignedGaffer: gaffer,
       riggingDate,
       deriggingDate,
+      vehicleIds,
     });
   };
 
@@ -130,6 +134,8 @@ export const EditJobModal = () => {
               />
             </div>
           </div>
+
+          <VehiclePicker value={vehicleIds} onChange={setVehicleIds} until={deriggingDate} />
 
           <div className="flex gap-2 mt-2">
             <button

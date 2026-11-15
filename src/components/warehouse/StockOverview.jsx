@@ -9,7 +9,6 @@ import { plural } from '../../domain/labels';
 import { catalogLabelPayload, resolveCode } from '../../domain/labels-qr';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { LabelPrint } from './LabelPrint';
-import { RestoreCatalogCard } from './RestoreCatalogCard';
 import {
   Search, Download, PackagePlus, PackageMinus, Wrench, Undo2, Tag, Hash, Warehouse, ChevronRight, Printer, QrCode,
 } from 'lucide-react';
@@ -170,7 +169,13 @@ export const StockOverview = () => {
     return !q || item.name.toLowerCase().includes(q);
   });
 
-  if (catalog.length === 0) return <RestoreCatalogCard />;
+  if (catalog.length === 0) {
+    return (
+      <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant">
+        <p className="text-base">Sklad je prázdný. Techniku přidáte v záložce Katalog.</p>
+      </div>
+    );
+  }
 
   if (stockLevels.length === 0) {
     return (

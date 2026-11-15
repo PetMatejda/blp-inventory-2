@@ -5,7 +5,7 @@ import { Package, AlertTriangle, CheckCircle, Search, ShoppingCart } from 'lucid
 import { RefillOrderSheet } from './RefillOrderSheet';
 
 export const ConsumableKit = () => {
-  const { consumables, restoreCatalogFromBackup } = useInventory();
+  const { consumables } = useInventory();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
 
@@ -41,9 +41,6 @@ export const ConsumableKit = () => {
       {consumables.length === 0 && (
         <div className="bg-card-bg border border-tertiary/40 rounded-2xl p-5 text-center flex flex-col items-center gap-3">
           <p className="text-base font-bold text-on-surface">Seznam spotřebního materiálu je prázdný</p>
-          <button onClick={restoreCatalogFromBackup} className="h-12 px-5 rounded-xl bg-primary text-on-primary-container font-bold">
-            Obnovit ze zálohy
-          </button>
         </div>
       )}
 

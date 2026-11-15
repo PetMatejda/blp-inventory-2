@@ -4,11 +4,10 @@ import { getCategoryMeta, getItemMeta, CATEGORIES } from '../../utils/categoryIc
 import {
   Search, Plus, Layers, Zap, Weight, Ruler, Check, Info,
   FolderOpen, ArrowRight, Edit3, Trash2, X, ChevronLeft,
-  ChevronRight, Filter, EyeOff, Eye, Package, RefreshCw
+  ChevronRight, Filter, EyeOff, Eye, Package
 } from 'lucide-react';
 import { CatalogItemDrawer } from './CatalogItemDrawer';
 import { useDialogs } from '../common/Dialogs';
-import { RestoreCatalogCard } from '../warehouse/RestoreCatalogCard';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { resolveCode } from '../../domain/labels-qr';
 import { plural } from '../../domain/labels';
@@ -184,7 +183,6 @@ export const EquipmentCatalog = () => {
     deleteCatalogItem,
     isAdmin,
     stockUnits,
-    restoreCatalogFromBackup,
   } = useInventory();
   const { confirm, toast } = useDialogs();
 
@@ -297,18 +295,6 @@ export const EquipmentCatalog = () => {
         {isAdmin() && (
           <div className="flex items-center gap-2">
           <button
-            onClick={async () => {
-              if (await confirm({
-                title: 'Doplnit chybějící katalog?',
-                message: 'Doplní položky ze zálohy původních dat (nebo z výchozího katalogu) a techniku, která je na zakázkách, ale v katalogu chybí. Existující položky se nezmění.',
-                confirmLabel: 'Doplnit',
-              })) restoreCatalogFromBackup();
-            }}
-            className="flex items-center gap-2 px-3 py-2.5 border border-outline-variant bg-card-bg text-on-surface font-semibold text-sm rounded-2xl active:scale-95"
-          >
-            <RefreshCw className="w-4 h-4" /> Doplnit
-          </button>
-          <button
             onClick={() => setDrawerItem('NEW')}
             className="flex items-center gap-2 px-3.5 py-2.5 bg-secondary text-on-secondary-container font-bold text-sm rounded-2xl shadow-md active:scale-95 transition-all"
           >
@@ -401,7 +387,10 @@ export const EquipmentCatalog = () => {
 
       {/* ── Catalog grid ── */}
       {catalog.length === 0 ? (
-        <RestoreCatalogCard />
+        <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant flex flex-col items-center gap-3">
+          <Package className="w-10 h-10 text-outline/40" />
+          <p className="text-base">Katalog techniky je prázdný. Přidejte první položku tlačítkem +.</p>
+        </div>
       ) : filteredCatalog.length === 0 ? (
         <div className="bg-card-bg border border-outline-variant rounded-2xl p-10 text-center text-outline flex flex-col items-center gap-3">
           <Package className="w-10 h-10 text-outline/40" />

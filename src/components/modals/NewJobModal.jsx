@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { Plus, X, Calendar } from 'lucide-react';
+import { VehiclePicker } from '../vehicles/VehiclePicker';
 
 export const NewJobModal = () => {
   const { isNewJobModalOpen, setIsNewJobModalOpen, createJob, currentUser } = useInventory();
@@ -11,6 +12,7 @@ export const NewJobModal = () => {
   const [gaffer, setGaffer] = useState('');
   const [riggingDate, setRiggingDate] = useState(new Date().toISOString().split('T')[0]);
   const [deriggingDate, setDeriggingDate] = useState(new Date().toISOString().split('T')[0]);
+  const [vehicleIds, setVehicleIds] = useState([]);
 
   // Fresh form each time it opens; the signed-in user is the default BLP contact.
   useEffect(() => {
@@ -22,6 +24,7 @@ export const NewJobModal = () => {
     setGaffer('');
     setRiggingDate(today);
     setDeriggingDate(today);
+    setVehicleIds([]);
   }, [isNewJobModalOpen, currentUser?.name]);
 
   if (!isNewJobModalOpen) return null;
@@ -37,7 +40,7 @@ export const NewJobModal = () => {
       assignedGaffer: gaffer,
       riggingDate,
       deriggingDate,
-      vehicleIds: ['v1'],
+      vehicleIds,
     });
   };
 
@@ -135,6 +138,8 @@ export const NewJobModal = () => {
               />
             </div>
           </div>
+
+          <VehiclePicker value={vehicleIds} onChange={setVehicleIds} until={deriggingDate} />
 
           <div className="flex gap-2 mt-2">
             <button

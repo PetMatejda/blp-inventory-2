@@ -23,6 +23,7 @@ import { EditJobModal } from './components/modals/EditJobModal';
 import { DuplicateJobModal } from './components/modals/DuplicateJobModal';
 import { ContextMenuModal } from './components/modals/ContextMenuModal';
 import { AuthModal } from './components/auth/AuthModal';
+import { VehiclesSheet } from './components/vehicles/VehiclesSheet';
 
 const ModalLayer = () => {
   const { isAuthModalOpen, setIsAuthModalOpen, currentUser } = useInventory();
@@ -39,6 +40,7 @@ const ModalLayer = () => {
       <EditJobModal />
       <DuplicateJobModal />
       <ContextMenuModal />
+      <VehiclesSheet />
       <PhotoViewer />
       <FinishJobSheet />
 

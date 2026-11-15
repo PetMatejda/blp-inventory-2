@@ -43,7 +43,7 @@ export function summarizeItems(items) {
 /** Builds the protocol HTML. Pure function — covered by tests. */
 export function buildProtocolHtml(job, items, vehicles = [], signatureGafferData = null, signatureCustodianData = null, now = new Date()) {
   const e = escapeHtml;
-  const assignedVehicles = vehicles.filter((v) => job.vehicleIds?.includes(v.id)).map((v) => v.name).join(', ') || 'Není přiřazeno';
+  const assignedVehicles = vehicles.filter((v) => job.vehicleIds?.includes(v.id)).map((v) => (v.plate ? `${v.name} (${v.plate})` : v.name)).join(', ') || 'Není přiřazeno';
   const { totalRequested, totalLoaded, damagedItems, progressPercent } = summarizeItems(items);
   const modeLabel = job.mode === 'DERIGGING' ? 'Derigging (vracení z placu)' : 'Rigging (nakládka ze skladu)';
 

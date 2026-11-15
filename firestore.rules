@@ -59,6 +59,11 @@ service cloud.firestore {
       allow read, write: if isApprovedUser();
     }
 
+    // Firemní vozidla (STK, dálniční známka).
+    match /vehicles/{id} {
+      allow read, write: if isApprovedUser();
+    }
+
     // Pohyby skladu jsou neměnná historie (stejně jako audit).
     match /movements/{id} {
       allow read, create: if isApprovedUser();

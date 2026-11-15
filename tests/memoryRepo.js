@@ -48,6 +48,7 @@ export function createMemoryRepo(seed = {}) {
     consumables: all('consumables'), auditLogs: all('auditLogs'),
     stockLevels: all('stockLevels'), stockUnits: all('stockUnits'), movements: all('movements'),
     stocktakes: all('stocktakes'), stocktakeLines: all('stocktakeLines').filter((l) => l.open),
+    vehicles: all('vehicles'),
   });
 
   return { repo, state, all, log };

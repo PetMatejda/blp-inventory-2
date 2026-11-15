@@ -113,7 +113,7 @@ export function findSameEquipment(jobItems, jobId, { catalogId, name }) {
 const randomSerial = (prefix) => `${prefix || 'EQP'}-${Math.floor(100 + Math.random() * 900)}`;
 
 /** New job item created from a catalog entry (1 piece). */
-export function newItemFromCatalog(jobId, catalogItem, vehicleId = 'v1') {
+export function newItemFromCatalog(jobId, catalogItem, vehicleId = '') {
   return {
     jobId,
     catalogId: catalogItem.id,
@@ -137,7 +137,7 @@ export function newItemFromCatalog(jobId, catalogItem, vehicleId = 'v1') {
  * Expands a bundle (set) into separate job items.
  * Returns { updates: [{ item, patch }], creates: [newItem], summary: [string] }.
  */
-export function expandBundle(jobId, bundle, jobItems, catalog, vehicleId = 'v1') {
+export function expandBundle(jobId, bundle, jobItems, catalog, vehicleId = '') {
   const updates = [];
   const creates = [];
   const summary = [];
@@ -176,7 +176,7 @@ export function expandBundle(jobId, bundle, jobItems, catalog, vehicleId = 'v1')
 
 export const adHocName = (name) => `${String(name).trim()} (Ad-Hoc)`;
 
-export function newAdHocItem(jobId, name, category, quantity, vehicleId = 'v1') {
+export function newAdHocItem(jobId, name, category, quantity, vehicleId = '') {
   return {
     jobId,
     catalogId: null,

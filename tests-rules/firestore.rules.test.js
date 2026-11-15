@@ -40,7 +40,7 @@ describe('přístup k datům', () => {
 
   it('schválený ověřený e-mail čte i zapisuje zakázky, položky, katalog, spotřebák', async () => {
     await assertSucceeds(getDoc(doc(member(), 'jobs/job-1')));
-    for (const col of ['jobs', 'jobItems', 'catalog', 'consumables']) {
+    for (const col of ['jobs', 'jobItems', 'catalog', 'consumables', 'vehicles']) {
       await assertSucceeds(setDoc(doc(member(), `${col}/new`), { name: 'x' }));
     }
   });

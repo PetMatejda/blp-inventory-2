@@ -73,7 +73,7 @@ Screen ──► InventoryContext (same API as before)
 - **Stocktake**: lines snapshot the expected warehouse count; several people count at once (scanned units via `arrayUnion`); approval applies `counted − expected` as an increment (deliveries during the count are kept) and settles pieces recorded as missing. CSV exports for stock, movements and stocktakes.
 - **Job progress** is counted in pieces.
 - **Hardware barcode readers** (`src/hooks/useBarcodeScanner.js`): USB/Bluetooth readers type fast + Enter; a burst detector turns that into a scan anywhere on the screen (not while typing in a field or with a dialog open). Packing → `scanOnJob`; Sklad › Stav → item detail; Inventura → unit counted / count dialog; Katalog → add to the selected job.
-- **Catalog repair** (`migration.restoreCatalog`): "Obnovit / Doplnit katalog" (Sklad › Katalog header, empty states, Settings › Stav dat) copies missing items from the legacy backup document or, when that has none, the built-in default catalog, and rebuilds entries for catalog ids used on jobs but missing everywhere (`catalogFromJobItems`, `restoredFromJobs: true`). Existing items are never overwritten.
+- **Catalog repair**: `migration.restoreCatalog` is kept (tested) but no longer reachable from the UI — the buttons were removed before going live.
 - **Local cache maintenance** (`src/services/cacheMaintenance.js`): Firestore uses a single-tab persistent cache (`persistentSingleTabManager`; other tabs use memory). `…/?reset-cache=1` (or Settings › "Vymazat offline data") deletes the Firestore IndexedDB cache **before** Firebase starts (`main.jsx` loads the app afterwards) — the fix for a damaged cache that hangs the page / "Out of Memory". Legacy localStorage keys of the single-document version are removed at start.
 - **Brácha refill order** (`src/domain/refill.js`, `RefillOrderSheet.jsx`): missing (and optionally 50 %) consumables as text → share / copy / e-mail; logged in history.
 - **Bundle**: camera scanner (`html5-qrcode`), PDF, QR generator and the Sklad / Brácha / Historie screens load on demand; Firebase and React are separate cached chunks.
@@ -124,9 +124,16 @@ Item cards in `ItemSwipeCard.jsx` feature a dedicated 12px left accent bar with 
 
 Catalog items may carry an `icon` (equipment type: balloon shapes, LED panel / net, ballast, cable, fan…; list in `ITEM_ICONS`, `src/utils/categoryIcons.jsx`). `getItemMeta(item)` returns the category label/colour with that icon; without one the category icon is used. Job items copy the icon from the catalog.
 
+### Vehicles (Vozidla)
+
+- Collection `vehicles`: `name`, `plate` (unique, upper case), `model`, `color`, `transmission`, `fuel`, `stkDue` (`YYYY-MM` = until the end of that month, or `YYYY-MM-DD`), `vignetteDue` (`YYYY-MM-DD`), `note`, `active` (retired = hidden from pickers, kept on old jobs), `order`.
+- Rules in `src/domain/vehicles.js` (pure, tested): STK warns 60 days ahead, vignette 30, red within 7 days and after expiry; a deadline that runs out before the job's derigging date is a warning in the job form.
+- UI: Settings › Vozidla (`VehiclesSheet`, add / edit / retire / delete when unused), dashboard strip (`VehicleAlertsBanner`, only when something is due), `VehiclePicker` in New / Edit job, vehicles on the job card and in the handover protocol (name + plate). Actions with audit: `src/services/vehicleActions.js`.
+- Seed of the fleet from the whiteboard: `scripts/seed-vehicles.mjs`.
+
 ### ZapSklad import
 
-`scripts/zapsklad/`: `read_xlsx.py` (Excel export → JSON) → `build-plan.mjs` (merges names into models, category, icon, SERIAL/QUANTITY, labelled units with the old inventory number as code) → `upload.mjs` (admin write via `gcloud auth print-access-token`). IDs are deterministic (`zs-…`), so a fresh export re-imports over the same records. The built-in demo catalog is no longer used by "Obnovit katalog".
+`scripts/zapsklad/`: `read_xlsx.py` (Excel export → JSON) → `build-plan.mjs` (merges names into models, category, icon, SERIAL/QUANTITY, labelled units with the old inventory number as code) → `upload.mjs` (admin write via `gcloud auth print-access-token`). IDs are deterministic (`zs-…`), so a fresh export re-imports over the same records. The "Obnovit / Doplnit katalog" buttons were removed (the demo catalog must never reach production data).
 
 Component `src/components/common/ItemThumbnail.jsx` renders image previews. If an image fails to load (404, CORS, offline), it automatically renders a styled category icon card (e.g. Light bulb for Lights, Tripod for Grip, Cable plug for Cables). Photos taken in the app (`photo:<id>`) are resolved through `usePhotoSrc()`.
 

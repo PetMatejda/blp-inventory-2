@@ -177,7 +177,7 @@ export function createInventoryActions({ repo, getState, getActor }) {
         blpResponsible: jobData.blpResponsible || '',
         riggingDate: jobData.riggingDate || today(),
         deriggingDate: jobData.deriggingDate || today(),
-        vehicleIds: jobData.vehicleIds || ['v1'],
+        vehicleIds: jobData.vehicleIds || [],
         status: 'ACTIVE',
         mode: 'LOADING',
       });
@@ -258,7 +258,7 @@ export function createInventoryActions({ repo, getState, getActor }) {
         blpResponsible: newJobData.blpResponsible ?? source.blpResponsible ?? '',
         riggingDate: newJobData.riggingDate || today(),
         deriggingDate: newJobData.deriggingDate || today(),
-        vehicleIds: source.vehicleIds || ['v1'],
+        vehicleIds: newJobData.vehicleIds || source.vehicleIds || [],
         status: 'ACTIVE',
         mode: 'LOADING',
       });

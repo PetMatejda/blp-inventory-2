@@ -2,6 +2,7 @@
 //
 //   jobs  jobItems  catalog  consumables  auditLogs  photos
 //   stockLevels/{catalogId}  stockUnits  movements  stocktakes  stocktakeLines
+//   vehicles
 //
 // Writes are not awaited by the UI. With the persistent cache they apply locally
 // at once (listeners fire immediately), are queued while offline and are sent
@@ -19,6 +20,7 @@ import {
 export const COLLECTIONS = [
   'jobs', 'jobItems', 'catalog', 'consumables', 'auditLogs',
   'stockLevels', 'stockUnits', 'movements', 'stocktakes', 'stocktakeLines',
+  'vehicles',
 ];
 export const AUDIT_LIMIT = 300;
 export const MOVEMENTS_LIMIT = 500;

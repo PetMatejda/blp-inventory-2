@@ -3,10 +3,10 @@ import { firebaseAuth } from '../services/firebaseAuth';
 import { createFirestoreRepo } from '../services/inventoryRepo';
 import { createInventoryActions } from '../services/inventoryActions';
 import { createStockActions } from '../services/stockActions';
+import { createVehicleActions } from '../services/vehicleActions';
 import { availability } from '../domain/stock';
-import { migrateLegacyStore, restoreCatalog, MIGRATION_DOC } from '../services/migration';
+import { migrateLegacyStore, MIGRATION_DOC } from '../services/migration';
 import { db, doc, getDoc, runTransaction, writeBatch } from '../services/firebase';
-import { INITIAL_VEHICLES } from '../mockData/initialData';
 import { CATEGORIES, getCategoryMeta } from '../utils/categoryIcons';
 
 const InventoryContext = createContext();
@@ -15,6 +15,7 @@ const CURRENT_JOB_KEY = 'blp_current_job_id_v2';
 const EMPTY_DATA = {
   jobs: [], jobItems: [], catalog: [], consumables: [], auditLogs: [],
   stockLevels: [], stockUnits: [], movements: [], stocktakes: [], stocktakeLines: [],
+  vehicles: [],
 };
 
 // Stable, readable order (Firestore returns documents by ID).
@@ -37,6 +38,7 @@ const SORTERS = {
   stockLevels: () => 0,
   stockUnits: (a, b) => String(a.code || '').localeCompare(String(b.code || ''), 'cs', { numeric: true }),
   stocktakeLines: byCategoryThenName,
+  vehicles: (a, b) => (a.active === false) - (b.active === false) || (a.order || 0) - (b.order || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'cs'),
 };
 
 const CORE_COLLECTIONS = ['jobs', 'jobItems', 'catalog'];
@@ -79,6 +81,7 @@ export const InventoryProvider = ({ children }) => {
   const [damageReportItem, setDamageReportItem] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isVehiclesOpen, setIsVehiclesOpen] = useState(false);
   const [isProtocolModalOpen, setIsProtocolModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
   const [templateJob, setTemplateJob] = useState(null);
@@ -120,6 +123,12 @@ export const InventoryProvider = ({ children }) => {
   }), [repo]);
 
   const stock = useMemo(() => createStockActions({
+    repo,
+    getState: () => dataRef.current,
+    getActor: () => actorRef.current,
+  }), [repo]);
+
+  const vehicleActions = useMemo(() => createVehicleActions({
     repo,
     getState: () => dataRef.current,
     getActor: () => actorRef.current,
@@ -208,7 +217,7 @@ export const InventoryProvider = ({ children }) => {
   // ── Derived state ──────────────────────────────────────────
   const {
     jobs, jobItems: allJobItems, catalog, consumables, auditLogs,
-    stockLevels, stockUnits, movements, stocktakes, stocktakeLines,
+    stockLevels, stockUnits, movements, stocktakes, stocktakeLines, vehicles,
   } = data;
   // The chosen job; an archived one only when it was opened on purpose in this
   // session (from the archive). Otherwise the first active job, or none at all —
@@ -375,29 +384,6 @@ export const InventoryProvider = ({ children }) => {
   const deleteCatalogItem = (catalogId) => actions.deleteCatalogItem(catalogId);
   const updateConsumableState = (consumableId, newState) => actions.updateConsumableState(consumableId, newState);
 
-  /**
-   * Fills a missing catalog from the legacy backup. The built-in demo catalog is
-   * never used any more: the live catalog is the real warehouse (ZapSklad import).
-   */
-  const restoreCatalogFromBackup = async () => {
-    if (!navigator.onLine) { showNotice('📴 Obnova katalogu potřebuje připojení.'); return null; }
-    try {
-      const fs = { db, doc, getDoc, writeBatch };
-      const res = await restoreCatalog(fs, { existingIds: catalog.map((c) => c.id), defaults: [], jobItems: allJobItems });
-      // Brácha (consumables) may be missing for the same reason — restore only when empty.
-      if (consumables.length === 0) {
-        await restoreCatalog(fs, { collection: 'consumables', existingIds: [], defaults: [] });
-      }
-      showNotice(res.count
-        ? `✅ Doplněno ${res.count} položek katalogu (${res.source === 'legacy' ? 'ze zálohy' : 'z výchozího katalogu'}${res.fromJobs ? `, ${res.fromJobs} podle zakázek` : ''}).`
-        : 'Katalog je úplný, nebylo co obnovit.', 6000);
-      return res;
-    } catch (err) {
-      console.error('[Context] restoreCatalog', err);
-      showNotice(isPermissionError(err) ? '🔒 Na obnovu katalogu nemáte oprávnění.' : '⚠️ Katalog se nepodařilo obnovit.');
-      return null;
-    }
-  };
 
   /** Waits until every local change is on the server. */
   const forceSyncAll = async () => {
@@ -426,7 +412,13 @@ export const InventoryProvider = ({ children }) => {
         jobItems,
         allJobItems,
         authLoading,
-        vehicles: INITIAL_VEHICLES,
+        vehicles,
+        createVehicle: vehicleActions.createVehicle,
+        updateVehicle: vehicleActions.updateVehicle,
+        setVehicleActive: vehicleActions.setVehicleActive,
+        deleteVehicle: vehicleActions.deleteVehicle,
+        isVehiclesOpen,
+        setIsVehiclesOpen,
         consumables,
         auditLogs,
         catalog,
@@ -442,7 +434,6 @@ export const InventoryProvider = ({ children }) => {
         hasPendingWrites,
         migrationState,
         migrationInfo,
-        restoreCatalogFromBackup,
         logAudit: actions.audit,
         themeMode,
         setThemeMode,

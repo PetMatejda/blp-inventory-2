@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
+import { VehicleAlertsBanner } from '../vehicles/VehicleBadges';
 import { useLongPress } from '../../hooks/useLongPress';
 import { phaseOf, phaseSummary } from '../../domain/labels';
 import { Plus, FolderOpen, Calendar, User, AlertTriangle, Lock, MoreVertical, Package, Truck, ChevronRight, Warehouse } from 'lucide-react';
@@ -11,7 +12,8 @@ const formatDate = (iso) => {
 };
 
 const JobCardItem = ({ job, isSelected }) => {
-  const { allJobItems, setCurrentJobId, setActiveTab, setContextMenu } = useInventory();
+  const { allJobItems, setCurrentJobId, setActiveTab, setContextMenu, vehicles } = useInventory();
+  const jobVehicles = vehicles.filter((v) => job.vehicleIds?.includes(v.id));
 
   const items = allJobItems.filter((i) => i.jobId === job.id);
   const isArchived = job.status === 'ARCHIVED';
@@ -60,6 +62,7 @@ const JobCardItem = ({ job, isSelected }) => {
           <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {formatDate(job.riggingDate || job.date)} – {formatDate(job.deriggingDate || job.date)}</span>
           {job.assignedGaffer && <span className="flex items-center gap-1.5"><User className="w-4 h-4" /> {job.assignedGaffer}</span>}
           {job.blpResponsible && <span className="flex items-center gap-1.5"><User className="w-4 h-4 text-primary" /> BLP: {job.blpResponsible}</span>}
+          {jobVehicles.length > 0 && <span className="flex items-center gap-1.5"><Truck className="w-4 h-4" /> {jobVehicles.map((v) => v.name).join(', ')}</span>}
         </div>
 
         <div className="flex flex-col gap-1.5 bg-surface-container p-3 rounded-xl border border-outline-variant">
@@ -123,6 +126,8 @@ export const JobDashboard = () => {
           <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Nová</span>
         </button>
       </div>
+
+      <VehicleAlertsBanner />
 
       <div className="flex flex-col gap-4">
         {filteredJobs.length === 0 ? (
