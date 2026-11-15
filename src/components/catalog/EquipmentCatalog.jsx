@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { getCategoryMeta, CATEGORIES } from '../../utils/categoryIcons';
-import { ItemThumbnail } from '../common/ItemThumbnail';
 import {
   Search, Plus, Layers, Zap, Weight, Check, Info,
   FolderOpen, ArrowRight, Edit3, Trash2, X, ChevronLeft,
@@ -27,29 +26,30 @@ const CatalogCard = ({ item, isAlreadyInJob, currentJob, onAdd, onEdit, onDelete
     <div className={`bg-card-bg rounded-2xl overflow-hidden border flex flex-col shadow-sm transition-all hover:shadow-md ${
       isAlreadyInJob ? 'border-secondary/40' : 'border-outline-variant'
     }`}>
-      {/* Category icon (catalog items have no photos) */}
-      <div className="relative h-24 bg-surface-container-lowest flex items-center justify-center overflow-hidden">
-        {item.isBundle && (
-          <span className="absolute top-2.5 left-2.5 bg-primary-container text-on-primary-container px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold z-10 border border-primary/40 flex items-center gap-1">
-            <Layers className="w-3 h-3" /> SET
-          </span>
-        )}
-        {isAlreadyInJob && (
-          <span className="absolute top-2.5 right-2.5 bg-secondary-container/80 text-on-secondary-container px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold z-10 border border-secondary/50 flex items-center gap-1 backdrop-blur-sm">
-            <Check className="w-3 h-3 text-secondary" /> V zakázce
-          </span>
-        )}
-        <ItemThumbnail name={item.name} category={item.category} className="w-full h-full" />
-      </div>
-
-      {/* Content */}
+      {/* Content (catalog items have no photos — the category icon is enough) */}
       <div className="p-3.5 flex flex-col flex-grow gap-2.5">
         {/* Name + category */}
-        <div className="flex items-start gap-2">
-          <span className={`mt-0.5 p-1.5 rounded-lg border shrink-0 ${catMeta.color}`}>
-            <CatIcon className="w-3.5 h-3.5" />
+        <div className="flex items-start gap-2.5">
+          <span className={`p-2 rounded-xl border shrink-0 ${catMeta.color}`} title={catMeta.label}>
+            <CatIcon className="w-5 h-5" />
           </span>
-          <h3 className="font-bold text-sm text-on-surface leading-snug">{item.name}</h3>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold text-sm text-on-surface leading-snug break-words">{item.name}</h3>
+            {(item.isBundle || isAlreadyInJob) && (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {item.isBundle && (
+                  <span className="bg-primary-container text-on-primary-container px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold border border-primary/40 flex items-center gap-1">
+                    <Layers className="w-3 h-3" /> SET
+                  </span>
+                )}
+                {isAlreadyInJob && (
+                  <span className="bg-secondary-container/80 text-on-secondary-container px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold border border-secondary/50 flex items-center gap-1">
+                    <Check className="w-3 h-3 text-secondary" /> V zakázce
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Specs row */}
