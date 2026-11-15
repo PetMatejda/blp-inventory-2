@@ -3,11 +3,12 @@ import { useInventory } from '../../context/InventoryContext';
 import { getCategoryMeta, getItemMeta, CATEGORIES } from '../../utils/categoryIcons';
 import {
   Search, Plus, Layers, Check, FolderOpen, ArrowRight, Edit3, Trash2, X,
-  EyeOff, Eye, Package, MoreVertical,
+  EyeOff, Eye, Package, MoreVertical, QrCode,
 } from 'lucide-react';
 import { CatalogItemDrawer } from './CatalogItemDrawer';
 import { useDialogs, Sheet, SheetAction } from '../common/Dialogs';
 import { SheetButtons } from '../common/FormField';
+import { ScannerScreen } from '../common/ScannerScreen';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { resolveCode } from '../../domain/labels-qr';
 import { plural } from '../../domain/labels';
@@ -120,6 +121,7 @@ export const EquipmentCatalog = () => {
   const [activeBundleModal, setActiveBundleModal] = useState(null);
   const [drawerItem, setDrawerItem] = useState(null);   // null | 'NEW' | catalogItem
   const [menuItem, setMenuItem] = useState(null); // admin actions (⋮) for one item
+  const [scanning, setScanning] = useState(false);
 
   const scrollRef = useRef(null);
 
@@ -149,14 +151,41 @@ export const EquipmentCatalog = () => {
     toast({ text: `Přidáno: ${item.name}`, actionLabel: 'Zobrazit', onAction: () => setActiveTab('packing') });
   };
 
+  const itemByCode = (code) => {
+    const r = resolveCode(code, { jobItems: [], catalog, units: stockUnits });
+    return r.kind === 'UNIT' ? catalog.find((c) => c.id === r.unit.catalogId) : r.kind === 'CATALOG' ? r.catalogItem : null;
+  };
+  /** Show just the scanned item in the list (clears the other filters so it cannot stay hidden). */
+  const showItem = (item) => { setSelectedCategory('ALL'); setHideAlreadyAdded(false); setSearchQuery(item.name); };
+
   // Hardware barcode reader: scanning a label / EAN adds the item to the selected job.
   useBarcodeScanner((code) => {
-    const r = resolveCode(code, { jobItems: [], catalog, units: stockUnits });
-    const item = r.kind === 'UNIT' ? catalog.find((c) => c.id === r.unit.catalogId) : r.kind === 'CATALOG' ? r.catalogItem : null;
+    const item = itemByCode(code);
     if (!item) { toast({ text: `✗ Neznámý kód ${code}` }); return; }
-    if (!currentJob || currentJob.status === 'ARCHIVED') { setSearchQuery(item.name); return; }
+    if (!currentJob || currentJob.status === 'ARCHIVED') { showItem(item); return; }
     handleAdd(item);
-  }, { enabled: !drawerItem });
+  }, { enabled: !drawerItem && !scanning });
+
+  // Camera scanner (button next to the search field): find the item, then choose what to do with it.
+  const onCameraCode = (code) => {
+    const item = itemByCode(code);
+    if (!item) return { type: 'error', text: 'Neznámý kód', detail: code };
+    const canAdd = currentJob?.status === 'ACTIVE';
+    return {
+      type: 'ask',
+      text: item.name,
+      detail: canAdd ? `Přidat do zakázky ${currentJob.name}?` : 'Není vybraná aktivní zakázka.',
+      actions: [
+        ...(canAdd ? [{
+          label: 'Přidat do zakázky (+1 ks)',
+          icon: Plus,
+          keepOpen: true,
+          onClick: () => { addCatalogItemToJob(item); return { type: 'success', text: `Přidáno: ${item.name}`, detail: currentJob.name }; },
+        }] : []),
+        { label: 'Najít v katalogu', icon: Search, onClick: () => showItem(item) },
+      ],
+    };
+  };
 
   const handleDelete = async (itemId, itemName) => {
     if (await confirm({
@@ -208,7 +237,7 @@ export const EquipmentCatalog = () => {
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`Hledat v katalogu (${catalog.length})`}
+            placeholder="Hledat nebo načíst kód…"
             enterKeyHint="search"
             autoComplete="off"
             className="w-full h-12 pl-10 pr-11 bg-card-bg border border-outline-variant rounded-xl text-on-surface text-base focus:border-primary focus:outline-none placeholder:text-outline"
@@ -219,6 +248,10 @@ export const EquipmentCatalog = () => {
             </button>
           )}
         </div>
+        <button onClick={() => setScanning(true)} aria-label="Najít položku načtením kódu"
+          className="w-12 h-12 rounded-xl border border-outline-variant bg-card-bg flex items-center justify-center shrink-0 active:scale-90">
+          <QrCode className="w-6 h-6 text-secondary" />
+        </button>
         <button
           onClick={() => setHideAlreadyAdded(!hideAlreadyAdded)}
           aria-pressed={hideAlreadyAdded}
@@ -305,6 +338,15 @@ export const EquipmentCatalog = () => {
           <SheetAction icon={Edit3} label="Upravit položku" onClick={() => { setDrawerItem(menuItem); setMenuItem(null); }} />
           <SheetAction icon={Trash2} label="Smazat z katalogu" danger onClick={() => { const it = menuItem; setMenuItem(null); handleDelete(it.id, it.name); }} />
         </Sheet>
+      )}
+
+      {scanning && (
+        <ScannerScreen
+          title="Skener · katalog"
+          subtitle={activeJob ? `Zakázka: ${activeJob.name}` : 'Bez zakázky – jen hledání'}
+          onClose={() => setScanning(false)}
+          onCode={onCameraCode}
+        />
       )}
 
       {/* ── Bundle sheet ── */}

@@ -182,10 +182,15 @@ export const StocktakeView = () => {
     return true;
   });
 
-  const onCode = (code) => {
+  // viaCamera: the full-screen scanner shows the result itself (no toast on top of it).
+  const onCode = (code, viaCamera = false) => {
     const r = stock.scanUnitCode(open.id, code);
-    toast({ text: r.ok ? (r.duplicate ? `Už započítáno: ${r.message}` : `✓ ${r.message}`) : `✗ ${r.message}` });
-    if (navigator.vibrate && !r.ok) navigator.vibrate([80, 60, 80]);
+    if (!viaCamera) {
+      toast({ text: r.ok ? (r.duplicate ? `Už započítáno: ${r.message}` : `✓ ${r.message}`) : `✗ ${r.message}` });
+      if (navigator.vibrate && !r.ok) navigator.vibrate([80, 60, 80]);
+    }
+    if (!r.ok) return { type: 'error', text: r.message, detail: code };
+    return { type: r.duplicate ? 'ask' : 'success', text: r.duplicate ? `Už započítáno: ${r.message}` : r.message, detail: code };
   };
 
   return (
@@ -201,7 +206,7 @@ export const StocktakeView = () => {
         <p className="text-xs text-on-surface-variant">Zahájil {open.startedBy} · {fmt(open.startedAt)}</p>
       </div>
 
-      <CodeInput placeholder="Naskenujte štítek kusu (světla, balasty)" onCode={onCode} autoFocus={false} />
+      <CodeInput placeholder="Naskenujte štítek kusu (světla, balasty)" onCode={onCode} autoFocus={false} scannerTitle="Skener · inventura" />
 
       <div className="flex gap-2 items-center">
         <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat položku…"

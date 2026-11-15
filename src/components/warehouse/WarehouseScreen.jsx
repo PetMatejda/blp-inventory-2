@@ -84,11 +84,6 @@ export const WarehouseScreen = () => {
             </button>
           ))}
         </div>
-        {!['movements', 'bracha'].includes(tab) && (
-          <p className="text-xs text-on-surface-variant mt-1.5 text-center">
-            Čtečka kódů: stačí naskenovat štítek nebo EAN — {tab === 'stock' ? 'otevře detail' : tab === 'stocktake' ? 'započítá kus / otevře počet' : 'přidá do zakázky'}
-          </p>
-        )}
       </div>
       {tab === 'catalog' ? <EquipmentCatalog /> : tab === 'bracha' ? <ConsumableKit /> : (
         <div className="px-4 pt-4">

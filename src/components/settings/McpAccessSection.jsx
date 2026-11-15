@@ -25,11 +25,11 @@ async function api(method, path = '', body) {
 
 const CopyRow = ({ label, value, onCopy }) => (
   <div className="flex flex-col gap-1">
-    <span className="text-xs text-outline">{label}</span>
+    <span className="text-sm text-on-surface-variant">{label}</span>
     <div className="flex gap-2 items-start">
-      <code className="flex-1 min-w-0 break-all text-xs bg-card-bg border border-outline-variant rounded-lg p-2 text-on-surface">{value}</code>
-      <button type="button" onClick={() => onCopy(value)} className="h-9 w-9 shrink-0 rounded-lg border border-outline-variant flex items-center justify-center text-on-surface" aria-label={`Zkopírovat: ${label}`}>
-        <Copy className="w-4 h-4" />
+      <code className="flex-1 min-w-0 break-all text-sm bg-card-bg border border-outline-variant rounded-lg p-2 text-on-surface">{value}</code>
+      <button type="button" onClick={() => onCopy(value)} className="h-11 w-11 shrink-0 rounded-xl border border-outline-variant flex items-center justify-center text-on-surface active:scale-90" aria-label={`Zkopírovat: ${label}`}>
+        <Copy className="w-5 h-5" />
       </button>
     </div>
   </div>
@@ -77,11 +77,11 @@ export const McpAccessSection = () => {
 
   return (
     <details className="bg-surface-container p-3 rounded-xl border border-outline-variant text-sm">
-      <summary className="font-semibold text-on-surface cursor-pointer flex items-center gap-1.5">
+      <summary className="font-semibold text-on-surface cursor-pointer flex items-center gap-1.5 py-1">
         <Bot className="w-4 h-4 text-primary" /> Přístup pro AI (MCP)
       </summary>
       <div className="mt-3 flex flex-col gap-3">
-        <p className="text-xs text-on-surface-variant">
+        <p className="text-sm text-on-surface-variant">
           Osobní token propojí Claude (Cowork, claude.ai, Claude Code) nebo Antigravity s BLP Inventory.
           Změny přes AI se zapisují pod vaším jménem. Token „jen čtení“ nic nezmění; „čtení i zápis“ umí
           zakládat zakázky a plánovat položky (vždy s náhledem a potvrzením).
@@ -89,11 +89,11 @@ export const McpAccessSection = () => {
 
         {created && (
           <div className="flex flex-col gap-2 p-3 rounded-xl border border-primary bg-primary-container/20">
-            <p className="text-xs font-bold text-on-surface flex items-center gap-1.5"><KeyRound className="w-4 h-4" /> Token „{created.record.label}“ ({SCOPE_LABEL[created.record.scope]}) – zobrazí se jen teď</p>
+            <p className="text-sm font-bold text-on-surface flex items-center gap-1.5"><KeyRound className="w-4 h-4" /> Token „{created.record.label}“ ({SCOPE_LABEL[created.record.scope]}) – zobrazí se jen teď</p>
             <CopyRow label="Token" value={created.token} onCopy={copy} />
             <CopyRow label="Claude Cowork / claude.ai – URL vlastního konektoru (bez hlaviček)" value={`${mcpUrl}?key=${created.token}`} onCopy={copy} />
             <CopyRow label="Claude Code – příkaz do terminálu" value={`claude mcp add --scope user --transport http blp-inventory ${mcpUrl} --header "Authorization: Bearer ${created.token}"`} onCopy={copy} />
-            <button type="button" onClick={() => setCreated(null)} className="h-10 rounded-xl border border-outline-variant text-on-surface font-semibold">Mám uloženo, skrýt</button>
+            <button type="button" onClick={() => setCreated(null)} className="h-12 rounded-xl border border-outline-variant text-on-surface text-base font-semibold">Mám uloženo, skrýt</button>
           </div>
         )}
 
@@ -101,43 +101,45 @@ export const McpAccessSection = () => {
           <input
             value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60}
             placeholder="Název, např. Claude Cowork – notebook"
-            className="h-11 px-3 rounded-xl border border-outline-variant bg-card-bg text-on-surface"
+            aria-label="Název tokenu"
+            autoComplete="off"
+            className="h-12 px-3 rounded-xl border border-outline-variant bg-card-bg text-base text-on-surface placeholder:text-outline focus:border-primary focus:outline-none"
           />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Oprávnění tokenu">
             {['read', 'write'].map((s) => (
-              <button key={s} type="button" onClick={() => setScope(s)}
-                className={`h-11 rounded-xl border text-xs font-bold ${scope === s ? 'bg-primary-container text-on-primary-container border-primary' : 'bg-card-bg text-outline border-outline-variant'}`}>
+              <button key={s} type="button" role="radio" aria-checked={scope === s} onClick={() => setScope(s)}
+                className={`h-12 rounded-xl border text-base font-semibold ${scope === s ? 'bg-primary-container text-on-primary-container border-primary' : 'bg-card-bg text-on-surface-variant border-outline-variant'}`}>
                 {s === 'read' ? 'Jen čtení' : 'Čtení i zápis'}
               </button>
             ))}
           </div>
           <button type="button" onClick={create} disabled={busy}
-            className="h-11 rounded-xl bg-primary text-on-primary font-bold disabled:opacity-50">
+            className="h-12 rounded-xl bg-primary text-on-primary text-base font-bold disabled:opacity-50 active:scale-[0.98]">
             {busy ? 'Pracuji…' : 'Vytvořit token'}
           </button>
         </div>
 
-        {error && <p className="text-xs text-error">{error}</p>}
+        {error && <p role="alert" className="text-sm font-semibold text-error">{error}</p>}
 
         <div className="flex items-center justify-between">
-          <span className="text-xs font-mono text-outline uppercase font-bold">Moje tokeny</span>
-          <button type="button" onClick={load} className="h-8 w-8 rounded-lg flex items-center justify-center text-outline" aria-label="Obnovit seznam"><RefreshCw className="w-4 h-4" /></button>
+          <span className="text-sm font-semibold text-on-surface-variant">Moje tokeny</span>
+          <button type="button" onClick={load} className="h-11 w-11 -mr-2 rounded-xl flex items-center justify-center text-on-surface-variant active:scale-90" aria-label="Obnovit seznam"><RefreshCw className="w-5 h-5" /></button>
         </div>
-        {tokens === null ? <p className="text-xs text-outline">Načítám…</p>
-          : tokens.length === 0 ? <p className="text-xs text-outline">Zatím žádný token.</p>
+        {tokens === null ? <p className="text-sm text-on-surface-variant">Načítám…</p>
+          : tokens.length === 0 ? <p className="text-sm text-on-surface-variant">Zatím žádný token.</p>
             : (
               <ul className="flex flex-col gap-2">
                 {tokens.map((t) => (
-                  <li key={t.id} className={`flex items-center gap-2 p-2 rounded-lg border border-outline-variant ${t.revoked ? 'opacity-50' : ''}`}>
+                  <li key={t.id} className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-outline-variant ${t.revoked ? 'opacity-50' : ''}`}>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-on-surface truncate">{t.label}</p>
-                      <p className="text-xs text-outline">
+                      <p className="text-sm text-on-surface-variant">
                         {SCOPE_LABEL[t.scope] || t.scope} · vytvořen {fmt(t.createdAt)} · použit {fmt(t.lastUsedAt)}{t.revoked ? ' · zrušen' : ''}
                       </p>
                     </div>
                     {!t.revoked && (
-                      <button type="button" onClick={() => revoke(t)} disabled={busy} className="h-9 w-9 shrink-0 rounded-lg border border-error/40 text-error flex items-center justify-center" aria-label={`Zrušit token ${t.label}`}>
-                        <Trash2 className="w-4 h-4" />
+                      <button type="button" onClick={() => revoke(t)} disabled={busy} className="h-11 w-11 shrink-0 rounded-xl border border-error/40 text-error flex items-center justify-center active:scale-90" aria-label={`Zrušit token ${t.label}`}>
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     )}
                   </li>

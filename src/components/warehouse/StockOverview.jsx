@@ -1,16 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { Sheet, SheetAction, useDialogs } from '../common/Dialogs';
-import { CodeInput, downloadText } from '../common/CodeInput';
+import { CodeInput } from '../common/CodeInput';
+import { ScannerScreen } from '../common/ScannerScreen';
 import { ItemThumbnail } from '../common/ItemThumbnail';
 import { CATEGORIES, getCategoryMeta } from '../../utils/categoryIcons';
-import { levelOf, ownedCount, trackingOf, toCsv } from '../../domain/stock';
+import { levelOf, trackingOf } from '../../domain/stock';
 import { plural } from '../../domain/labels';
 import { catalogLabelPayload, resolveCode } from '../../domain/labels-qr';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { LabelPrint } from './LabelPrint';
 import {
-  Search, Download, PackagePlus, PackageMinus, Wrench, Undo2, Tag, Hash, Warehouse, ChevronRight, Printer, QrCode,
+  Search, PackagePlus, PackageMinus, Wrench, Undo2, Tag, Hash, Warehouse, ChevronRight, Printer, QrCode,
 } from 'lucide-react';
 
 const UNIT_STATUS = { IN_STOCK: 'Ve skladu', IN_SERVICE: 'V servisu', MISSING: 'Chybí', RETIRED: 'Vyřazen' };
@@ -53,9 +54,10 @@ const StockItemSheet = ({ item, onClose }) => {
         )}
         {addingUnit && (
           <div className="rounded-xl border border-outline-variant p-3 flex flex-col gap-2">
-            <CodeInput placeholder="Kód / SN nového kusu" onCode={(code) => {
+            <CodeInput placeholder="Kód / SN nového kusu" scannerTitle="Skener · nový kus" onCode={(code, viaCamera) => {
               const err = stock.addUnit(item.id, code);
-              toast({ text: err || `Přijat kus ${code}` });
+              if (!viaCamera) toast({ text: err || `Přijat kus ${code}` });
+              return err ? { type: 'error', text: err, detail: code } : { type: 'success', text: `Přijat kus ${code}`, detail: item.name };
             }} />
           </div>
         )}
@@ -149,7 +151,7 @@ export const StockOverview = () => {
   const [category, setCategory] = useState('ALL');
   const [onlyProblems, setOnlyProblems] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [bulkLabels, setBulkLabels] = useState(null);
+  const [scanning, setScanning] = useState(false);
 
   // Opened from an alert (missing / in service): show that item's detail.
   useEffect(() => {
@@ -159,12 +161,19 @@ export const StockOverview = () => {
     setNavFocus(null);
   }, [navFocus, catalog, setNavFocus]);
 
-  // Hardware barcode reader: scanning a label / EAN opens the item detail.
-  useBarcodeScanner((code) => {
+  // A scanned label / EAN (hardware reader anywhere on the screen, or the camera
+  // button next to the search field) opens the item detail.
+  const findByCode = (code) => {
     const r = resolveCode(code, { jobItems: [], catalog, units: stockUnits });
     const item = r.kind === 'UNIT' ? catalog.find((c) => c.id === r.unit.catalogId) : r.kind === 'CATALOG' ? r.catalogItem : null;
-    if (item) { setSelected(item); if (r.kind === 'UNIT') toast({ text: `Kus ${r.unit.code}` }); } else toast({ text: `✗ Neznámý kód ${code}` });
-  }, { enabled: catalog.length > 0 && !selected });
+    if (!item) return null;
+    setSelected(item);
+    if (r.kind === 'UNIT') toast({ text: `Kus ${r.unit.code}` });
+    return item;
+  };
+  useBarcodeScanner((code) => {
+    if (!findByCode(code)) toast({ text: `✗ Neznámý kód ${code}` });
+  }, { enabled: catalog.length > 0 && !selected && !scanning });
 
   const rows = useMemo(() => catalog
     .filter((c) => !c.isBundle)
@@ -208,34 +217,6 @@ export const StockOverview = () => {
     );
   }
 
-  const exportCsv = () => {
-    const csv = toCsv(rows, [
-      { label: 'Položka', value: (r) => r.item.name },
-      { label: 'Kategorie', value: (r) => getCategoryMeta(r.item.category).label },
-      { label: 'Evidence', value: (r) => (r.tracking === 'SERIAL' ? 'po kusech' : 'počtem') },
-      { label: 'Ve skladu', value: (r) => r.level.inStock },
-      { label: 'Na zakázkách', value: (r) => r.level.onJob },
-      { label: 'V servisu', value: (r) => r.level.inService },
-      { label: 'Chybí', value: (r) => r.level.missing },
-      { label: 'Celkem (bez chybějících)', value: (r) => ownedCount(r.level) },
-    ]);
-    downloadText(`BLP_stav_skladu_${new Date().toISOString().slice(0, 10)}.csv`, csv);
-  };
-
-  // Bulk print: every labelled unit (not retired) of the visible items + one label per item tracked by count.
-  const printVisible = async () => {
-    const labels = visible.flatMap(({ item, tracking }) => (tracking === 'SERIAL'
-      ? stockUnits.filter((u) => u.catalogId === item.id && u.status !== 'RETIRED').map((u) => unitLabel(u, item))
-      : [itemLabel(item)]));
-    if (!labels.length) { toast({ text: 'Žádné štítky k tisku' }); return; }
-    const sheets = Math.ceil(labels.length / 24);
-    if (await confirm({
-      title: `Tisknout ${labels.length} štítků?`,
-      message: `${sheets} ${plural(sheets, 'arch', 'archy', 'archů')} A4 (3 × 8 štítků 70 × 37 mm). Kusy bez štítku nejdřív označte v detailu položky.`,
-      confirmLabel: 'Tisknout',
-    })) setBulkLabels(labels);
-  };
-
   const totals = rows.reduce((t, r) => ({ inStock: t.inStock + r.level.inStock, onJob: t.onJob + r.level.onJob, problems: t.problems + (r.level.missing || r.level.inService ? 1 : 0) }), { inStock: 0, onJob: 0, problems: 0 });
 
   return (
@@ -251,22 +232,27 @@ export const StockOverview = () => {
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat ve skladu…"
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat nebo načíst kód…" enterKeyHint="search" autoComplete="off"
             className="w-full h-12 pl-10 pr-3 bg-card-bg border border-outline-variant rounded-xl text-base text-on-surface focus:border-primary focus:outline-none" />
         </div>
-        <button onClick={exportCsv} className="h-12 px-3 rounded-xl border border-outline-variant bg-card-bg text-sm font-semibold flex items-center gap-1.5" aria-label="Export stavu skladu do CSV">
-          <Download className="w-5 h-5" /> CSV
-        </button>
-        <button onClick={printVisible} className="h-12 px-3 rounded-xl border border-outline-variant bg-card-bg text-sm font-semibold flex items-center gap-1.5" aria-label="Tisk štítků zobrazených položek">
-          <Printer className="w-5 h-5" /> Štítky
+        <button onClick={() => setScanning(true)} aria-label="Najít položku načtením kódu"
+          className="w-12 h-12 rounded-xl border border-outline-variant bg-card-bg flex items-center justify-center shrink-0 active:scale-90">
+          <QrCode className="w-6 h-6 text-secondary" />
         </button>
       </div>
-      {bulkLabels && <LabelPrint labels={bulkLabels} onDone={() => setBulkLabels(null)} />}
+      {scanning && (
+        <ScannerScreen
+          title="Skener · sklad"
+          subtitle="Načtený kód otevře detail položky"
+          onClose={() => setScanning(false)}
+          onCode={(code) => (findByCode(code) ? { close: true } : { type: 'error', text: 'Neznámý kód', detail: code })}
+        />
+      )}
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {[{ id: 'ALL', label: 'Vše' }, ...CATEGORIES].map((c) => (
           <button key={c.id} onClick={() => setCategory(c.id)}
-            className={`h-10 px-3 rounded-xl text-sm font-semibold whitespace-nowrap border shrink-0 ${category === c.id ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg border-outline-variant text-on-surface-variant'}`}>
+            className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap border shrink-0 ${category === c.id ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg border-outline-variant text-on-surface-variant'}`}>
             {c.label}
           </button>
         ))}
