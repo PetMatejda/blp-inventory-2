@@ -8,11 +8,16 @@ const DONE = { LOADING: 'LOADED', DERIGGING: 'PACKED', RESTOCK: 'RESTOCKED' };
 const doneStatus = (mode) => DONE[mode] || 'LOADED';
 
 /**
- * Entering the restock phase: every piece has to be counted back into the
- * warehouse, so counts start at 0. Damaged items keep their state (→ service).
+ * Entering the restock phase. What was packed in derigging is prefilled as
+ * restocked (the crew only fixes differences instead of counting everything
+ * a second time). Items not packed start at 0; labelled units (unitIds) must be
+ * scanned back one by one, so they start at 0 too. Damaged items keep their
+ * state (→ service).
  */
 export function enterRestock(item) {
   if (item.status === 'DAMAGED') return {};
+  const packed = item.status === 'PACKED' && (item.quantityLoaded || 0) > 0 && !item.unitIds?.length;
+  if (packed) return { quantityLoaded: Math.min(item.quantityLoaded, item.quantityRequested || item.quantityLoaded), status: 'RESTOCKED' };
   return { quantityLoaded: 0, status: 'PENDING' };
 }
 const normName = (name) => String(name || '').toLowerCase().trim();

@@ -91,7 +91,7 @@ export const PackingList = () => {
     const remaining = summary.remaining.length;
     const ok = await confirm(isDerigging ? {
       title: 'Zahájit naskladnění?',
-      message: `Technika se bude počítat zpět do skladu od nuly — každý kus, který se vrátí.${remaining ? `\n\n${remaining} ${plural(remaining, 'položka není sbalená', 'položky nejsou sbalené', 'položek není sbalených')}.` : ''}\n\nPo potvrzení se do deriggingu nedá vrátit.`,
+      message: `Sbalená technika se předvyplní jako naskladněná — opravte jen rozdíly. Nesbalené položky a kusy se štítkem se počítají od nuly.${remaining ? `\n\n${remaining} ${plural(remaining, 'položka není sbalená', 'položky nejsou sbalené', 'položek není sbalených')}.` : ''}\n\nPo potvrzení se do deriggingu nedá vrátit.`,
       confirmLabel: 'Zahájit naskladnění',
     } : {
       title: 'Zahájit derigging?',

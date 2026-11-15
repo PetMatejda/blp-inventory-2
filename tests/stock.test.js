@@ -84,7 +84,10 @@ describe('výdej a naskladnění', () => {
   });
 
   it('fáze naskladnění: počítání od nuly, swipe = naskladněno, závada zůstává', () => {
-    expect(enterRestock(makeItem({ status: 'PACKED', quantityLoaded: 4 }))).toEqual({ quantityLoaded: 0, status: 'PENDING' });
+    // packed in derigging → prefilled as restocked (no second count)
+    expect(enterRestock(makeItem({ status: 'PACKED', quantityRequested: 4, quantityLoaded: 4 }))).toEqual({ quantityLoaded: 4, status: 'RESTOCKED' });
+    expect(enterRestock(makeItem({ status: 'LOADED', quantityRequested: 4, quantityLoaded: 4 }))).toEqual({ quantityLoaded: 0, status: 'PENDING' });
+    expect(enterRestock(makeItem({ status: 'PACKED', quantityLoaded: 2, unitIds: ['u1', 'u2'] }))).toEqual({ quantityLoaded: 0, status: 'PENDING' });
     expect(enterRestock(makeItem({ status: 'DAMAGED', quantityLoaded: 1 }))).toEqual({});
     expect(markDone(makeItem({ quantityRequested: 4 }), 'RESTOCK')).toEqual({ quantityLoaded: 4, status: 'RESTOCKED' });
     expect(markUndone(makeItem({ status: 'RESTOCKED' }), 'RESTOCK')).toEqual({ quantityLoaded: 0, status: 'PENDING' });

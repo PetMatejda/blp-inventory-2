@@ -63,7 +63,7 @@ export const ContextMenuModal = () => {
               onClick={run(async () => {
                 if (await confirm(derigging ? {
                   title: 'Zahájit naskladnění?',
-                  message: 'Technika se bude počítat zpět do skladu od nuly. Do deriggingu se pak nedá vrátit.',
+                  message: 'Sbalená technika se předvyplní jako naskladněná, opravují se jen rozdíly. Do deriggingu se pak nedá vrátit.',
                   confirmLabel: 'Zahájit naskladnění',
                 } : {
                   title: 'Zahájit derigging?',

@@ -217,6 +217,12 @@ export const InventoryProvider = ({ children }) => {
   const currentJob = (chosenJob && (chosenJob.status !== 'ARCHIVED' || chosenJob.id === openedArchivedId) ? chosenJob : null)
     || jobs.find((j) => j.status === 'ACTIVE')
     || null;
+  // An archived job opened from the archive is only for looking: once the user
+  // goes to another screen it is no longer the current job.
+  useEffect(() => {
+    if (activeTab !== 'packing' && !isProtocolModalOpen && openedArchivedId) setOpenedArchivedId('');
+  }, [activeTab, isProtocolModalOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const jobItems = useMemo(
     () => (currentJob ? allJobItems.filter((i) => i.jobId === currentJob.id) : []),
     [allJobItems, currentJob],
@@ -340,7 +346,7 @@ export const InventoryProvider = ({ children }) => {
    * Move the current job to another phase and keep the warehouse in step:
    *   Rigging → Derigging : loaded equipment is issued from the warehouse
    *   Derigging → Rigging : the issue is cancelled
-   *   Derigging → Restock : counting back starts from zero
+   *   Derigging → Restock : packed items are prefilled as restocked
    */
   const changeJobPhase = (mode, jobId = currentJob?.id) => {
     const job = jobs.find((j) => j.id === jobId);
