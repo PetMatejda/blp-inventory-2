@@ -2,6 +2,7 @@ import React from 'react';
 import { Truck, Check, AlertTriangle } from 'lucide-react';
 import { useInventory } from '../../context/InventoryContext';
 import { vehicleAlerts, todayIso, worstLevel } from '../../domain/vehicles';
+import { VehicleIcon } from './VehicleBadges';
 
 /**
  * Choose the vehicles for a job. A vehicle whose STK or vignette is due soon,
@@ -38,6 +39,7 @@ export const VehiclePicker = ({ value = [], onChange, until }) => {
                 <span className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 ${selected ? 'bg-primary border-primary text-on-primary' : 'border-outline'}`}>
                   {selected && <Check className="w-4 h-4" />}
                 </span>
+                <VehicleIcon vehicle={v} className="w-5 h-5 text-on-surface-variant shrink-0" />
                 <span className="flex-1 min-w-0">
                   <span className="text-sm font-semibold text-on-surface">{v.name}</span>{' '}
                   <span className="text-xs font-mono text-on-surface-variant">{v.plate}</span>

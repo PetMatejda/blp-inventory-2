@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Moon, Sun, CloudUpload, Download, ShieldCheck, LogOut, User, History, ChevronRight } from 'lucide-react';
+import { Moon, Sun, CloudUpload, Download, ShieldCheck, LogOut, User, History, ChevronRight, BookOpen, ExternalLink } from 'lucide-react';
 import { useDialogs, Sheet } from '../common/Dialogs';
 import { firebaseAuth } from '../../services/firebaseAuth';
 import { McpAccessSection } from '../settings/McpAccessSection';
@@ -159,6 +159,19 @@ export const SettingsModal = () => {
         </span>
         <ChevronRight className="w-5 h-5 text-outline shrink-0" />
       </button>
+
+      {/* Help: the short guide for the team */}
+      <a
+        href="/navod.html" target="_blank" rel="noopener"
+        className="w-full min-h-[56px] px-4 py-2 bg-surface-container border border-outline-variant rounded-xl flex items-center gap-3 text-left active:scale-[0.98]"
+      >
+        <BookOpen className="w-5 h-5 text-primary shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-base font-semibold text-on-surface">Návod k aplikaci</span>
+          <span className="block text-sm text-on-surface-variant">Krátký přehled, co kde je a jak se to ovládá</span>
+        </span>
+        <ExternalLink className="w-5 h-5 text-outline shrink-0" />
+      </a>
 
       {/* Install as an app */}
       {!isInstalled && (

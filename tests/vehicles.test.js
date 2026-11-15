@@ -121,3 +121,20 @@ describe('vehicle actions', () => {
     expect(mem.all('vehicles').map((x) => x.id)).toEqual(['v']);
   });
 });
+
+import { vehicleKind } from '../src/domain/vehicles.js';
+
+describe('typ vozu (ikona)', () => {
+  it('odhadne typ z modelu a názvu', () => {
+    expect(vehicleKind({ name: 'Sprinter černý', model: 'Mercedes Sprinter' })).toBe('truck');
+    expect(vehicleKind({ name: 'Viano', model: 'Mercedes Viano' })).toBe('van');
+    expect(vehicleKind({ name: 'Transporter automat', model: 'VW Transporter' })).toBe('van');
+    expect(vehicleKind({ name: 'Bigster', model: 'Dacia Bigster' })).toBe('car');
+    expect(vehicleKind({ name: 'Jogger', model: 'Dacia Jogger' })).toBe('car');
+    expect(vehicleKind({ name: 'Mercedes T', model: 'Mercedes-Benz T' })).toBe('car');
+  });
+  it('ručně nastavený typ má přednost', () => {
+    expect(vehicleKind({ name: 'Sprinter', kind: 'car' })).toBe('car');
+    expect(vehicleKind({ name: 'Sprinter', kind: 'nesmysl' })).toBe('truck');
+  });
+});

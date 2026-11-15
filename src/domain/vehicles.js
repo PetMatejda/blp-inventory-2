@@ -10,6 +10,28 @@ export const DEADLINES = {
 };
 export const DANGER_DAYS = 7;
 
+// Kind of vehicle (decides the icon): truck = nákladní (Sprinter), van = firemní
+// MPV (Viano, Transporter), car = osobní (Dacia, Mercedes T).
+export const VEHICLE_KINDS = [
+  { id: 'truck', label: 'Nákladní' },
+  { id: 'van', label: 'Van' },
+  { id: 'car', label: 'Osobní' },
+];
+const KIND_HINTS = {
+  truck: /sprinter|crafter|ducato|boxer|jumper|master|movano|daily|iveco|transit(?! (custom|connect|courier))|naklad|dodavk/,
+  van: /viano|vito|v-class|trida v|transporter|multivan|caravelle|trafic|vivaro|tourneo|transit custom|\bvan\b|\bmpv\b/,
+};
+const plain = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+/** The kind set on the vehicle, otherwise guessed from its model and name; unknown = car. */
+export function vehicleKind(vehicle) {
+  if (VEHICLE_KINDS.some((k) => k.id === vehicle?.kind)) return vehicle.kind;
+  const text = plain(`${vehicle?.model || ''} ${vehicle?.name || ''}`);
+  if (KIND_HINTS.van.test(text)) return 'van';
+  if (KIND_HINTS.truck.test(text)) return 'truck';
+  return 'car';
+}
+
 const pad = (n) => String(n).padStart(2, '0');
 const isoDay = (d) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 const utc = (iso) => {

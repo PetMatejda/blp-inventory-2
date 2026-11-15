@@ -1,5 +1,6 @@
 import React from 'react';
-import { AlertTriangle, CalendarCheck } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, Truck, Bus, Car } from 'lucide-react';
+import { vehicleKind, VEHICLE_KINDS } from '../../domain/vehicles';
 
 const STYLE = {
   ok: 'bg-surface-container text-on-surface-variant border-outline-variant',
@@ -18,4 +19,14 @@ export const DeadlineBadge = ({ status }) => {
       <Icon className="w-3.5 h-3.5 shrink-0" /> {status.text}
     </span>
   );
+};
+
+const KIND_ICON = { truck: Truck, van: Bus, car: Car };
+const KIND_LABEL = Object.fromEntries(VEHICLE_KINDS.map((k) => [k.id, k.label]));
+
+/** Icon by kind of vehicle: truck (Sprinter), van (Viano, Transporter), car (Dacia, Mercedes T). */
+export const VehicleIcon = ({ vehicle, kind, className = 'w-6 h-6' }) => {
+  const k = kind || vehicleKind(vehicle);
+  const Icon = KIND_ICON[k] || Car;
+  return <Icon className={className} role="img" aria-label={KIND_LABEL[k]} />;
 };

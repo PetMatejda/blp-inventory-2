@@ -2,7 +2,7 @@
 // Every change leaves an audit entry. Rules for deadlines: src/domain/vehicles.js.
 import { normalizePlate, validateVehicle, formatDue, DEADLINES } from '../domain/vehicles.js';
 
-const FIELDS = ['name', 'model', 'plate', 'color', 'transmission', 'fuel', 'stkDue', 'vignetteDue', 'note'];
+const FIELDS = ['name', 'model', 'kind', 'plate', 'color', 'transmission', 'fuel', 'stkDue', 'vignetteDue', 'note'];
 
 export function createVehicleActions({ repo, getState, getActor }) {
   const now = () => new Date().toISOString();

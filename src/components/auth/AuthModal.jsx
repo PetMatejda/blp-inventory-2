@@ -12,7 +12,7 @@ import {
 } from '../../services/webAuthnService';
 import {
   ShieldCheck, X, LogIn, UserPlus, Shield, CheckCircle2,
-  AlertCircle, LogOut, Fingerprint, ScanFace, Trash2, Mail, ChevronDown, ChevronUp
+  AlertCircle, LogOut, Fingerprint, ScanFace, Trash2, Mail, ChevronDown, ChevronUp, BookOpen
 } from 'lucide-react';
 
 export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
@@ -465,8 +465,14 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
           </div>
         )}
 
+        {/* Guide for newcomers */}
+        <a href="/navod.html" target="_blank" rel="noopener"
+          className="min-h-[44px] px-4 flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 text-sm font-semibold text-slate-200 active:scale-[0.98]">
+          <BookOpen className="w-4 h-4" /> Návod k aplikaci
+        </a>
+
         {/* Footer */}
-        <p className="text-xs text-slate-400 text-center mt-4">
+        <p className="text-xs text-slate-400 text-center mt-2">
           BLP INVENTORY v2.0 · Lighting Equipment Management
         </p>
       </div>

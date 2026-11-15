@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Truck, Archive, ArchiveRestore, Trash2, ChevronRight } from 'lucide-react';
 import { useInventory } from '../../context/InventoryContext';
 import { Sheet, useDialogs } from '../common/Dialogs';
-import { DeadlineBadge } from './VehicleBadges';
+import { DeadlineBadge, VehicleIcon } from './VehicleBadges';
 import { plural } from '../../domain/labels';
-import { vehicleDeadlines, vehicleAlerts, todayIso, formatDue, parseDueInput, dueDate } from '../../domain/vehicles';
+import { vehicleDeadlines, vehicleAlerts, todayIso, formatDue, parseDueInput, dueDate, vehicleKind, VEHICLE_KINDS } from '../../domain/vehicles';
 
-const EMPTY = { name: '', plate: '', model: '', color: '', transmission: '', fuel: '', stkDue: '', vignetteDue: '', note: '' };
+const EMPTY = { name: '', plate: '', model: '', kind: '', color: '', transmission: '', fuel: '', stkDue: '', vignetteDue: '', note: '' };
 const input = 'w-full h-12 px-3 bg-surface-container border border-outline-variant rounded-xl text-base text-on-surface focus:outline-none focus:border-primary';
 
 const Field = ({ label, hint, children }) => (
@@ -65,6 +65,21 @@ const VehicleForm = ({ vehicle, onDone }) => {
         <Field label="Model"><input className={input} value={form.model} onChange={(e) => set({ model: e.target.value })} placeholder="Mercedes Sprinter" /></Field>
         <Field label="Barva"><input className={input} value={form.color} onChange={(e) => set({ color: e.target.value })} placeholder="černá" /></Field>
       </div>
+      <div>
+        <span className="block text-xs font-bold text-outline mb-1 uppercase">Typ vozu</span>
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Typ vozu">
+          {VEHICLE_KINDS.map((k) => {
+            const selected = vehicleKind(form) === k.id;
+            return (
+              <button key={k.id} type="button" role="radio" aria-checked={selected} onClick={() => set({ kind: k.id })}
+                className={`h-12 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 ${
+                  selected ? 'bg-primary-container text-on-primary-container border-primary' : 'bg-surface-container text-on-surface-variant border-outline-variant'}`}>
+                <VehicleIcon kind={k.id} className="w-5 h-5" /> {k.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Převodovka">
           <select className={input} value={form.transmission} onChange={(e) => set({ transmission: e.target.value })}>
@@ -109,7 +124,7 @@ const VehicleRow = ({ vehicle, today, onOpen }) => {
     <li>
       <button type="button" onClick={onOpen}
         className={`w-full text-left bg-card-bg border border-outline-variant rounded-2xl p-3 flex items-start gap-3 active:scale-[0.99] ${vehicle.active === false ? 'opacity-60' : ''}`}>
-        <Truck className="w-6 h-6 text-primary shrink-0 mt-0.5" />
+        <VehicleIcon vehicle={vehicle} className="w-6 h-6 text-primary shrink-0 mt-0.5" />
         <span className="flex-1 min-w-0 flex flex-col gap-1">
           <span className="flex items-baseline gap-2 flex-wrap">
             <span className="font-bold text-on-surface">{vehicle.name}</span>
