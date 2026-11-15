@@ -1,5 +1,5 @@
 // Vercel Function: remote MCP endpoint, Streamable HTTP in stateless mode.
-//   POST /api/mcp   JSON-RPC (MCP)   Authorization: Bearer <MCP_SPIKE_TOKEN>  or  X-BLP-Token: <MCP_SPIKE_TOKEN>
+//   POST /api/mcp   JSON-RPC (MCP)   Authorization: Bearer <MCP_SPIKE_TOKEN>  or  X-API-Key: <MCP_SPIKE_TOKEN>
 // Spike only (docs/MCP_SERVER_PLAN.md, phase 0). Personal tokens / OAuth come later.
 import { timingSafeEqual } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -18,17 +18,23 @@ const sameToken = (given, expected) => {
   return a.length === b.length && timingSafeEqual(a, b);
 };
 
+// Header names that may carry the token besides Authorization. Claude custom connectors
+// (claude.ai, Cowork) reserve Authorization for OAuth and only allow approved names —
+// `x-api-key` is one of the standard ones.
+const TOKEN_HEADERS = ['x-api-key', 'x-blp-token'];
+
 /**
  * Token check (constant time). Accepts `Authorization: Bearer <token>` (Claude Code,
- * Antigravity) or `X-BLP-Token: <token>` — Claude custom connectors (claude.ai,
- * Cowork) reserve the Authorization header for OAuth, so they send the custom one.
+ * Antigravity) or the token in `X-API-Key` / `X-BLP-Token` (Claude custom connectors).
  */
 export function isAuthorized(headers, expected) {
   if (!expected) return false;
   const bearer = /^Bearer\s+(.+)$/i.exec(String(headers?.authorization || ''));
   if (bearer && sameToken(bearer[1], expected)) return true;
-  const custom = headers?.['x-blp-token'];
-  return typeof custom === 'string' && custom.length > 0 && sameToken(custom.replace(/^Bearer\s+/i, ''), expected);
+  return TOKEN_HEADERS.some((name) => {
+    const value = headers?.[name];
+    return typeof value === 'string' && value.length > 0 && sameToken(value.replace(/^Bearer\s+/i, ''), expected);
+  });
 }
 
 export default async function handler(req, res) {

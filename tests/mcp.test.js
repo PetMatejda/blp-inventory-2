@@ -45,8 +45,8 @@ describe('MCP spike endpoint', () => {
     await client.close();
   });
 
-  it('accepts the token in X-BLP-Token (Claude custom connectors)', async () => {
-    const client = await connect(TOKEN, 'X-BLP-Token');
+  it.each(['X-API-Key', 'X-BLP-Token'])('accepts the token in %s (Claude custom connectors)', async (header) => {
+    const client = await connect(TOKEN, header);
     const result = await client.callTool({ name: 'ping', arguments: {} });
     expect(result.content[0].text).toMatch(/^pong/);
     await client.close();
@@ -93,5 +93,11 @@ describe('isAuthorized', () => {
     expect(isAuthorized(custom(`${TOKEN}x`), TOKEN)).toBe(false);
     expect(isAuthorized(custom(''), TOKEN)).toBe(false);
     expect(isAuthorized({ ...auth('Bearer wrong'), ...custom(TOKEN) }, TOKEN)).toBe(true);
+  });
+
+  it('accepts the exact token in X-API-Key', () => {
+    expect(isAuthorized({ 'x-api-key': TOKEN }, TOKEN)).toBe(true);
+    expect(isAuthorized({ 'x-api-key': `${TOKEN}x` }, TOKEN)).toBe(false);
+    expect(isAuthorized({ 'x-api-key': '' }, TOKEN)).toBe(false);
   });
 });
