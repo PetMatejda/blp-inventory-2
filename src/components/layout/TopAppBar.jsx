@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Check, RefreshCw, WifiOff, User, ChevronDown, Lock } from 'lucide-react';
+import { Check, RefreshCw, WifiOff, User, ChevronDown, Lock, Bell } from 'lucide-react';
+import { alertCounts } from '../../domain/alerts';
 
 // One clear sync state the crew can trust (ANALYZA_A_NAVRH.md, 3.8).
 const SYNC_CHIP = {
@@ -11,7 +12,8 @@ const SYNC_CHIP = {
 };
 
 export const TopAppBar = () => {
-  const { jobs, setCurrentJobId, currentJob, currentUser, setIsSettingsModalOpen, forceSyncAll, syncStatus } = useInventory();
+  const { jobs, setCurrentJobId, currentJob, currentUser, setIsSettingsModalOpen, forceSyncAll, syncStatus, alerts, activeTab, setActiveTab } = useInventory();
+  const counts = alertCounts(alerts);
   const [avatarError, setAvatarError] = useState(false);
 
   const activeJobs = jobs.filter((j) => j.status === 'ACTIVE');
@@ -48,6 +50,19 @@ export const TopAppBar = () => {
           <h1 className="font-bold text-base text-on-surface">BLP Inventory</h1>
         )}
       </div>
+
+      <button
+        onClick={() => setActiveTab('alerts')}
+        className={`relative w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 active:scale-95 ${activeTab === 'alerts' ? 'bg-primary-container border-primary text-on-primary-container' : 'bg-surface-container border-outline-variant text-on-surface'}`}
+        aria-label={counts.urgent ? `Upozornění: ${counts.urgent}` : 'Upozornění'}
+      >
+        <Bell className="w-5 h-5" />
+        {counts.urgent > 0 && (
+          <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-bold flex items-center justify-center border-2 border-background ${counts.critical ? 'bg-error text-white' : 'bg-amber-500 text-black'}`}>
+            {counts.urgent > 99 ? '99+' : counts.urgent}
+          </span>
+        )}
+      </button>
 
       <button
         onClick={forceSyncAll}

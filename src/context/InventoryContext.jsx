@@ -5,6 +5,8 @@ import { createInventoryActions } from '../services/inventoryActions';
 import { createStockActions } from '../services/stockActions';
 import { createVehicleActions } from '../services/vehicleActions';
 import { availability } from '../domain/stock';
+import { buildAlerts } from '../domain/alerts';
+import { todayIso } from '../domain/vehicles';
 import { migrateLegacyStore, MIGRATION_DOC } from '../services/migration';
 import { db, doc, getDoc, runTransaction, writeBatch } from '../services/firebase';
 import { CATEGORIES, getCategoryMeta } from '../utils/categoryIcons';
@@ -81,7 +83,8 @@ export const InventoryProvider = ({ children }) => {
   const [damageReportItem, setDamageReportItem] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isVehiclesOpen, setIsVehiclesOpen] = useState(false);
+  // Where a tap on an alert leads inside a screen: { type: 'vehicle' | 'stockItem', id }.
+  const [navFocus, setNavFocus] = useState(null);
   const [isProtocolModalOpen, setIsProtocolModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
   const [templateJob, setTemplateJob] = useState(null);
@@ -236,6 +239,10 @@ export const InventoryProvider = ({ children }) => {
     () => (currentJob ? allJobItems.filter((i) => i.jobId === currentJob.id) : []),
     [allJobItems, currentJob],
   );
+
+  // Everything that needs attention (Upozornění): vehicles, warehouse, jobs, Brácha.
+  const today = todayIso();
+  const alerts = useMemo(() => buildAlerts({ ...data, jobItems: allJobItems }, today), [data, allJobItems, today]);
   const hasPendingWrites = Object.values(pending).some(Boolean);
   const syncStatus = accessDenied ? 'error'
     : isOffline ? 'offline'
@@ -256,6 +263,16 @@ export const InventoryProvider = ({ children }) => {
     setCurrentJobIdState(jobId || '');
     setOpenedArchivedId(jobId || '');
   };
+  /** Opens the place an alert points to (see domain/alerts.js `target`). */
+  const openTarget = (target) => {
+    if (!target) return;
+    if (target.jobId) setCurrentJobId(target.jobId);
+    if (target.warehouseTab) setWarehouseTab(target.warehouseTab);
+    if (target.vehicleId) setNavFocus({ type: 'vehicle', id: target.vehicleId });
+    else if (target.catalogId) setNavFocus({ type: 'stockItem', id: target.catalogId });
+    setActiveTab(target.tab);
+  };
+
   /** After a job is finished: switch to another active job, or to none. */
   const leaveJob = (jobId) => {
     if (currentJob?.id !== jobId) return;
@@ -417,8 +434,10 @@ export const InventoryProvider = ({ children }) => {
         updateVehicle: vehicleActions.updateVehicle,
         setVehicleActive: vehicleActions.setVehicleActive,
         deleteVehicle: vehicleActions.deleteVehicle,
-        isVehiclesOpen,
-        setIsVehiclesOpen,
+        alerts,
+        navFocus,
+        setNavFocus,
+        openTarget,
         consumables,
         auditLogs,
         catalog,

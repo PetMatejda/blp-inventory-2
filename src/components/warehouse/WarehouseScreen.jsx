@@ -3,6 +3,7 @@ import { useInventory } from '../../context/InventoryContext';
 import { StockOverview } from './StockOverview';
 import { StocktakeView } from './StocktakeView';
 import { EquipmentCatalog } from '../catalog/EquipmentCatalog';
+import { ConsumableKit } from '../bracha/ConsumableKit';
 import { downloadText } from '../common/CodeInput';
 import { toCsv } from '../../domain/stock';
 import { Download } from 'lucide-react';
@@ -61,12 +62,14 @@ const TABS = [
   { id: 'stocktake', label: 'Inventura' },
   { id: 'movements', label: 'Pohyby' },
   { id: 'catalog', label: 'Katalog' },
+  { id: 'bracha', label: 'Brácha' },
 ];
 
-/** Warehouse: stock levels, stocktake, movement history and the equipment catalog. */
+/** Warehouse: stock levels, stocktake, movement history, the equipment catalog and Brácha (consumables). */
 export const WarehouseScreen = () => {
-  const { stocktakes, warehouseTab: tab, setWarehouseTab: choose } = useInventory();
+  const { stocktakes, consumables, warehouseTab: tab, setWarehouseTab: choose } = useInventory();
   const stocktakeOpen = stocktakes.some((s) => s.status === 'OPEN');
+  const refillNeeded = consumables.some((c) => c.state === 2);
 
   return (
     <div className="max-w-4xl mx-auto pb-28">
@@ -76,17 +79,18 @@ export const WarehouseScreen = () => {
             <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => choose(t.id)}
               className={`flex-1 h-11 rounded-lg text-sm font-semibold relative ${tab === t.id ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant'}`}>
               {t.label}
-              {t.id === 'stocktake' && stocktakeOpen && <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-primary" aria-label="probíhá" />}
+              {t.id === 'stocktake' && stocktakeOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" aria-label="probíhá" />}
+              {t.id === 'bracha' && refillNeeded && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500" aria-label="doplnit" />}
             </button>
           ))}
         </div>
-        {tab !== 'movements' && (
+        {!['movements', 'bracha'].includes(tab) && (
           <p className="text-xs text-on-surface-variant mt-1.5 text-center">
             Čtečka kódů: stačí naskenovat štítek nebo EAN — {tab === 'stock' ? 'otevře detail' : tab === 'stocktake' ? 'započítá kus / otevře počet' : 'přidá do zakázky'}
           </p>
         )}
       </div>
-      {tab === 'catalog' ? <EquipmentCatalog /> : (
+      {tab === 'catalog' ? <EquipmentCatalog /> : tab === 'bracha' ? <ConsumableKit /> : (
         <div className="px-4 pt-4">
           {tab === 'stock' && <StockOverview />}
           {tab === 'stocktake' && <StocktakeView />}

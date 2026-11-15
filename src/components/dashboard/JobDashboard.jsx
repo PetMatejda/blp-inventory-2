@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { VehicleAlertsBanner } from '../vehicles/VehicleBadges';
+import { AlertsSummary } from '../alerts/AlertsSummary';
 import { useLongPress } from '../../hooks/useLongPress';
 import { phaseOf, phaseSummary } from '../../domain/labels';
 import { Plus, FolderOpen, Calendar, User, AlertTriangle, Lock, MoreVertical, Package, Truck, ChevronRight, Warehouse } from 'lucide-react';
@@ -127,7 +127,7 @@ export const JobDashboard = () => {
         </button>
       </div>
 
-      <VehicleAlertsBanner />
+      <AlertsSummary />
 
       <div className="flex flex-col gap-4">
         {filteredJobs.length === 0 ? (

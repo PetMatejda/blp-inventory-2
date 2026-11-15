@@ -9,7 +9,8 @@ import { vehicleAlerts, todayIso, worstLevel } from '../../domain/vehicles';
  * Retired vehicles are offered only when the job already uses them.
  */
 export const VehiclePicker = ({ value = [], onChange, until }) => {
-  const { vehicles, setIsVehiclesOpen } = useInventory();
+  const { vehicles, setActiveTab, setIsNewJobModalOpen, setEditingJob } = useInventory();
+  const goToVehicles = () => { setIsNewJobModalOpen(false); setEditingJob(null); setActiveTab('vehicles'); };
   const today = todayIso();
   const options = vehicles.filter((v) => v.active !== false || value.includes(v.id));
   const toggle = (id) => onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
@@ -20,8 +21,8 @@ export const VehiclePicker = ({ value = [], onChange, until }) => {
         <Truck className="w-3.5 h-3.5" /> Vozidla
       </span>
       {options.length === 0 ? (
-        <button type="button" onClick={() => setIsVehiclesOpen(true)} className="text-sm text-primary font-semibold underline">
-          Zatím žádná auta — přidat v Nastavení › Vozidla
+        <button type="button" onClick={goToVehicles} className="text-sm text-primary font-semibold underline">
+          Zatím žádná auta — přidat v sekci Auta
         </button>
       ) : (
         <div className="flex flex-col gap-1.5">

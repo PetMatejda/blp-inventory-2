@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Truck, Archive, ArchiveRestore, Trash2, ChevronRight } from 'lucide-react';
 import { useInventory } from '../../context/InventoryContext';
 import { Sheet, useDialogs } from '../common/Dialogs';
 import { DeadlineBadge } from './VehicleBadges';
-import { vehicleDeadlines, todayIso, formatDue, parseDueInput, dueDate } from '../../domain/vehicles';
+import { plural } from '../../domain/labels';
+import { vehicleDeadlines, vehicleAlerts, todayIso, formatDue, parseDueInput, dueDate } from '../../domain/vehicles';
 
 const EMPTY = { name: '', plate: '', model: '', color: '', transmission: '', fuel: '', stkDue: '', vignetteDue: '', note: '' };
 const input = 'w-full h-12 px-3 bg-surface-container border border-outline-variant rounded-xl text-base text-on-surface focus:outline-none focus:border-primary';
@@ -125,47 +126,67 @@ const VehicleRow = ({ vehicle, today, onOpen }) => {
   );
 };
 
-/** Settings › Vozidla: the company fleet with STK and vignette deadlines. */
-export const VehiclesSheet = () => {
-  const { isVehiclesOpen, setIsVehiclesOpen, vehicles } = useInventory();
-  const [editing, setEditing] = useState(null); // null = list | 'NEW' | vehicle
-  if (!isVehiclesOpen) return null;
+/** Auta (bottom bar): the company fleet with STK and vignette deadlines. */
+export const VehiclesScreen = () => {
+  const { vehicles, navFocus, setNavFocus } = useInventory();
+  const [editing, setEditing] = useState(null); // null | 'NEW' | vehicle
+
+  // Opened from an alert: show that vehicle right away.
+  useEffect(() => {
+    if (navFocus?.type !== 'vehicle') return;
+    const v = vehicles.find((x) => x.id === navFocus.id);
+    if (v) setEditing(v);
+    setNavFocus(null);
+  }, [navFocus, vehicles, setNavFocus]);
 
   const today = todayIso();
-  const close = () => { setEditing(null); setIsVehiclesOpen(false); };
   const active = vehicles.filter((v) => v.active !== false);
   const retired = vehicles.filter((v) => v.active === false);
   // Most urgent deadline first, so the cars that need attention are on top.
   const soonest = (v) => Math.min(...['stkDue', 'vignetteDue'].map((f) => (dueDate(v[f]) ? Date.parse(dueDate(v[f])) : Infinity)));
   const sorted = [...active].sort((a, b) => soonest(a) - soonest(b));
-
-  if (editing) {
-    const vehicle = editing === 'NEW' ? null : vehicles.find((v) => v.id === editing.id) || editing;
-    return (
-      <Sheet title={vehicle ? `${vehicle.name} ${vehicle.plate}` : 'Nový vůz'} subtitle="Vozidla" onClose={close}>
-        <VehicleForm key={vehicle?.id || 'new'} vehicle={vehicle} onDone={() => setEditing(null)} />
-      </Sheet>
-    );
-  }
+  const needAttention = active.filter((v) => vehicleAlerts(v, today).length).length;
+  const editingVehicle = editing && editing !== 'NEW' ? vehicles.find((v) => v.id === editing.id) || editing : null;
 
   return (
-    <Sheet title="Vozidla" subtitle={`${active.length} v provozu · STK hlídána 60 dní, známka 30 dní předem`} onClose={close}>
-      <button type="button" onClick={() => setEditing('NEW')}
-        className="h-12 rounded-xl bg-primary text-on-primary-container font-bold flex items-center justify-center gap-2">
-        <Plus className="w-5 h-5" /> Přidat vůz
-      </button>
-      {active.length === 0 && <p className="text-sm text-on-surface-variant text-center">Zatím žádná auta.</p>}
+    <div className="max-w-3xl mx-auto px-4 py-4 pb-28 flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-on-surface">Auta</h1>
+          <p className="text-sm text-on-surface-variant">
+            {active.length} v provozu{needAttention ? ` · ${needAttention} ${plural(needAttention, 'potřebuje', 'potřebují', 'potřebuje')} pozornost` : ' · vše v pořádku'}
+          </p>
+        </div>
+        <button type="button" onClick={() => setEditing('NEW')}
+          className="h-12 px-4 rounded-xl bg-primary text-on-primary-container font-bold flex items-center gap-2 shrink-0 active:scale-95">
+          <Plus className="w-5 h-5" /> Přidat
+        </button>
+      </div>
+      <p className="text-xs text-on-surface-variant -mt-2">STK hlídána 60 dní, dálniční známka 30 dní předem.</p>
+
+      {active.length === 0 && (
+        <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant flex flex-col items-center gap-3">
+          <Truck className="w-10 h-10 text-outline/50" />
+          <p>Zatím žádná auta.</p>
+        </div>
+      )}
       <ul className="flex flex-col gap-2">
         {sorted.map((v) => <VehicleRow key={v.id} vehicle={v} today={today} onOpen={() => setEditing(v)} />)}
       </ul>
       {retired.length > 0 && (
         <details className="text-sm">
-          <summary className="cursor-pointer font-semibold text-on-surface-variant">Vyřazená vozidla ({retired.length})</summary>
+          <summary className="cursor-pointer font-semibold text-on-surface-variant py-2">Vyřazená vozidla ({retired.length})</summary>
           <ul className="flex flex-col gap-2 mt-2">
             {retired.map((v) => <VehicleRow key={v.id} vehicle={v} today={today} onOpen={() => setEditing(v)} />)}
           </ul>
         </details>
       )}
-    </Sheet>
+
+      {editing && (
+        <Sheet title={editingVehicle ? `${editingVehicle.name} ${editingVehicle.plate}` : 'Nový vůz'} subtitle="Auta" onClose={() => setEditing(null)}>
+          <VehicleForm key={editingVehicle?.id || 'new'} vehicle={editingVehicle} onDone={() => setEditing(null)} />
+        </Sheet>
+      )}
+    </div>
   );
 };

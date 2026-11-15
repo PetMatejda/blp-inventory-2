@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { Settings, X, Moon, Sun, CloudUpload, CheckCircle2, AlertCircle, Smartphone, Download, ShieldCheck, LogOut, User, Truck, ChevronRight } from 'lucide-react';
-import { fleetAlerts, todayIso } from '../../domain/vehicles';
+import { Settings, X, Moon, Sun, CloudUpload, CheckCircle2, AlertCircle, Smartphone, Download, ShieldCheck, LogOut, User } from 'lucide-react';
 import { useDialogs } from '../common/Dialogs';
 import { firebaseAuth } from '../../services/firebaseAuth';
 
@@ -9,7 +8,7 @@ export const SettingsModal = () => {
   const {
     isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode,
     forceSyncAll, hasPendingWrites, isOffline, currentUser, setCurrentUser, setIsAuthModalOpen,
-    migrationInfo, catalog, jobs, stockLevels, vehicles, setIsVehiclesOpen,
+    migrationInfo, catalog, jobs, stockLevels,
   } = useInventory();
   const { confirm } = useDialogs();
   const [syncStatus, setSyncStatus] = useState(null);
@@ -132,24 +131,6 @@ export const SettingsModal = () => {
             <span>{syncStatus.text}</span>
           </div>
         )}
-
-        {/* Company vehicles */}
-        {(() => {
-          const alerts = fleetAlerts(vehicles, todayIso()).length;
-          const active = vehicles.filter((v) => v.active !== false).length;
-          return (
-            <button type="button" onClick={() => setIsVehiclesOpen(true)}
-              className="w-full text-left bg-surface-container p-3 rounded-xl border border-outline-variant flex items-center gap-3 active:scale-[0.99]">
-              <Truck className="w-6 h-6 text-primary shrink-0" />
-              <span className="flex-1 min-w-0">
-                <span className="block font-bold text-on-surface">Vozidla</span>
-                <span className="block text-sm text-on-surface-variant">{active} v provozu · STK a dálniční známky</span>
-              </span>
-              {alerts > 0 && <span className="px-2 py-0.5 rounded-full bg-error text-white text-xs font-bold shrink-0">{alerts}</span>}
-              <ChevronRight className="w-5 h-5 text-outline shrink-0" />
-            </button>
-          );
-        })()}
 
         {/* Android App & PWA Installation */}
         <div className="bg-surface-container p-4 rounded-xl border border-secondary/40 flex flex-col gap-3 relative overflow-hidden">

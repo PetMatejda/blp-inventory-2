@@ -7,7 +7,8 @@ import { JobDashboard } from './components/dashboard/JobDashboard';
 import { PackingList } from './components/packing/PackingList';
 // Screens that are not needed at start are loaded on first use (smaller start-up bundle).
 const WarehouseScreen = lazy(() => import('./components/warehouse/WarehouseScreen').then((m) => ({ default: m.WarehouseScreen })));
-const ConsumableKit = lazy(() => import('./components/bracha/ConsumableKit').then((m) => ({ default: m.ConsumableKit })));
+const VehiclesScreen = lazy(() => import('./components/vehicles/VehiclesScreen').then((m) => ({ default: m.VehiclesScreen })));
+const AlertsScreen = lazy(() => import('./components/alerts/AlertsScreen').then((m) => ({ default: m.AlertsScreen })));
 const AuditTimeline = lazy(() => import('./components/audit/AuditTimeline').then((m) => ({ default: m.AuditTimeline })));
 
 import { NewJobModal } from './components/modals/NewJobModal';
@@ -23,7 +24,6 @@ import { EditJobModal } from './components/modals/EditJobModal';
 import { DuplicateJobModal } from './components/modals/DuplicateJobModal';
 import { ContextMenuModal } from './components/modals/ContextMenuModal';
 import { AuthModal } from './components/auth/AuthModal';
-import { VehiclesSheet } from './components/vehicles/VehiclesSheet';
 
 const ModalLayer = () => {
   const { isAuthModalOpen, setIsAuthModalOpen, currentUser } = useInventory();
@@ -40,7 +40,6 @@ const ModalLayer = () => {
       <EditJobModal />
       <DuplicateJobModal />
       <ContextMenuModal />
-      <VehiclesSheet />
       <PhotoViewer />
       <FinishJobSheet />
 
@@ -65,8 +64,10 @@ const MainContent = () => {
       return <PackingList />;
     case 'catalog':
       return <WarehouseScreen />;
-    case 'bracha':
-      return <ConsumableKit />;
+    case 'vehicles':
+      return <VehiclesScreen />;
+    case 'alerts':
+      return <AlertsScreen />;
     case 'history':
       return <AuditTimeline />;
     default:

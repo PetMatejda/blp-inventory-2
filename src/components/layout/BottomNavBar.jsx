@@ -1,17 +1,20 @@
 import React from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { LayoutDashboard, PackageCheck, Warehouse, Briefcase, History } from 'lucide-react';
+import { LayoutDashboard, PackageCheck, Warehouse, Truck, History } from 'lucide-react';
 
 export const BottomNavBar = () => {
-  const { activeTab, setActiveTab, consumables } = useInventory();
+  const { activeTab, setActiveTab, alerts } = useInventory();
 
-  const refillCount = consumables.filter(c => c.state === 2).length;
+  // Badge on Auta: vehicles with an expired / soon expiring STK or vignette.
+  const vehicleAlerts = alerts.filter((a) => a.group === 'vehicles');
+  const vehicleBadge = new Set(vehicleAlerts.map((a) => a.target.vehicleId)).size;
+  const vehicleCritical = vehicleAlerts.some((a) => a.severity === 'critical');
 
   const tabs = [
     { id: 'dashboard', label: 'Zakázky', icon: LayoutDashboard },
     { id: 'packing', label: 'Balení', icon: PackageCheck },
     { id: 'catalog', label: 'Sklad', icon: Warehouse },
-    { id: 'bracha', label: 'Brácha', icon: Briefcase, badge: refillCount },
+    { id: 'vehicles', label: 'Auta', icon: Truck, badge: vehicleBadge, critical: vehicleCritical },
     { id: 'history', label: 'Historie', icon: History },
   ];
 
@@ -25,6 +28,8 @@ export const BottomNavBar = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              aria-label={tab.badge ? `${tab.label}, ${tab.badge} upozornění` : tab.label}
+              aria-current={isActive ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full py-1.5 gap-0.5 relative transition-all active:scale-95 rounded-xl mx-0.5 ${
                 isActive ? '' : 'text-on-surface-variant'
               }`}
@@ -41,7 +46,7 @@ export const BottomNavBar = () => {
                   }`}
                 />
                 {tab.badge > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-tertiary-container text-on-tertiary-container text-[10px] font-mono font-bold w-4 h-4 rounded-full flex items-center justify-center border border-background">
+                  <span className={`absolute -top-1.5 -right-2 text-[10px] font-mono font-bold w-4 h-4 rounded-full flex items-center justify-center border border-background ${tab.critical ? 'bg-error text-white' : 'bg-amber-500 text-black'}`}>
                     {tab.badge}
                   </span>
                 )}

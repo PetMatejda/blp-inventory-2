@@ -128,7 +128,13 @@ Catalog items may carry an `icon` (equipment type: balloon shapes, LED panel / n
 
 - Collection `vehicles`: `name`, `plate` (unique, upper case), `model`, `color`, `transmission`, `fuel`, `stkDue` (`YYYY-MM` = until the end of that month, or `YYYY-MM-DD`), `vignetteDue` (`YYYY-MM-DD`), `note`, `active` (retired = hidden from pickers, kept on old jobs), `order`.
 - Rules in `src/domain/vehicles.js` (pure, tested): STK warns 60 days ahead, vignette 30, red within 7 days and after expiry; a deadline that runs out before the job's derigging date is a warning in the job form.
-- UI: Settings › Vozidla (`VehiclesSheet`, add / edit / retire / delete when unused), dashboard strip (`VehicleAlertsBanner`, only when something is due), `VehiclePicker` in New / Edit job, vehicles on the job card and in the handover protocol (name + plate). Actions with audit: `src/services/vehicleActions.js`.
+- UI: bottom bar › Auta (`VehiclesScreen`, add / edit / retire / delete when unused; badge = vehicles with a deadline due), `VehiclePicker` in New / Edit job, vehicles on the job card and in the handover protocol (name + plate). Actions with audit: `src/services/vehicleActions.js`.
+
+### Upozornění (alerts)
+
+- `src/domain/alerts.js` `buildAlerts(data, today)` (pure, tested) collects: vehicle STK / vignette, pieces missing after a job (critical), pieces in service, damage on active jobs, Brácha to refill (warning), Brácha running low, open stocktake (info). Each alert has a `target` that `openTarget()` (context) opens: Auta with that vehicle, Sklad › Stav with that item's detail (`navFocus`), the job, Sklad › Brácha / Inventura.
+- Bell in the top bar (badge = critical + warning) → `AlertsScreen` (counts by urgency, filter by area, sections Hned řešit / Brzy / Pro informaci). Dashboard shows `AlertsSummary` (top 3 urgent) only when something is urgent.
+- Brácha moved from the bottom bar to Sklad › Brácha (next to Katalog).
 - Seed of the fleet from the whiteboard: `scripts/seed-vehicles.mjs`.
 
 ### ZapSklad import

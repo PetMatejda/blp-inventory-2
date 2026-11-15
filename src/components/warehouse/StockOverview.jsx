@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { Sheet, SheetAction, useDialogs } from '../common/Dialogs';
 import { CodeInput, downloadText } from '../common/CodeInput';
@@ -143,13 +143,21 @@ const StockItemSheet = ({ item, onClose }) => {
 };
 
 export const StockOverview = () => {
-  const { catalog, stockLevels, stockUnits, stock } = useInventory();
+  const { catalog, stockLevels, stockUnits, stock, navFocus, setNavFocus } = useInventory();
   const { confirm, toast } = useDialogs();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('ALL');
   const [onlyProblems, setOnlyProblems] = useState(false);
   const [selected, setSelected] = useState(null);
   const [bulkLabels, setBulkLabels] = useState(null);
+
+  // Opened from an alert (missing / in service): show that item's detail.
+  useEffect(() => {
+    if (navFocus?.type !== 'stockItem') return;
+    const item = catalog.find((c) => c.id === navFocus.id);
+    if (item) setSelected(item);
+    setNavFocus(null);
+  }, [navFocus, catalog, setNavFocus]);
 
   // Hardware barcode reader: scanning a label / EAN opens the item detail.
   useBarcodeScanner((code) => {

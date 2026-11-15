@@ -11,7 +11,7 @@ A comprehensive, detailed architectural blueprint and technical guide has been p
 - **Deployment**: Hosted on **Vercel** (Auto-deploys from GitHub `PetMatejda/blp-inventory-2`, branch `main`).
 - **Android Support**: PWA / WebAPK container with custom studio film icons (`public/icon-192.png`, `public/icon-512.png`). Web and Android app share 100% identical codebase and cloud database.
 - **Cloud Database**: Firestore collections, one document per record: `jobs`, `jobItems`, `catalog`, `consumables`, `auditLogs` (append-only), `photos` (photos as JPEG data URLs — no Cloud Storage on the free plan). The legacy single document `/inventory_store/blp_main_store` is a read-only backup migrated once by `src/services/migration.js`.
-- **Vehicles**: `vehicles` (STK `stkDue` as `YYYY-MM` or date, vignette `vignetteDue`); Settings › Vozidla, warnings on the dashboard and in the job forms (`src/domain/vehicles.js`).
+- **Vehicles**: `vehicles` (STK `stkDue` as `YYYY-MM` or date, vignette `vignetteDue`); bottom bar › Auta, warnings in the job forms (`src/domain/vehicles.js`). Alerts from all areas: `src/domain/alerts.js`, bell in the top bar.
 - **Warehouse**: `stockLevels`, `stockUnits`, `movements` (append-only), `stocktakes`, `stocktakeLines`; job phases `LOADING → DERIGGING → RESTOCK` issue and return stock (see ARCHITECTURE.md › Warehouse).
 - **Realtime & Offline**: Firestore persistent cache (IndexedDB) + `onSnapshot` per collection. Writes apply locally immediately and are queued offline by the SDK — no custom sync/merge layer.
 - **Access**: `firestore.rules` — only verified e-mails on the approved list.
