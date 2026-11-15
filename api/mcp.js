@@ -41,7 +41,12 @@ export default async function handler(req, res) {
   const expected = process.env.MCP_SPIKE_TOKEN;
   if (!expected) return jsonRpcError(res, 503, -32000, 'MCP server is not configured (MCP_SPIKE_TOKEN missing).');
   if (!isAuthorized(req.headers, expected)) {
-    return jsonRpcError(res, 401, -32001, 'Unauthorized', { 'WWW-Authenticate': 'Bearer realm="blp-inventory"' });
+    // Header names only (never values) – shows in Vercel logs whether a client sent a token at all.
+    const sent = ['authorization', ...TOKEN_HEADERS].filter((h) => req.headers[h]);
+    console.warn(`MCP auth refused: ${req.method} ua="${req.headers['user-agent'] || ''}" tokenHeaders=[${sent.join(',')}]`);
+    // 403, not 401: a 401 makes MCP clients (Claude connectors) start OAuth discovery and
+    // dynamic client registration, which this server does not offer (static token only).
+    return jsonRpcError(res, 403, -32001, 'Missing or invalid token. Send X-API-Key: <token> or Authorization: Bearer <token>.');
   }
   // Stateless: no server-initiated SSE stream (GET) and no sessions to delete (DELETE).
   if (req.method !== 'POST') return jsonRpcError(res, 405, -32000, 'Method not allowed.', { Allow: 'POST' });

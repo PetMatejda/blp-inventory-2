@@ -59,7 +59,7 @@ describe('MCP spike endpoint', () => {
 
   it('refuses requests without a token and non-POST methods', async () => {
     const noAuth = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-    expect(noAuth.status).toBe(401);
+    expect(noAuth.status).toBe(403);
     const get = await fetch(url, { headers: { Authorization: `Bearer ${TOKEN}` } });
     expect(get.status).toBe(405);
   });
