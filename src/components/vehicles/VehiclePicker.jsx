@@ -35,7 +35,7 @@ export const VehiclePicker = ({ value = [], onChange, until }) => {
               <button key={v.id} type="button" onClick={() => toggle(v.id)} aria-pressed={selected}
                 className={`w-full min-h-[48px] px-3 py-2 rounded-xl border text-left flex items-center gap-3 active:scale-[0.99] ${
                   selected ? 'bg-primary-container/60 border-primary' : 'bg-surface-container border-outline-variant'}`}>
-                <span className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 ${selected ? 'bg-primary border-primary text-on-primary-container' : 'border-outline'}`}>
+                <span className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 ${selected ? 'bg-primary border-primary text-on-primary' : 'border-outline'}`}>
                   {selected && <Check className="w-4 h-4" />}
                 </span>
                 <span className="flex-1 min-w-0">

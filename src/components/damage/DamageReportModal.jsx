@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { savePhoto } from '../../services/photoService';
-import { Camera, AlertTriangle, X, Trash2 } from 'lucide-react';
+import { Camera, AlertTriangle, Trash2 } from 'lucide-react';
+import { Sheet } from '../common/Dialogs';
+import { Field, inputCls, SheetButtons } from '../common/FormField';
 
 const SEVERITIES = [
-  { id: 'LIGHT', label: 'Lehké (Kosmetické)', active: 'bg-surface-variant text-on-surface border-outline shadow' },
-  { id: 'MAJOR', label: 'Nefunkční (Major)', active: 'bg-tertiary-container text-on-tertiary-container border-tertiary shadow' },
-  { id: 'CRITICAL', label: 'Kritické (Risk)', active: 'bg-error-container text-on-error-container border-error shadow' },
+  { id: 'LIGHT', label: 'Lehká', hint: 'kosmetická', active: 'bg-surface-variant text-on-surface border-outline shadow' },
+  { id: 'MAJOR', label: 'Nefunkční', hint: 'nejde použít', active: 'bg-tertiary-container text-on-tertiary-container border-tertiary shadow' },
+  { id: 'CRITICAL', label: 'Kritická', hint: 'nebezpečná', active: 'bg-error-container text-on-error-container border-error shadow' },
 ];
 
 export const DamageReportModal = () => {
@@ -74,133 +76,82 @@ export const DamageReportModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-card-bg rounded-2xl border border-error max-w-lg w-full p-6 flex flex-col gap-5 shadow-2xl relative my-8">
-        {/* Header */}
-        <div className="flex justify-between items-start border-b border-outline-variant pb-3">
-          <div>
-            <span className="text-xs font-mono font-bold text-error uppercase tracking-widest flex items-center gap-1">
-              <AlertTriangle className="w-4 h-4" /> HLÁŠENÍ POŠKOZENÍ A ZÁVAD
-            </span>
-            <h2 className="text-xl font-bold text-on-surface mt-1">{damageReportItem.name}</h2>
-            <p className="text-xs text-outline font-mono">SN: {damageReportItem.serialNumber || 'Bez SN'}</p>
-          </div>
-          <button
-            onClick={close}
-            aria-label="Zavřít"
-            className="text-outline hover:text-on-surface p-2 rounded-full hover:bg-surface-variant transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Photo — real camera on phones, file picker on desktop */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={handlePhotoChosen}
-          />
-          {previewUrl ? (
-            <div className="relative h-48 rounded-xl overflow-hidden border border-outline-variant">
-              <img src={previewUrl} alt="Fotka závady" className="w-full h-full object-cover" />
-              <div className="absolute bottom-3 right-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPhotoFile(null)}
-                  className="h-11 px-3 bg-black/70 text-white text-xs font-bold rounded-xl flex items-center gap-1.5"
-                >
-                  <Trash2 className="w-4 h-4" /> Odebrat
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="h-11 px-4 bg-error text-on-error text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg active:scale-95"
-                >
-                  <Camera className="w-4 h-4" /> Vyfotit znovu
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="h-32 rounded-xl border-2 border-dashed border-outline-variant bg-surface-container flex flex-col items-center justify-center gap-2 text-on-surface-variant active:scale-[0.98] transition-transform"
-            >
-              <Camera className="w-9 h-9 stroke-[1.5]" />
-              <span className="text-sm font-semibold">Vyfotit závadu</span>
-              <span className="text-xs text-outline">nepovinné</span>
-            </button>
-          )}
-
-          {/* Severity Selector */}
-          <div>
-            <label className="block text-xs font-mono text-outline mb-2 uppercase">Závažnost poruchy</label>
-            <div className="grid grid-cols-3 gap-2">
-              {SEVERITIES.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSeverity(s.id)}
-                  className={`py-3 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
-                    severity === s.id ? s.active : 'bg-surface-container text-outline border-outline-variant hover:border-outline'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Notes Input */}
-          <div>
-            <label className="block text-xs font-mono text-outline mb-1.5 uppercase">Popis závady pro sklad</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Např. prasklá výbojka, stržený závit, ohnutá stojna…"
-              rows={3}
-              className="w-full p-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface focus:border-error focus:outline-none placeholder:text-outline"
-              required
-            ></textarea>
-          </div>
-
-          {uploadError && (
-            <div className="bg-error-container/20 border border-error/40 rounded-xl p-3 text-sm flex flex-col gap-2">
-              <span className="text-error font-semibold">{uploadError}</span>
-              <button
-                type="button"
-                onClick={() => save(null)}
-                className="self-start px-3 py-2 bg-surface-container border border-outline-variant rounded-lg text-xs font-bold text-on-surface"
-              >
-                Uložit závadu bez fotky
+    <Sheet
+      title={damageReportItem.name}
+      subtitle={`Hlášení závady${damageReportItem.serialNumber ? ` · SN ${damageReportItem.serialNumber}` : ''}`}
+      onClose={close}
+      dismissOnBackdrop={false}
+      footer={<SheetButtons onCancel={close} form="damage-form" submitLabel={isSaving ? 'Ukládám fotku…' : 'Nahlásit závadu'} icon={AlertTriangle} tone="danger" disabled={isSaving} />}
+    >
+      <form id="damage-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* Photo — real camera on phones, file picker on desktop */}
+        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChosen} />
+        {previewUrl ? (
+          <div className="relative h-48 rounded-xl overflow-hidden border border-outline-variant shrink-0">
+            <img src={previewUrl} alt="Fotka závady" className="w-full h-full object-cover" />
+            <div className="absolute bottom-3 right-3 flex gap-2">
+              <button type="button" onClick={() => setPhotoFile(null)} className="h-11 px-3 bg-black/70 text-white text-sm font-bold rounded-xl flex items-center gap-1.5">
+                <Trash2 className="w-4 h-4" /> Odebrat
+              </button>
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="h-11 px-4 bg-black/70 text-white text-sm font-bold rounded-xl flex items-center gap-2 active:scale-95">
+                <Camera className="w-4 h-4" /> Znovu
               </button>
             </div>
-          )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="h-28 shrink-0 rounded-xl border-2 border-dashed border-outline-variant bg-surface-container flex flex-col items-center justify-center gap-1.5 text-on-surface-variant active:scale-[0.98] transition-transform"
+          >
+            <Camera className="w-9 h-9 stroke-[1.5]" />
+            <span className="text-base font-semibold">Vyfotit závadu</span>
+            <span className="text-sm text-outline">nepovinné</span>
+          </button>
+        )}
 
-          {/* Buttons */}
-          <div className="flex gap-2 mt-2">
-            <button
-              type="button"
-              onClick={close}
-              className="flex-1 py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-sm"
-            >
-              Storno
-            </button>
+        <div>
+          <span className="block text-sm font-semibold text-on-surface-variant mb-1.5">Závažnost</span>
+          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Závažnost">
+            {SEVERITIES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                role="radio"
+                aria-checked={severity === s.id}
+                onClick={() => setSeverity(s.id)}
+                className={`min-h-[56px] px-2 py-1.5 rounded-xl text-sm font-bold border text-center leading-tight ${
+                  severity === s.id ? s.active : 'bg-surface-container text-on-surface-variant border-outline-variant'
+                }`}
+              >
+                {s.label}
+                <span className="block text-xs font-normal opacity-80">{s.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="flex-1 py-3 bg-error text-on-error font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all disabled:opacity-60"
-            >
-              <AlertTriangle className="w-4 h-4" /> {isSaving ? 'Ukládám fotku…' : 'Nahlásit poškození'}
+        <Field label="Popis závady pro sklad" required>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Např. prasklá výbojka, stržený závit, ohnutá stojna…"
+            rows={3}
+            required
+            autoCapitalize="sentences"
+            className={`${inputCls} h-auto py-3`}
+          />
+        </Field>
+
+        {uploadError && (
+          <div className="bg-error-container/20 border border-error/40 rounded-xl p-3 text-sm flex flex-col gap-2">
+            <span className="text-error font-semibold">{uploadError}</span>
+            <button type="button" onClick={() => save(null)} className="self-start h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm font-bold text-on-surface">
+              Uložit závadu bez fotky
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+      </form>
+    </Sheet>
   );
 };

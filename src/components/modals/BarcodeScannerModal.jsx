@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import {
-  QrCode, X, Check, Camera, Zap, SwitchCamera,
-  AlertCircle, Volume2, Plus, Search, CheckCircle2, RefreshCw
+  X, Camera, Zap, SwitchCamera, Flashlight, FlashlightOff,
+  AlertCircle, Plus, CheckCircle2, Keyboard,
 } from 'lucide-react';
+import { useBackLayer } from '../../hooks/useBackLayer';
 // html5-qrcode (~370 kB) is loaded only when the camera scanner opens.
 import { phaseOf } from '../../domain/labels';
 
@@ -23,6 +24,10 @@ export const BarcodeScannerModal = () => {
   const [manualCode, setManualCode] = useState('');
   const [catalogMatch, setCatalogMatch] = useState(null);
   const [cameraFacing, setCameraFacing] = useState('environment'); // 'environment' or 'user'
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [recent, setRecent] = useState([]); // last scans, newest first
+  const [scanCount, setScanCount] = useState(0);
 
   const scannerRef = useRef(null);
   const lastScannedTimeRef = useRef(0);
@@ -65,6 +70,11 @@ export const BarcodeScannerModal = () => {
     }
   };
 
+  const remember = (ok, text) => {
+    setScanCount((n) => n + 1);
+    setRecent((list) => [{ ok, text, id: Date.now() }, ...list].slice(0, 4));
+  };
+
   // Core processing logic when a code is decoded (from camera or manual entry)
   const processCode = (rawCode) => {
     if (!rawCode || !rawCode.trim()) return;
@@ -84,15 +94,16 @@ export const BarcodeScannerModal = () => {
       playSuccessSound();
       if (navigator.vibrate) navigator.vibrate(60);
       setCatalogMatch(null);
-      setScannedResult({ type: 'success', text: `${phaseOf(currentJob?.mode).name}: ${r.message}`, detail: r.warning || code });
-      setTimeout(() => setScannedResult(null), 4000);
+      setScannedResult({ type: 'success', text: r.message, detail: r.warning || code });
+      remember(true, r.message);
       return;
     }
 
     if (r.needsAdd) {
       playSuccessSound();
       setCatalogMatch(r.needsAdd);
-      setScannedResult({ type: 'catalog', text: r.message, detail: `Kód: ${code} • Přidat na zakázku?` });
+      setScannedResult({ type: 'catalog', text: r.message, detail: `Kód ${code} — položka zatím není v zakázce` });
+      setScanCount((n) => n + 1);
       return;
     }
 
@@ -100,7 +111,7 @@ export const BarcodeScannerModal = () => {
     if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
     setCatalogMatch(null);
     setScannedResult({ type: 'error', text: r.message, detail: code });
-    setTimeout(() => setScannedResult(null), 4500);
+    remember(false, r.message);
   };
 
   const handleAddCatalogMatchToJob = () => {
@@ -109,12 +120,8 @@ export const BarcodeScannerModal = () => {
     playSuccessSound();
     const name = catalogMatch.name;
     setCatalogMatch(null);
-    setScannedResult({
-      type: 'success',
-      text: `Přidáno do zakázky: ${name}`,
-      detail: `Položka byla úspěšně přidána a zaevidována.`
-    });
-    setTimeout(() => setScannedResult(null), 3000);
+    setScannedResult({ type: 'success', text: `Přidáno do zakázky: ${name}`, detail: '' });
+    remember(true, `Přidáno: ${name}`);
   };
 
   // Start Html5Qrcode camera scanner
@@ -161,6 +168,13 @@ export const BarcodeScannerModal = () => {
             // Frame parse noise, ignore
           }
         );
+        // Torch (flashlight) — only some phones / cameras expose it.
+        try {
+          const torch = html5QrCode.getRunningTrackCameraCapabilities().torchFeature();
+          if (isMounted) { setTorchSupported(torch.isSupported()); setTorchOn(false); }
+        } catch (e) {
+          if (isMounted) setTorchSupported(false);
+        }
       } catch (err) {
         console.warn('Html5Qrcode start error:', err);
         if (isMounted) {
@@ -213,158 +227,138 @@ export const BarcodeScannerModal = () => {
     setCameraFacing(prev => prev === 'environment' ? 'user' : 'environment');
   };
 
+  const toggleTorch = async () => {
+    try {
+      const torch = scannerRef.current.getRunningTrackCameraCapabilities().torchFeature();
+      await torch.apply(!torchOn);
+      setTorchOn(!torchOn);
+    } catch (e) {
+      setTorchSupported(false);
+    }
+  };
+
+  const close = () => {
+    cleanupScanner();
+    setScannedResult(null);
+    setCatalogMatch(null);
+    setRecent([]);
+    setIsScannerModalOpen(false);
+  };
+  useBackLayer(isScannerModalOpen, close);
+
   if (!isScannerModalOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-card-bg rounded-3xl border border-primary/40 max-w-lg w-full p-5 sm:p-6 flex flex-col gap-4 shadow-2xl relative my-auto">
-        
-        {/* Header */}
-        <div className="flex justify-between items-center border-b border-outline-variant pb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-primary-container/20 text-primary flex items-center justify-center border border-primary/30">
-              <QrCode className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[10px] font-mono font-bold text-primary uppercase">
-                Skener · {phaseOf(currentJob?.mode).name}
-              </span>
-              <h2 className="text-base sm:text-lg font-bold text-on-surface">Čtečka Čárových & QR Kódů</h2>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              cleanupScanner();
-              setIsScannerModalOpen(false);
-            }}
-            className="text-outline hover:text-on-surface p-2 rounded-full hover:bg-surface-container transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  const RESULT_STYLE = {
+    success: 'bg-emerald-600 text-white',
+    catalog: 'bg-amber-400 text-black',
+    error: 'bg-red-600 text-white',
+  };
+  const iconBtn = 'w-12 h-12 rounded-full bg-white/15 text-white flex items-center justify-center active:scale-90';
 
-        {/* Scan Feedback Banner */}
-        {scannedResult && (
-          <div className={`p-3.5 rounded-2xl font-bold text-xs flex flex-col gap-1 border shadow-lg animate-in fade-in zoom-in-95 duration-200 ${
-            scannedResult.type === 'success'
-              ? 'bg-secondary-container text-on-secondary-container border-secondary'
-              : scannedResult.type === 'catalog'
-              ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
-              : 'bg-error-container/30 text-error border-error/50'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-sm font-bold">
-                {scannedResult.type === 'success' && <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />}
-                {scannedResult.type === 'catalog' && <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />}
-                {scannedResult.type === 'error' && <AlertCircle className="w-4 h-4 text-error shrink-0" />}
-                {scannedResult.text}
-              </span>
-              <Volume2 className="w-4 h-4 opacity-70 shrink-0" />
-            </div>
-            <p className="text-[11px] font-normal opacity-90 pl-6">{scannedResult.detail}</p>
-            
-            {/* Action button if found in catalog */}
-            {catalogMatch && (
-              <button
-                type="button"
-                onClick={handleAddCatalogMatchToJob}
-                className="mt-2 ml-6 py-2 px-3 bg-amber-500 text-black font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow active:scale-95 transition-transform"
-              >
-                <Plus className="w-4 h-4" /> Přidat položku do této zakázky (+1 ks)
-              </button>
-            )}
+  return (
+    <div className="fixed inset-0 z-50 bg-black flex flex-col animate-fade-in" role="dialog" aria-modal="true" aria-label="Skener kódů">
+      {/* Top bar */}
+      <div className="shrink-0 flex items-center gap-2 px-3 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))]">
+        <button onClick={close} aria-label="Zavřít skener" className={iconBtn}>
+          <X className="w-6 h-6" />
+        </button>
+        <div className="flex-1 min-w-0 text-white">
+          <p className="text-base font-bold leading-tight truncate">Skener · {phaseOf(currentJob?.mode).name}</p>
+          <p className="text-sm text-white/70 truncate">{currentJob?.name}</p>
+        </div>
+        {torchSupported && (
+          <button onClick={toggleTorch} aria-label={torchOn ? 'Vypnout svítilnu' : 'Zapnout svítilnu'} aria-pressed={torchOn}
+            className={torchOn ? 'w-12 h-12 rounded-full bg-amber-400 text-black flex items-center justify-center active:scale-90' : iconBtn}>
+            {torchOn ? <Flashlight className="w-6 h-6" /> : <FlashlightOff className="w-6 h-6" />}
+          </button>
+        )}
+        <button onClick={toggleCamera} aria-label="Přepnout přední / zadní kameru" className={iconBtn}>
+          <SwitchCamera className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Camera */}
+      <div className="flex-1 min-h-0 relative flex items-center justify-center overflow-hidden">
+        <div id="blp-html5-qr-reader" className="w-full" />
+        {cameraError && (
+          <div className="absolute inset-0 bg-black flex flex-col items-center justify-center p-6 text-center gap-3 text-white">
+            <Camera className="w-12 h-12 text-white/50" />
+            <p className="text-base">{cameraError}</p>
           </div>
         )}
+      </div>
 
-        {/* Live Camera Viewfinder Box */}
-        <div className="relative bg-black rounded-2xl overflow-hidden border border-outline-variant min-h-[240px] flex items-center justify-center shadow-inner">
-          <div id="blp-html5-qr-reader" className="w-full h-full" />
-
-          {cameraError && (
-            <div className="absolute inset-0 bg-card-bg/95 flex flex-col items-center justify-center p-6 text-center gap-3">
-              <Camera className="w-10 h-10 text-outline/50" />
-              <p className="text-xs text-outline">{cameraError}</p>
+      {/* Result + manual entry, within thumb reach */}
+      <div className="shrink-0 bg-card-bg rounded-t-3xl border-t border-outline-variant px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex flex-col gap-3 max-h-[55dvh] overflow-y-auto">
+        <div aria-live="assertive">
+          {scannedResult ? (
+            <div key={scanCount} className={`rounded-2xl p-4 flex flex-col gap-2 animate-fade-in ${RESULT_STYLE[scannedResult.type]}`}>
+              <div className="flex items-start gap-3">
+                {scannedResult.type === 'success' ? <CheckCircle2 className="w-7 h-7 shrink-0" /> : <AlertCircle className="w-7 h-7 shrink-0" />}
+                <div className="min-w-0">
+                  <p className="text-lg font-bold leading-snug break-words">{scannedResult.text}</p>
+                  {scannedResult.detail && <p className="text-sm opacity-90 break-words">{scannedResult.detail}</p>}
+                </div>
+              </div>
+              {catalogMatch && (
+                <button type="button" onClick={handleAddCatalogMatchToJob} className="h-14 rounded-xl bg-black text-white text-base font-bold flex items-center justify-center gap-2 active:scale-[0.98]">
+                  <Plus className="w-5 h-5" /> Přidat do zakázky (+1 ks)
+                </button>
+              )}
             </div>
+          ) : (
+            <p className="text-base text-on-surface-variant text-center py-3">
+              {isScanning ? 'Namiřte kameru na štítek nebo čárový kód.' : 'Spouštím kameru…'}
+            </p>
           )}
-
-          {/* Camera Flip Button */}
-          <button
-            onClick={toggleCamera}
-            type="button"
-            className="absolute bottom-3 right-3 z-30 p-2.5 bg-black/70 backdrop-blur text-white rounded-xl border border-white/20 hover:bg-black/90 active:scale-95 transition-all"
-            title="Přepnout přední / zadní kameru"
-          >
-            <SwitchCamera className="w-4 h-4" />
-          </button>
         </div>
 
-        {/* Manual Barcode Entry / Laser Gun Input */}
+        {recent.length > 1 && (
+          <ul className="flex flex-col gap-1" aria-label="Poslední skeny">
+            {recent.slice(1).map((r) => (
+              <li key={r.id} className="flex items-center gap-2 text-sm text-on-surface-variant">
+                {r.ok ? <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" /> : <AlertCircle className="w-4 h-4 text-error shrink-0" />}
+                <span className="truncate">{r.text}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <form onSubmit={handleManualSubmit} className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
+            <Keyboard className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
             <input
               type="text"
               value={manualCode}
               onChange={(e) => setManualCode(e.target.value)}
-              placeholder="Zadat kód ručně nebo čtečkou..."
-              className="w-full h-11 pl-9 pr-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary font-mono"
+              placeholder="Zadat kód ručně"
+              autoComplete="off"
+              autoCapitalize="characters"
+              enterKeyHint="go"
+              aria-label="Kód ručně"
+              className="w-full h-12 pl-10 pr-3 bg-surface-container border border-outline-variant rounded-xl text-base text-on-surface focus:outline-none focus:border-primary font-mono"
             />
           </div>
-          <button
-            type="submit"
-            disabled={!manualCode.trim()}
-            className="px-4 py-2.5 bg-primary text-on-primary-container font-bold text-xs rounded-xl flex items-center gap-1.5 active:scale-95 disabled:opacity-40 shadow shrink-0"
-          >
-            <Zap className="w-4 h-4" /> Zpracovat
+          <button type="submit" disabled={!manualCode.trim()} className="h-12 px-4 bg-primary text-on-primary font-bold text-base rounded-xl active:scale-95 disabled:opacity-40 shrink-0">
+            OK
           </button>
         </form>
 
         {/* Quick simulation list for testing without physical barcodes — dev builds only */}
         {import.meta.env.DEV && (
-        <div className="border-t border-outline-variant/60 pt-3">
-          <label className="block text-[11px] font-mono text-outline mb-1.5 uppercase">
-            Položky na zakázce (klikněte pro rychlé nasimulování skenu):
-          </label>
-          <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
-            {jobItems.length === 0 ? (
-              <div className="text-xs text-outline italic text-center py-2">
-                Žádné položky na této zakázce.
-              </div>
-            ) : (
-              jobItems.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => processCode(item.barcode || item.serialNumber || item.name)}
-                  className="flex justify-between items-center bg-surface-container hover:bg-surface-container-high px-3 py-2 rounded-xl border border-outline-variant text-left transition-all active:scale-98"
-                >
-                  <div className="min-w-0 flex-1 pr-2">
-                    <span className="block text-xs font-semibold text-on-surface truncate">{item.name}</span>
-                    <span className="text-[10px] font-mono text-outline">
-                      {item.barcode ? `BARCODE: ${item.barcode} | ` : ''}SN: {item.serialNumber || 'Bez SN'}
-                    </span>
-                  </div>
-                  <span className="font-mono text-[10px] font-bold text-primary bg-primary-container/20 px-2 py-1 rounded border border-primary/30 flex items-center gap-1 shrink-0">
-                    <Zap className="w-3 h-3 text-secondary" /> +1
-                  </span>
+          <details className="text-sm">
+            <summary className="text-on-surface-variant py-1">Simulace skenu (jen vývoj)</summary>
+            <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto mt-1">
+              {jobItems.map((item) => (
+                <button key={item.id} type="button" onClick={() => processCode(item.barcode || item.serialNumber || item.name)}
+                  className="flex justify-between items-center gap-2 bg-surface-container px-3 py-2 rounded-xl border border-outline-variant text-left">
+                  <span className="truncate text-on-surface">{item.name}</span>
+                  <Zap className="w-4 h-4 text-secondary shrink-0" />
                 </button>
-              ))
-            )}
-          </div>
-        </div>
+              ))}
+            </div>
+          </details>
         )}
-
-        {/* Footer */}
-        <button
-          type="button"
-          onClick={() => {
-            cleanupScanner();
-            setIsScannerModalOpen(false);
-          }}
-          className="w-full py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-sm active:scale-98"
-        >
-          Zavřít Skener
-        </button>
       </div>
     </div>
   );

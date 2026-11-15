@@ -3,6 +3,8 @@ import { useInventory } from '../../context/InventoryContext';
 import { useDialogs } from '../common/Dialogs';
 import { ItemSwipeCard } from './ItemSwipeCard';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
+import { useHideOnScroll } from '../../hooks/useHideOnScroll';
+import { useBackLayer } from '../../hooks/useBackLayer';
 import { phaseOf, filtersFor, filterCounts, matchesFilter, phaseSummary, plural } from '../../domain/labels';
 import {
   Search, QrCode, Plus, Package, Lock, Unlock, Truck, Copy, X, BookOpen, FileText, CheckCircle2, ArrowRight, Warehouse,
@@ -24,6 +26,10 @@ export const PackingList = () => {
   } = useInventory();
   const { confirm, toast } = useDialogs();
   const [fabOpen, setFabOpen] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  // Scrolling down hides search + filters so more of the list fits on a phone.
+  const toolsHidden = useHideOnScroll({ enabled: !searchQuery && !searchFocused });
+  useBackLayer(fabOpen, () => setFabOpen(false));
 
   useEffect(() => {
     const handleScroll = () => { if (fabOpen) setFabOpen(false); };
@@ -45,7 +51,7 @@ export const PackingList = () => {
       <div className="max-w-4xl mx-auto px-4 py-12 text-center text-on-surface-variant flex flex-col items-center gap-4">
         <Package className="w-16 h-16 text-outline/40" />
         <p className="text-lg">Vyberte nebo vytvořte zakázku.</p>
-        <button onClick={() => setActiveTab('dashboard')} className="h-14 px-6 bg-primary text-on-primary-container font-semibold rounded-2xl active:scale-95">
+        <button onClick={() => setActiveTab('dashboard')} className="h-14 px-6 bg-primary text-on-primary font-semibold rounded-2xl active:scale-95">
           Přejít na zakázky
         </button>
       </div>
@@ -120,7 +126,7 @@ export const PackingList = () => {
               <button onClick={() => setTemplateJob(currentJob)} className="h-11 px-3 bg-surface-container text-on-surface text-sm font-semibold rounded-xl flex items-center gap-1.5 border border-outline-variant">
                 <Copy className="w-4 h-4 text-secondary" /> Vzor
               </button>
-              <button onClick={() => { reactivateJob(currentJob.id); toast({ text: 'Zakázka obnovena' }); }} className="h-11 px-3 bg-secondary text-on-secondary-container text-sm font-bold rounded-xl flex items-center gap-1.5">
+              <button onClick={() => { reactivateJob(currentJob.id); toast({ text: 'Zakázka obnovena' }); }} className="h-11 px-3 bg-secondary text-on-secondary text-sm font-bold rounded-xl flex items-center gap-1.5">
                 <Unlock className="w-4 h-4" /> Obnovit
               </button>
             </div>
@@ -149,7 +155,9 @@ export const PackingList = () => {
           </div>
         </div>
 
-        {/* Search + scanner + protocol */}
+        {/* Search + scanner + protocol, filters — collapse while scrolling down */}
+        <div className={`grid transition-[grid-template-rows] duration-200 ${toolsHidden ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}>
+        <div className={`min-h-0 overflow-hidden ${toolsHidden ? 'invisible' : ''}`}>
         <div className="px-3 py-2 border-b border-outline-variant/60 flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
@@ -157,6 +165,10 @@ export const PackingList = () => {
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              enterKeyHint="search"
+              autoComplete="off"
               placeholder="Hledat techniku, SN…"
               className="w-full h-12 pl-10 pr-11 bg-card-bg border border-outline-variant rounded-xl text-on-surface text-base focus:border-primary focus:outline-none placeholder:text-outline"
             />
@@ -188,7 +200,7 @@ export const PackingList = () => {
                   aria-selected={active}
                   onClick={() => setSelectedStatusFilter(f.id)}
                   className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap border shrink-0 flex items-center gap-2 ${
-                    active ? 'bg-primary text-on-primary-container border-primary' : 'bg-card-bg text-on-surface-variant border-outline-variant'
+                    active ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg text-on-surface-variant border-outline-variant'
                   } ${f.id === 'DAMAGED' && counts.DAMAGED > 0 && !active ? 'text-error border-error/40' : ''}`}
                 >
                   {f.label}
@@ -198,6 +210,8 @@ export const PackingList = () => {
             })}
           </div>
         )}
+        </div>
+        </div>
       </div>
 
       {/* Items */}
@@ -212,7 +226,7 @@ export const PackingList = () => {
             <p className="text-lg font-bold text-on-surface">{phase.allDone}</p>
             {summary.damaged.length > 0 && <p className="text-sm text-error font-semibold">{summary.damaged.length} {plural(summary.damaged.length, 'položka má', 'položky mají', 'položek má')} nahlášenou závadu.</p>}
             {!isArchived && (
-              <button onClick={switchPhase} className="h-14 px-6 rounded-2xl bg-secondary text-on-secondary-container font-bold flex items-center gap-2">
+              <button onClick={switchPhase} className="h-14 px-6 rounded-2xl bg-secondary text-on-secondary font-bold flex items-center gap-2">
                 {isRestock ? <><Lock className="w-5 h-5" /> Dokončit naskladnění…</>
                   : isDerigging ? <><Warehouse className="w-5 h-5" /> Zahájit naskladnění</>
                     : <><Truck className="w-5 h-5" /> Zahájit derigging</>}
@@ -249,7 +263,7 @@ export const PackingList = () => {
           <button
             onClick={() => setFabOpen(!fabOpen)}
             className={`fixed right-4 z-50 w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-200 active:scale-90 ${
-              fabOpen ? 'bg-error-container border-2 border-error/60 text-error rotate-45' : 'bg-secondary border-2 border-secondary/60 text-on-secondary-container'
+              fabOpen ? 'bg-error-container border-2 border-error/60 text-error rotate-45' : 'bg-secondary border-2 border-secondary/60 text-on-secondary'
             }`}
             style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 0.5rem)' }}
             aria-label={fabOpen ? 'Zavřít' : 'Přidat techniku do zakázky'}

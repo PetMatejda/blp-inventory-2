@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../context/InventoryContext';
+import { useBackLayer } from '../../hooks/useBackLayer';
 import { firebaseAuth } from '../../services/firebaseAuth';
 import { auth } from '../../services/firebase';
 import {
@@ -45,6 +46,8 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
       setHasCredential(hasRegisteredCredential());
     });
   }, [isOpen]);
+
+  useBackLayer(isOpen && !isForceAuth, onClose);
 
   if (!isOpen) return null;
 
@@ -176,7 +179,7 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-bold text-on-surface">Profil</h2>
             {!isForceAuth && onClose && (
-              <button onClick={onClose} className="text-outline hover:text-on-surface p-1 rounded-full">
+              <button onClick={onClose} aria-label="Zavřít" className="w-11 h-11 -mr-2 flex items-center justify-center text-outline rounded-full">
                 <X className="w-5 h-5" />
               </button>
             )}
@@ -184,12 +187,12 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
 
           {/* Toast */}
           {successMsg && (
-            <div className="bg-secondary-container text-on-secondary-container p-2.5 rounded-xl font-bold text-xs flex items-center gap-2 border border-secondary">
+            <div className="bg-secondary-container text-on-secondary-container p-3 rounded-xl font-semibold text-sm flex items-center gap-2 border border-secondary">
               <CheckCircle2 className="w-4 h-4 shrink-0" /> {successMsg}
             </div>
           )}
           {error && (
-            <div className="bg-error-container/30 text-error p-2.5 rounded-xl font-bold text-xs flex items-center gap-2 border border-error/40">
+            <div className="bg-error-container/30 text-error p-3 rounded-xl font-semibold text-sm flex items-center gap-2 border border-error/40">
               <AlertCircle className="w-4 h-4 shrink-0" /> {error}
             </div>
           )}
@@ -203,8 +206,8 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
             />
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-base text-on-surface truncate">{currentUser.name}</h3>
-              <p className="text-xs text-outline truncate">{currentUser.email}</p>
-              <span className="text-[10px] font-mono text-secondary mt-1 block">
+              <p className="text-sm text-on-surface-variant truncate">{currentUser.email}</p>
+              <span className="text-xs text-secondary mt-1 block">
                 {currentUser.provider === 'google' ? 'Google OAuth' : 'E-mail'}
               </span>
             </div>
@@ -215,9 +218,9 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
             <div className="bg-surface-container rounded-xl border border-outline-variant p-3 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <Fingerprint className="w-4 h-4 text-primary" />
-                <span className="text-xs font-bold text-on-surface">Biometrické přihlášení</span>
+                <span className="text-sm font-bold text-on-surface">Biometrické přihlášení</span>
                 {hasCredential && (
-                  <span className="ml-auto text-[10px] font-mono bg-secondary/15 text-secondary border border-secondary/30 px-2 py-0.5 rounded-full font-bold">
+                  <span className="ml-auto text-xs bg-secondary/15 text-secondary border border-secondary/30 px-2 py-0.5 rounded-full font-bold">
                     AKTIVNÍ
                   </span>
                 )}
@@ -225,33 +228,33 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
 
               {showBioRegister ? (
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs text-outline">Přihlašovat se příště otiskem prstu?</p>
+                  <p className="text-sm text-on-surface-variant">Přihlašovat se příště otiskem prstu?</p>
                   <div className="flex gap-2">
                     <button
                       onClick={handleRegisterBiometric}
                       disabled={bioLoading}
-                      className="flex-1 py-2 bg-primary text-on-primary-container font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+                      className="flex-1 h-11 bg-primary text-on-primary font-bold text-sm rounded-xl flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
                     >
                       <Fingerprint className="w-4 h-4" />
                       {bioLoading ? 'Registruji...' : 'Aktivovat'}
                     </button>
                     <button
                       onClick={() => { setShowBioRegister(false); if (onClose) onClose(); }}
-                      className="px-4 py-2 bg-surface-variant text-on-surface-variant text-xs font-semibold rounded-xl border border-outline-variant active:scale-95"
+                      className="px-4 h-11 bg-surface-variant text-on-surface-variant text-sm font-semibold rounded-xl border border-outline-variant active:scale-95"
                     >
                       Přeskočit
                     </button>
                   </div>
                 </div>
               ) : hasCredential ? (
-                <button onClick={handleRemoveBiometric} className="flex items-center gap-1.5 text-xs text-error font-semibold">
+                <button onClick={handleRemoveBiometric} className="min-h-[44px] flex items-center gap-1.5 text-sm text-error font-semibold">
                   <Trash2 className="w-3.5 h-3.5" /> Odregistrovat biometrii
                 </button>
               ) : (
                 <button
                   onClick={handleRegisterBiometric}
                   disabled={bioLoading}
-                  className="w-full py-2 bg-primary/10 border border-primary/30 text-primary font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+                  className="w-full h-11 bg-primary/10 border border-primary/30 text-primary font-bold text-sm rounded-xl flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
                 >
                   <Fingerprint className="w-4 h-4" />
                   {bioLoading ? 'Registruji...' : 'Aktivovat otisk prstu'}
@@ -265,7 +268,7 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
             type="button"
             disabled={loading}
             onClick={handleLogout}
-            className="w-full py-3 bg-error-container/30 border border-error/40 text-error font-bold rounded-xl text-sm flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+            className="w-full h-12 bg-error-container/30 border border-error/40 text-error font-bold rounded-xl text-base flex items-center justify-center gap-2 active:scale-95 shadow-sm"
           >
             <LogOut className="w-4 h-4" /> Odhlásit se
           </button>
@@ -302,12 +305,12 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
 
         {/* Toast messages */}
         {successMsg && (
-          <div className="w-full bg-emerald-500/20 text-emerald-300 p-3 rounded-xl font-bold text-xs flex items-center gap-2 border border-emerald-500/30 backdrop-blur-sm">
+          <div className="w-full bg-emerald-500/20 text-emerald-300 p-3 rounded-xl font-semibold text-sm flex items-center gap-2 border border-emerald-500/30 backdrop-blur-sm">
             <CheckCircle2 className="w-4 h-4 shrink-0" /> {successMsg}
           </div>
         )}
         {error && (
-          <div className="w-full bg-red-500/20 text-red-300 p-3 rounded-xl font-bold text-xs flex items-center gap-2 border border-red-500/30 backdrop-blur-sm">
+          <div className="w-full bg-red-500/20 text-red-200 p-3 rounded-xl font-semibold text-sm flex items-center gap-2 border border-red-500/30 backdrop-blur-sm">
             <AlertCircle className="w-4 h-4 shrink-0" /> {error}
           </div>
         )}
@@ -319,7 +322,7 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
               type="button"
               disabled={bioLoading}
               onClick={handleBiometricLogin}
-              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/25 active:scale-[0.97] transition-all disabled:opacity-50"
+              className="w-full h-14 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold rounded-2xl text-base flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/25 active:scale-[0.97] transition-all disabled:opacity-50"
             >
               <Fingerprint className="w-6 h-6" />
               {bioLoading ? 'Ověřuji...' : 'Přihlásit otiskem / Face ID'}
@@ -327,7 +330,7 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
 
             <div className="relative flex items-center justify-center w-full">
               <div className="border-t border-slate-600 w-full" />
-              <span className="bg-transparent px-3 text-[10px] font-mono text-slate-500 uppercase shrink-0 absolute backdrop-blur-sm">
+              <span className="bg-transparent px-3 text-xs text-slate-400 shrink-0 absolute backdrop-blur-sm">
                 nebo
               </span>
             </div>
@@ -339,7 +342,7 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
           type="button"
           disabled={loading}
           onClick={handleGoogleLogin}
-          className="w-full py-3.5 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-sm flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all disabled:opacity-50"
+          className="w-full h-14 bg-white hover:bg-gray-50 text-gray-800 font-semibold rounded-2xl text-base flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all disabled:opacity-50"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -354,9 +357,9 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
         <button
           type="button"
           onClick={() => setShowEmailForm(!showEmailForm)}
-          className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-300 transition-colors"
+          className="min-h-[44px] px-3 flex items-center gap-2 text-sm text-slate-300"
         >
-          <Mail className="w-3.5 h-3.5" />
+          <Mail className="w-4 h-4" />
           Přihlásit se e-mailem a heslem
           {showEmailForm ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
@@ -368,20 +371,20 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
               <button
                 type="button"
                 onClick={() => { setActiveTab('login'); setError(''); }}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-md flex items-center justify-center gap-1 transition-all ${
-                  activeTab === 'login' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-500 hover:text-slate-300'
+                className={`flex-1 h-11 text-sm font-bold rounded-md flex items-center justify-center gap-1.5 transition-all ${
+                  activeTab === 'login' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-300'
                 }`}
               >
-                <LogIn className="w-3 h-3" /> Přihlášení
+                <LogIn className="w-4 h-4" /> Přihlášení
               </button>
               <button
                 type="button"
                 onClick={() => { setActiveTab('register'); setError(''); }}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-md flex items-center justify-center gap-1 transition-all ${
-                  activeTab === 'register' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-500 hover:text-slate-300'
+                className={`flex-1 h-11 text-sm font-bold rounded-md flex items-center justify-center gap-1.5 transition-all ${
+                  activeTab === 'register' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-300'
                 }`}
               >
-                <UserPlus className="w-3 h-3" /> Registrace
+                <UserPlus className="w-4 h-4" /> Registrace
               </button>
             </div>
 
@@ -395,7 +398,7 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   placeholder="E-mail"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none font-mono"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-3 text-base text-white placeholder:text-slate-400 focus:border-emerald-500/50 outline-none font-mono"
                 />
                 <input
                   type="password"
@@ -404,12 +407,12 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
                   onChange={(e) => setLoginPassword(e.target.value)}
                   autoComplete="current-password"
                   placeholder="Heslo"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none font-mono"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-3 text-base text-white placeholder:text-slate-400 focus:border-emerald-500/50 outline-none font-mono"
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold rounded-xl text-sm active:scale-[0.97] transition-all disabled:opacity-50"
+                  className="w-full h-12 bg-emerald-500 text-black font-bold rounded-xl text-base active:scale-[0.97] transition-all disabled:opacity-50"
                 >
                   {loading ? 'Přihlašuji...' : 'Přihlásit se'}
                 </button>
@@ -425,32 +428,36 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
                 <input
                   type="text"
                   required
+                  autoComplete="name"
+                  autoCapitalize="words"
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
                   placeholder="Jméno a Příjmení"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-3 text-base text-white placeholder:text-slate-400 focus:border-emerald-500/50 outline-none"
                 />
                 <input
                   type="email"
                   required
+                  autoComplete="email"
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   placeholder="E-mail"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-3 text-base text-white placeholder:text-slate-400 focus:border-emerald-500/50 outline-none"
                 />
                 <input
                   type="password"
                   required
                   minLength={6}
+                  autoComplete="new-password"
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
                   placeholder="Heslo (min. 6 znaků)"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 outline-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-3 text-base text-white placeholder:text-slate-400 focus:border-emerald-500/50 outline-none"
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold rounded-xl text-sm active:scale-[0.97] transition-all disabled:opacity-50"
+                  className="w-full h-12 bg-emerald-500 text-black font-bold rounded-xl text-base active:scale-[0.97] transition-all disabled:opacity-50"
                 >
                   {loading ? 'Registruji...' : 'Vytvořit účet'}
                 </button>
@@ -460,7 +467,7 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
         )}
 
         {/* Footer */}
-        <p className="text-[10px] text-slate-600 font-mono text-center mt-4">
+        <p className="text-xs text-slate-400 text-center mt-4">
           BLP INVENTORY v2.0 · Lighting Equipment Management
         </p>
       </div>

@@ -112,19 +112,10 @@ export const JobDashboard = () => {
   );
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 flex flex-col gap-4 pb-24">
-      <div className="flex items-center gap-2">
-        <div className="flex bg-surface-container p-1 rounded-xl border border-outline-variant shadow-sm flex-1" role="tablist">
-          {tab('ACTIVE', 'Aktivní')}
-          {tab('ARCHIVED', 'Archiv')}
-        </div>
-        <button
-          onClick={() => setIsNewJobModalOpen(true)}
-          className="h-[52px] px-4 bg-primary text-on-primary-container font-semibold rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 shrink-0"
-          aria-label="Nová zakázka"
-        >
-          <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Nová</span>
-        </button>
+    <div className="max-w-4xl mx-auto px-4 py-4 flex flex-col gap-4 pb-36">
+      <div className="flex bg-surface-container p-1 rounded-xl border border-outline-variant shadow-sm" role="tablist">
+        {tab('ACTIVE', 'Aktivní')}
+        {tab('ARCHIVED', 'Archiv')}
       </div>
 
       <AlertsSummary />
@@ -135,7 +126,7 @@ export const JobDashboard = () => {
             <FolderOpen className="w-12 h-12 text-outline/50" />
             <p className="text-base">{filterState === 'ACTIVE' ? 'Žádné aktivní zakázky.' : 'Archiv je prázdný.'}</p>
             {filterState === 'ACTIVE' && (
-              <button onClick={() => setIsNewJobModalOpen(true)} className="h-12 px-5 rounded-xl bg-primary text-on-primary-container font-semibold">
+              <button onClick={() => setIsNewJobModalOpen(true)} className="h-12 px-5 rounded-xl bg-primary text-on-primary font-semibold">
                 Založit zakázku
               </button>
             )}
@@ -144,6 +135,15 @@ export const JobDashboard = () => {
           filteredJobs.map((job) => <JobCardItem key={job.id} job={job} isSelected={job.id === currentJobId} />)
         )}
       </div>
+
+      {/* New job — same place and shape as "add item" on the packing screen */}
+      <button
+        onClick={() => setIsNewJobModalOpen(true)}
+        className="fixed right-4 z-30 h-14 pl-4 pr-5 rounded-2xl bg-primary text-on-primary font-bold text-base flex items-center gap-2 shadow-2xl active:scale-95"
+        style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 0.5rem)' }}
+      >
+        <Plus className="w-6 h-6 stroke-[2.5]" /> Nová zakázka
+      </button>
     </div>
   );
 };

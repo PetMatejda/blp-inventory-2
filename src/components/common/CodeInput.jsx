@@ -82,7 +82,7 @@ export const CodeInput = ({ onCode, placeholder = 'Naskenujte nebo zadejte kód'
           />
         </div>
         <button type="button" onClick={() => setCamera((c) => !c)} aria-label={camera ? 'Vypnout kameru' : 'Skenovat kamerou'}
-          className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${camera ? 'bg-primary text-on-primary-container border-primary' : 'bg-card-bg border-outline-variant text-secondary'}`}>
+          className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${camera ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg border-outline-variant text-secondary'}`}>
           {camera ? <CameraOff className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
         </button>
       </form>

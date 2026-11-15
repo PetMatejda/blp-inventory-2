@@ -46,7 +46,7 @@ export const BottomNavBar = () => {
                   }`}
                 />
                 {tab.badge > 0 && (
-                  <span className={`absolute -top-1.5 -right-2 text-[10px] font-mono font-bold w-4 h-4 rounded-full flex items-center justify-center border border-background ${tab.critical ? 'bg-error text-white' : 'bg-amber-500 text-black'}`}>
+                  <span className={`absolute -top-1.5 -right-2 text-[10px] font-mono font-bold w-4 h-4 rounded-full flex items-center justify-center border border-background ${tab.critical ? 'bg-error text-on-error' : 'bg-amber-500 text-black'}`}>
                     {tab.badge}
                   </span>
                 )}

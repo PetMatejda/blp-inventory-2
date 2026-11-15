@@ -58,7 +58,7 @@ export const TopAppBar = () => {
       >
         <Bell className="w-5 h-5" />
         {counts.urgent > 0 && (
-          <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-bold flex items-center justify-center border-2 border-background ${counts.critical ? 'bg-error text-white' : 'bg-amber-500 text-black'}`}>
+          <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-bold flex items-center justify-center border-2 border-background ${counts.critical ? 'bg-error text-on-error' : 'bg-amber-500 text-black'}`}>
             {counts.urgent > 99 ? '99+' : counts.urgent}
           </span>
         )}

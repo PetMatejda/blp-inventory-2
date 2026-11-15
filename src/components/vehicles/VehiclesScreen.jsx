@@ -87,7 +87,7 @@ const VehicleForm = ({ vehicle, onDone }) => {
 
       <div className="flex gap-2">
         <button type="button" onClick={onDone} className="flex-1 h-12 rounded-xl border border-outline-variant bg-surface-container font-semibold">Zpět</button>
-        <button type="submit" className="flex-1 h-12 rounded-xl bg-primary text-on-primary-container font-bold">{isNew ? 'Přidat vůz' : 'Uložit'}</button>
+        <button type="submit" className="flex-1 h-12 rounded-xl bg-primary text-on-primary font-bold">{isNew ? 'Přidat vůz' : 'Uložit'}</button>
       </div>
       {!isNew && (
         <div className="flex gap-2">
@@ -158,7 +158,7 @@ export const VehiclesScreen = () => {
           </p>
         </div>
         <button type="button" onClick={() => setEditing('NEW')}
-          className="h-12 px-4 rounded-xl bg-primary text-on-primary-container font-bold flex items-center gap-2 shrink-0 active:scale-95">
+          className="h-12 px-4 rounded-xl bg-primary text-on-primary font-bold flex items-center gap-2 shrink-0 active:scale-95">
           <Plus className="w-5 h-5" /> Přidat
         </button>
       </div>

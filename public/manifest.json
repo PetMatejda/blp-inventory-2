@@ -1,24 +1,16 @@
 {
   "short_name": "BLP Inventory",
   "name": "BLP INVENTORY - Operativní řízení filmové techniky",
-  "description": "Profesionální systém pro nakládku, derigging a správa filmové osvětlovací techniky",
+  "description": "Profesionální systém pro nakládku, derigging a správu filmové osvětlovací techniky",
   "icons": [
-    {
-      "src": "/icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any maskable"
-    }
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "maskable" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
   ],
   "start_url": "/",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#10131a",
+  "theme_color": "#10131a",
   "display": "standalone",
   "orientation": "portrait"
 }

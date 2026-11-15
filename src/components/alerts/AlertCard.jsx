@@ -7,7 +7,7 @@ export const GROUP_ICON = { vehicles: Truck, stock: Warehouse, jobs: PackageChec
 export const SEVERITY = {
   critical: {
     label: 'Hned řešit', stripe: 'bg-error', icon: 'text-error bg-error-container/40 border-error/40',
-    chip: 'bg-error text-white border-error',
+    chip: 'bg-error text-on-error border-error',
   },
   warning: {
     label: 'Brzy', stripe: 'bg-amber-500', icon: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/40',
@@ -34,7 +34,7 @@ export const AlertCard = ({ alert, onOpen, compact = false }) => {
         <span className="flex-1 min-w-0">
           <span className="flex items-baseline gap-2">
             <span className="font-bold text-on-surface leading-snug truncate">{alert.title}</span>
-            {!compact && <span className="text-[11px] font-semibold uppercase tracking-wide text-outline shrink-0">{ALERT_GROUPS[alert.group]}</span>}
+            {!compact && <span className="text-xs font-semibold uppercase tracking-wide text-outline shrink-0">{ALERT_GROUPS[alert.group]}</span>}
           </span>
           <span className={`block text-sm text-on-surface-variant ${compact ? 'truncate' : 'break-words'}`}>{alert.detail}</span>
         </span>

@@ -48,7 +48,7 @@ export const AlertsScreen = () => {
             <div className="flex gap-2 overflow-x-auto no-scrollbar" role="tablist" aria-label="Oblast">
               {[['ALL', 'Vše', counts.total], ...groups.map((g) => [g, ALERT_GROUPS[g], alerts.filter((a) => a.group === g).length])].map(([id, label, n]) => (
                 <button key={id} role="tab" aria-selected={group === id} onClick={() => setGroup(id)}
-                  className={`h-10 px-3 rounded-xl text-sm font-semibold whitespace-nowrap border shrink-0 ${group === id ? 'bg-primary text-on-primary-container border-primary' : 'bg-card-bg border-outline-variant text-on-surface-variant'}`}>
+                  className={`h-10 px-3 rounded-xl text-sm font-semibold whitespace-nowrap border shrink-0 ${group === id ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg border-outline-variant text-on-surface-variant'}`}>
                   {label} <span className="opacity-70">{n}</span>
                 </button>
               ))}

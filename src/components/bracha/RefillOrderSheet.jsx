@@ -50,7 +50,7 @@ export const RefillOrderSheet = ({ onClose }) => {
       <pre className="whitespace-pre-wrap text-sm bg-surface-container border border-outline-variant rounded-xl p-3 max-h-64 overflow-y-auto font-sans text-on-surface">{text}</pre>
       <div className="grid grid-cols-3 gap-2">
         {typeof navigator !== 'undefined' && navigator.share && (
-          <button onClick={share} disabled={!items.length} className="h-14 rounded-2xl bg-secondary text-on-secondary-container font-bold flex flex-col items-center justify-center text-sm disabled:opacity-40">
+          <button onClick={share} disabled={!items.length} className="h-14 rounded-2xl bg-secondary text-on-secondary font-bold flex flex-col items-center justify-center text-sm disabled:opacity-40">
             <Share2 className="w-5 h-5" /> Sdílet
           </button>
         )}

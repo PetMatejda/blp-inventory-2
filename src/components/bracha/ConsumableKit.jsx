@@ -32,7 +32,7 @@ export const ConsumableKit = () => {
         <button
           onClick={() => setShowOrder(true)}
           disabled={refillItems.length + halfItems.length === 0}
-          className="h-12 px-4 rounded-xl bg-primary text-on-primary-container font-bold flex items-center gap-2 shrink-0 disabled:opacity-40"
+          className="h-12 px-4 rounded-xl bg-primary text-on-primary font-bold flex items-center gap-2 shrink-0 disabled:opacity-40"
         >
           <ShoppingCart className="w-5 h-5" /> Objednat ({refillItems.length + halfItems.length})
         </button>

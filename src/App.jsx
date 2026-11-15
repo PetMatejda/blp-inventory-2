@@ -2,6 +2,7 @@ import React, { useEffect, lazy, Suspense } from 'react';
 import { InventoryProvider, useInventory } from './context/InventoryContext';
 import { TopAppBar } from './components/layout/TopAppBar';
 import { BottomNavBar } from './components/layout/BottomNavBar';
+import { useBackLayer } from './hooks/useBackLayer';
 
 import { JobDashboard } from './components/dashboard/JobDashboard';
 import { PackingList } from './components/packing/PackingList';
@@ -55,7 +56,10 @@ const ModalLayer = () => {
 };
 
 const MainContent = () => {
-  const { activeTab } = useInventory();
+  const { activeTab, setActiveTab } = useInventory();
+  // Android Back: from any other tab go to Zakázky first; Back there leaves the app.
+  // (Sheets, the scanner and drawers register their own layers — see useBackLayer.)
+  useBackLayer(activeTab !== 'dashboard', () => setActiveTab('dashboard'));
 
   switch (activeTab) {
     case 'dashboard':
@@ -78,8 +82,6 @@ const MainContent = () => {
 /**
  * AuthGate — renders a loading splash until Firebase resolves auth state.
  * Prevents the dashboard from being visible (even briefly) before auth check.
- * Also installs a back-button interceptor so Android PWA back doesn't navigate
- * to the Google OAuth redirect page.
  */
 const AuthGate = ({ children }) => {
   const { authLoading } = useInventory();
@@ -89,7 +91,7 @@ const AuthGate = ({ children }) => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
         <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-2xl animate-pulse">
-          <span className="text-3xl font-black text-white">B</span>
+          <span className="text-3xl font-black text-on-primary">B</span>
         </div>
         <p className="text-outline text-sm font-mono">Načítám...</p>
       </div>
@@ -143,7 +145,7 @@ const GlobalNoticeToast = () => {
   if (!syncNotice) return null;
 
   return (
-    <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 max-w-sm w-11/12 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-200">
+    <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 max-w-sm w-11/12 pointer-events-none animate-fade-in">
       <div className="bg-slate-900/95 dark:bg-zinc-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-white/20 text-xs font-semibold text-center flex items-center justify-center gap-2">
         <span>{syncNotice}</span>
       </div>

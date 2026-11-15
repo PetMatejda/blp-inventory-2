@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useBackLayer } from '../../hooks/useBackLayer';
 import { useInventory } from '../../context/InventoryContext';
 import { CATEGORIES, ITEM_ICONS, getCategoryMeta, getItemMeta } from '../../utils/categoryIcons';
 
@@ -227,6 +228,8 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
     return () => document.removeEventListener('mousedown', handler);
   }, [showBundlePicker]);
 
+  useBackLayer(!!item, handleClose);
+
   if (!item) return null;
 
   return (
@@ -239,9 +242,9 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
 
       {/* Drawer */}
       <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-md bg-card-bg border-l border-outline-variant shadow-2xl
-                      overflow-hidden animate-in slide-in-from-right duration-300
+                      overflow-hidden animate-sheet-up
                       max-sm:inset-x-0 max-sm:inset-y-auto max-sm:bottom-0 max-sm:rounded-t-3xl max-sm:border-t max-sm:border-l-0
-                      max-sm:max-h-[92vh] max-sm:animate-in max-sm:slide-in-from-bottom"
+                      max-sm:max-h-[92dvh]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0 bg-surface-container">
@@ -249,7 +252,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
             <Package className="w-5 h-5 text-primary" />
             {isNew ? 'Nová Položka Katalogu' : `Upravit: ${formData.name}`}
           </h2>
-          <button onClick={handleClose} className="p-2 hover:bg-surface-variant rounded-full text-outline">
+          <button onClick={handleClose} aria-label="Zavřít" className="w-11 h-11 -mr-2 flex items-center justify-center hover:bg-surface-variant rounded-full text-outline">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -309,7 +312,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                   <QrCode className="w-3.5 h-3.5 text-secondary" /> Čárový kód / Barcode (nepovinný)
                 </span>
                 {formData.barcode && (
-                  <span className="text-[10px] text-secondary font-mono">Uloženo</span>
+                  <span className="text-xs text-secondary font-mono">Uloženo</span>
                 )}
               </label>
 
@@ -332,8 +335,8 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                   }}
                   className={`px-3 h-10 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow ${
                     isScanningBarcode
-                      ? 'bg-error text-white'
-                      : 'bg-primary text-on-primary-container'
+                      ? 'bg-error text-on-error'
+                      : 'bg-primary text-on-primary'
                   }`}
                 >
                   <Camera className="w-3.5 h-3.5" />
@@ -345,7 +348,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
               {isScanningBarcode && (
                 <div className="mt-2.5 rounded-xl overflow-hidden border border-primary/50 bg-black relative">
                   <div id="drawer-barcode-reader" className="w-full min-h-[160px]" />
-                  <div className="p-2 bg-black/80 text-center text-[11px] text-secondary font-mono">
+                  <div className="p-2 bg-black/80 text-center text-xs text-secondary font-mono">
                     Zaměřte kameru na čárový kód techniky...
                   </div>
                 </div>
@@ -422,7 +425,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                       <button
                         type="button"
                         onClick={() => { setShowBundlePicker(!showBundlePicker); setBundleSearch(''); }}
-                        className="px-2.5 py-1 bg-primary text-on-primary-container text-xs font-bold rounded-lg flex items-center gap-1 active:scale-90"
+                        className="px-2.5 py-1 bg-primary text-on-primary text-xs font-bold rounded-lg flex items-center gap-1 active:scale-90"
                       >
                         <Plus className="w-3 h-3" /> Přidat z katalogu
                       </button>
@@ -458,10 +461,10 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                                   <CategoryBadge category={c.category} icon={c.icon} />
                                   <div className="flex-1 min-w-0">
                                     <div className="text-xs font-bold text-on-surface truncate">{c.name}</div>
-                                    <div className="text-[10px] text-outline">{c.category}</div>
+                                    <div className="text-xs text-outline">{c.category}</div>
                                   </div>
                                   {bundleCatalogIds.has(c.id) && (
-                                    <span className="text-[10px] font-mono text-primary font-bold shrink-0">✓ v setu</span>
+                                    <span className="text-xs font-mono text-primary font-bold shrink-0">✓ v setu</span>
                                   )}
                                 </button>
                               ))
@@ -481,7 +484,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                       <div key={sub.catalogId || idx} className="flex items-center gap-2 bg-surface-container/50 rounded-xl px-2 py-1.5">
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-bold text-on-surface truncate">{sub.name}</div>
-                          {sub.category && <div className="text-[10px] text-outline">{sub.category}</div>}
+                          {sub.category && <div className="text-xs text-outline">{sub.category}</div>}
                         </div>
                         <input
                           type="number"
@@ -490,7 +493,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                           onChange={(e) => updateBundleItemQty(idx, parseInt(e.target.value) || 1)}
                           className="w-12 h-8 px-1 bg-card-bg border border-outline-variant rounded-lg text-xs font-mono font-bold text-center focus:outline-none"
                         />
-                        <span className="text-[10px] text-outline shrink-0">ks</span>
+                        <span className="text-xs text-outline shrink-0">ks</span>
                         <button
                           type="button"
                           onClick={() => removeBundleItem(idx)}
@@ -520,7 +523,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
             type="submit"
             onClick={handleSave}
             disabled={!formData.name.trim()}
-            className="flex-1 py-3 bg-primary text-on-primary-container font-bold rounded-xl text-sm shadow flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
+            className="flex-1 py-3 bg-primary text-on-primary font-bold rounded-xl text-sm shadow flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
           >
             <Check className="w-4 h-4" /> {isNew ? 'Vytvořit' : 'Uložit'}
           </button>

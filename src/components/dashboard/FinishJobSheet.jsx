@@ -93,7 +93,7 @@ export const FinishJobSheet = () => {
         {!job.issued && <p className="text-sm text-on-surface-variant">Tato zakázka se nevydávala ze skladu, proto se upraví jen kusy se závadou (přesun do servisu).</p>}
         <div className="flex flex-col gap-2">
           {protocolButton}
-          <button onClick={finish} className="h-14 rounded-2xl bg-secondary text-on-secondary-container text-base font-bold shadow flex items-center justify-center gap-2">
+          <button onClick={finish} className="h-14 rounded-2xl bg-secondary text-on-secondary text-base font-bold shadow flex items-center justify-center gap-2">
             <Lock className="w-5 h-5" /> Dokončit naskladnění a archivovat
           </button>
         </div>
@@ -156,7 +156,7 @@ export const FinishJobSheet = () => {
         )}
         {protocolButton}
         <button onClick={archive} className={`h-14 rounded-2xl text-base font-bold shadow flex items-center justify-center gap-2 ${
-          job.issued ? 'border border-outline-variant bg-surface-container text-on-surface' : 'bg-secondary text-on-secondary-container'
+          job.issued ? 'border border-outline-variant bg-surface-container text-on-surface' : 'bg-secondary text-on-secondary'
         }`}>
           <Lock className="w-5 h-5" /> {job.issued ? 'Archivovat bez naskladnění' : 'Ukončit a archivovat'}
         </button>

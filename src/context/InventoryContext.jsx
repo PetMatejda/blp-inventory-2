@@ -215,6 +215,8 @@ export const InventoryProvider = ({ children }) => {
     const root = document.documentElement;
     root.classList.toggle('dark', themeMode === 'dark');
     root.classList.toggle('light', themeMode !== 'dark');
+    // Android status bar / PWA title bar follows the app theme.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeMode === 'dark' ? '#10131a' : '#ffffff');
   }, [themeMode]);
 
   // ── Derived state ──────────────────────────────────────────

@@ -6,7 +6,7 @@ const STYLE = {
   none: 'bg-surface-container text-outline border-outline-variant border-dashed',
   warn: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/50',
   danger: 'bg-error-container/40 text-error border-error/60',
-  expired: 'bg-error text-white border-error',
+  expired: 'bg-error text-on-error border-error',
 };
 
 /** One deadline (STK / known) as a coloured pill. */

@@ -6,7 +6,7 @@ import { getItemMeta } from '../../utils/categoryIcons';
 import { phaseOf, statusLabel } from '../../domain/labels';
 import { damagePhotos } from '../../domain/items';
 import { ItemThumbnail } from '../common/ItemThumbnail';
-import { Plus, Minus, CheckCircle, AlertTriangle, RefreshCw, MoreVertical } from 'lucide-react';
+import { Plus, Minus, CheckCircle, AlertTriangle, RefreshCw, MoreVertical, Pencil } from 'lucide-react';
 
 // Status accent bar color
 const STATUS_COLORS = {
@@ -25,7 +25,8 @@ const BADGE_STYLES = {
 
 const SEVERITY = { LIGHT: 'lehká', MAJOR: 'nefunkční', CRITICAL: 'kritická' };
 
-const SWIPE_THRESHOLD = 40;
+// Far enough that a diagonal scroll does not mark an item by accident.
+const SWIPE_THRESHOLD = 72;
 
 export const ItemSwipeCard = ({ item, shortage = 0 }) => {
   const {
@@ -40,13 +41,14 @@ export const ItemSwipeCard = ({ item, shortage = 0 }) => {
     setPhotoViewerItem,
     catalog,
   } = useInventory();
-  const { askNumber } = useDialogs();
+  const { askNumber, toast } = useDialogs();
 
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
   const isHorizRef = useRef(false);
+  const crossedRef = useRef(false);
 
   const mode = currentJob?.mode || 'LOADING';
   const phase = phaseOf(mode);
@@ -86,17 +88,28 @@ export const ItemSwipeCard = ({ item, shortage = 0 }) => {
     if (!isHorizRef.current) isHorizRef.current = Math.abs(dx) > Math.abs(dy);
     if (!isHorizRef.current) { setDragOffset(0); return; }
     if (Math.abs(dx) > 8) cancelLongPress();
+    // A short buzz tells the thumb that releasing now will count.
+    const crossed = Math.abs(dx) > SWIPE_THRESHOLD;
+    if (crossed && !crossedRef.current && navigator.vibrate) navigator.vibrate(15);
+    crossedRef.current = crossed;
     setDragOffset(Math.max(-130, Math.min(130, dx)));
   };
 
   const handleEnd = (e) => {
     if (!isDragging) return;
     setIsDragging(false);
-    if (dragOffset > SWIPE_THRESHOLD) setItemLoadedOrPacked(item.id);
-    else if (dragOffset < -SWIPE_THRESHOLD) setItemPending(item.id);
-    else longPress.onMouseUp(e);
+    const before = item.quantityLoaded;
+    const undo = (text) => toast({ text, actionLabel: 'Vrátit', onAction: () => setItemExactQuantity(item.id, before) });
+    if (dragOffset > SWIPE_THRESHOLD) {
+      setItemLoadedOrPacked(item.id);
+      if (before < item.quantityRequested) undo(`${phase.doneLabel}: ${item.name}`);
+    } else if (dragOffset < -SWIPE_THRESHOLD) {
+      setItemPending(item.id);
+      if (before > 0) undo(`Vráceno: ${item.name}`);
+    } else longPress.onMouseUp(e);
     setDragOffset(0);
     isHorizRef.current = false;
+    crossedRef.current = false;
   };
 
   const editCount = async (e) => {
@@ -205,38 +218,22 @@ export const ItemSwipeCard = ({ item, shortage = 0 }) => {
 
           {item.bundleTag && <p className="text-xs text-on-surface-variant">{item.bundleTag}</p>}
 
-          {/* Plan (preparation) */}
+          {/* Plan (preparation): one compact row; tap the chip to change the planned count */}
           {canPlan && (
-            <div className="flex items-center gap-2">
-              <span className="flex-1 text-sm font-semibold text-on-surface-variant">Připravit</span>
-              <button
-                onClick={stop(() => setItemRequestedQuantity(item.id, (item.quantityRequested || 1) - 1))}
-                disabled={(item.quantityRequested || 1) <= 1}
-                className="w-11 h-11 flex items-center justify-center bg-surface-container rounded-lg border border-outline-variant disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-transform"
-                aria-label={`Méně kusů v plánu: ${item.name}`}
-              >
-                <Minus className="w-5 h-5" />
-              </button>
+            <div className="flex items-center justify-between gap-2 -my-1">
+              <span className="text-sm font-semibold text-on-surface-variant">{phase.doneLabel}</span>
               <button
                 type="button"
                 onClick={editPlan}
-                className="min-w-[4.5rem] h-11 px-2 rounded-lg border border-outline-variant bg-surface-container font-mono font-bold text-lg text-on-surface active:scale-95"
-                aria-label={`Zadat plánovaný počet: ${item.quantityRequested} ks`}
+                className="h-11 px-3 -mr-1 rounded-xl text-sm font-semibold text-on-surface-variant flex items-center gap-1.5 active:scale-95"
+                aria-label={`Změnit plánovaný počet: ${item.quantityRequested} ks`}
               >
-                {item.quantityRequested} ks
-              </button>
-              <button
-                onClick={stop(() => setItemRequestedQuantity(item.id, (item.quantityRequested || 0) + 1))}
-                className="w-11 h-11 flex items-center justify-center bg-surface-container rounded-lg border border-outline-variant active:scale-90 transition-transform"
-                aria-label={`Více kusů v plánu: ${item.name}`}
-              >
-                <Plus className="w-5 h-5" />
+                Plán <span className="font-mono font-bold text-on-surface">{item.quantityRequested} ks</span> <Pencil className="w-4 h-4" />
               </button>
             </div>
           )}
 
           {/* Stepper */}
-          {canPlan && <span className="text-xs font-semibold text-on-surface-variant -mb-1.5">{phase.doneLabel}</span>}
           <div className="flex items-center gap-2 bg-surface-container rounded-xl border border-outline-variant p-1">
             <button
               onClick={stop(() => updateItemQuantity(item.id, -1))}

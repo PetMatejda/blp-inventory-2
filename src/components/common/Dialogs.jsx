@@ -6,26 +6,29 @@
 // Bottom sheet on phones, centred card on larger screens; big touch targets.
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Delete, X } from 'lucide-react';
+import { useBackLayer } from '../../hooks/useBackLayer';
 
 const DialogContext = createContext(null);
 
-export const Sheet = ({ title, subtitle, onClose, children, labelledBy = 'sheet-title' }) => {
+export const Sheet = ({ title, subtitle, onClose, children, footer, wide = false, dismissOnBackdrop = true, labelledBy = 'sheet-title' }) => {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+  // Android Back closes the sheet instead of leaving the app.
+  useBackLayer(!!onClose, onClose);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={dismissOnBackdrop ? onClose : undefined}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-md bg-card-bg border border-outline-variant rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-4 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-150"
+        className={`w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'} bg-card-bg border border-outline-variant rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92dvh] animate-sheet-up`}
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 shrink-0">
           <div className="min-w-0">
             <h2 id={labelledBy} className="text-lg font-bold text-on-surface leading-snug break-words">{title}</h2>
             {subtitle && <p className="text-sm text-on-surface-variant mt-0.5">{subtitle}</p>}
@@ -36,7 +39,14 @@ export const Sheet = ({ title, subtitle, onClose, children, labelledBy = 'sheet-
             </button>
           )}
         </div>
-        {children}
+        <div className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-1 flex flex-col gap-4 ${footer ? 'pb-4' : 'pb-[calc(1.25rem+env(safe-area-inset-bottom))]'}`}>
+          {children}
+        </div>
+        {footer && (
+          <div className="shrink-0 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] border-t border-outline-variant">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -72,7 +82,7 @@ const ConfirmDialog = ({ title, message, confirmLabel = 'Potvrdit', cancelLabel 
       <button
         autoFocus
         onClick={() => onResult(true)}
-        className={`h-14 rounded-2xl text-base font-bold shadow ${danger ? 'bg-error text-on-error' : 'bg-secondary text-on-secondary-container'}`}
+        className={`h-14 rounded-2xl text-base font-bold shadow ${danger ? 'bg-error text-on-error' : 'bg-secondary text-on-secondary'}`}
       >
         {confirmLabel}
       </button>
@@ -110,7 +120,7 @@ const NumberDialog = ({ title, message, value = 0, max, onResult }) => {
           </button>
         ))}
       </div>
-      <button onClick={() => onResult(num)} className="h-14 rounded-2xl bg-secondary text-on-secondary-container text-lg font-bold shadow">
+      <button onClick={() => onResult(num)} className="h-14 rounded-2xl bg-secondary text-on-secondary text-lg font-bold shadow">
         Uložit {num} ks
       </button>
     </Sheet>

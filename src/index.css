@@ -18,6 +18,72 @@
   #label-print { position: absolute; left: 0; top: 0; }
 }
 
+/* ── Theme colours (RGB channels, used by tailwind.config.js) ──
+   :root = dark theme, html.light = light theme. Text / background pairs are
+   chosen for at least 4.5:1 contrast (on-primary on primary, etc.). */
+:root {
+  --c-background: 16 19 26;
+  --c-card-bg: 30 41 59;
+  --c-surface-container: 29 32 39;
+  --c-surface-container-low: 24 27 34;
+  --c-surface-container-high: 39 42 49;
+  --c-surface-container-highest: 50 53 60;
+  --c-surface-container-lowest: 18 21 28;
+  --c-surface-variant: 50 53 60;
+  --c-surface-bright: 56 61 74;
+  --c-primary: 173 198 255;
+  --c-on-primary: 0 46 105;
+  --c-primary-container: 0 67 149;
+  --c-on-primary-container: 216 226 255;
+  --c-secondary: 78 222 163;
+  --c-on-secondary: 0 56 36;
+  --c-secondary-container: 0 165 114;
+  --c-on-secondary-container: 230 253 243;
+  --c-tertiary: 255 183 134;
+  --c-tertiary-container: 223 116 18;
+  --c-on-tertiary-container: 255 241 230;
+  --c-error: 255 180 171;
+  --c-on-error: 105 0 5;
+  --c-error-container: 147 0 10;
+  --c-on-error-container: 255 218 214;
+  --c-outline: 140 144 159;
+  --c-outline-variant: 66 71 84;
+  --c-on-surface: 225 226 236;
+  --c-on-surface-variant: 194 198 214;
+  color-scheme: dark;
+}
+html.light {
+  --c-background: 241 245 249;
+  --c-card-bg: 255 255 255;
+  --c-surface-container: 248 250 252;
+  --c-surface-container-low: 241 245 249;
+  --c-surface-container-high: 226 232 240;
+  --c-surface-container-highest: 226 232 240;
+  --c-surface-container-lowest: 255 255 255;
+  --c-surface-variant: 226 232 240;
+  --c-surface-bright: 248 250 252;
+  --c-primary: 3 105 161;
+  --c-on-primary: 255 255 255;
+  --c-primary-container: 224 242 254;
+  --c-on-primary-container: 7 89 133;
+  --c-secondary: 4 120 87;
+  --c-on-secondary: 255 255 255;
+  --c-secondary-container: 209 250 229;
+  --c-on-secondary-container: 6 95 70;
+  --c-tertiary: 180 83 9;
+  --c-tertiary-container: 255 237 213;
+  --c-on-tertiary-container: 154 52 18;
+  --c-error: 220 38 38;
+  --c-on-error: 255 255 255;
+  --c-error-container: 254 226 226;
+  --c-on-error-container: 153 27 27;
+  --c-outline: 100 116 139;
+  --c-outline-variant: 203 213 225;
+  --c-on-surface: 15 23 42;
+  --c-on-surface-variant: 71 85 105;
+  color-scheme: light;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -27,97 +93,34 @@
     -webkit-tap-highlight-color: transparent;
     /* Safe area insets for iPhone notch & home bar */
     padding-bottom: env(safe-area-inset-bottom);
+    /* No pull-to-refresh / page bounce while swiping lists and sheets */
+    overscroll-behavior-y: contain;
+  }
+  /* 16px text in fields: iOS does not zoom the page on focus, so pinch-zoom can stay enabled. */
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
+  /* Visible keyboard / reader focus (touch taps do not trigger it). */
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-primary));
+    outline-offset: 2px;
   }
 }
 
-/* Light theme overrides matching Stitch Light designs */
-html.light body {
-  background-color: #f1f5f9;
-  color: #0f172a;
-}
-html.light .bg-background {
-  background-color: #f1f5f9 !important;
-}
-html.light .bg-card-bg {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-}
-html.light .bg-surface-container {
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
-}
-html.light .bg-surface-container-high,
-html.light .bg-surface-container-highest,
-html.light .bg-surface-variant {
-  background-color: #e2e8f0 !important;
-  color: #1e293b !important;
-}
-html.light .bg-surface-container-lowest {
-  background-color: #ffffff !important;
-}
-html.light .text-on-surface {
-  color: #0f172a !important;
-}
-html.light .text-on-surface-variant,
-html.light .text-outline {
-  color: #475569 !important;
-}
-html.light .border-outline-variant {
-  border-color: #cbd5e1 !important;
-}
+/* Top and bottom bars are white in the light theme */
 html.light header,
 html.light nav {
-  background-color: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  color: #0f172a !important;
+  background-color: #ffffff;
 }
-html.light .text-primary {
-  color: #0284c7 !important;
-}
-html.light .bg-primary {
-  background-color: #0284c7 !important;
-  color: #ffffff !important;
-}
-html.light .text-on-primary-container {
-  color: #ffffff !important;
-}
-html.light .bg-primary-container {
-  background-color: #e0f2fe !important;
-  color: #0369a1 !important;
-}
-html.light .text-on-primary-container {
-  color: #0369a1 !important;
-}
-html.light .text-secondary {
-  color: #059669 !important;
-}
-html.light .bg-secondary {
-  background-color: #10b981 !important;
-  color: #ffffff !important;
-}
-html.light .text-on-secondary-container {
-  color: #ffffff !important;
-}
-html.light .bg-secondary-container {
-  background-color: #d1fae5 !important;
-  color: #065f46 !important;
-}
-html.light .bg-tertiary-container {
-  background-color: #ffedd5 !important;
-  color: #9a3412 !important;
-}
-html.light .text-error {
-  color: #dc2626 !important;
-}
-html.light .bg-error-container {
-  background-color: #fee2e2 !important;
-  color: #991b1b !important;
-}
-html.light .border-outline {
-  border-color: #94a3b8 !important;
-}
-html.light .text-tertiary {
-  color: #d97706 !important;
+
+/* Respect "reduce motion" in the system settings */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Custom Scrollbar for dark & light themes */

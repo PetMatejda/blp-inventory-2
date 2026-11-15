@@ -23,7 +23,7 @@ A comprehensive, detailed architectural blueprint and technical guide has been p
 2. [`src/services/inventoryActions.js`](./src/services/inventoryActions.js) - Every user action (writes + audit) against the repo interface.
 3. [`src/domain/items.js`](./src/domain/items.js) - Item state machine (pure functions, spec section 4).
 3b. [`src/services/inventoryRepo.js`](./src/services/inventoryRepo.js) - Firestore listeners and batched writes.
-4. [`src/components/packing/ItemSwipeCard.jsx`](./src/components/packing/ItemSwipeCard.jsx) - Item card with 40px swipe threshold, explicit 12px status accent stripes (`#10b981` LOADED, `#06b6d4` PACKED, `#ef4444` DAMAGED, `#475569` PENDING).
+4. [`src/components/packing/ItemSwipeCard.jsx`](./src/components/packing/ItemSwipeCard.jsx) - Item card with 72px swipe threshold (buzz when crossed, "Vrátit" undo toast), explicit 12px status accent stripes (`#10b981` LOADED, `#06b6d4` PACKED, `#ef4444` DAMAGED, `#475569` PENDING).
 5. [`src/components/dashboard/JobDashboard.jsx`](./src/components/dashboard/JobDashboard.jsx) - Project dashboard with mode-aware progress bars (Emerald Green for LOADING vs Cyan Blue for DERIGGING).
 6. [`src/components/common/ItemThumbnail.jsx`](./src/components/common/ItemThumbnail.jsx) - Thumbnail image preview component with automatic Category Icon fallback.
 

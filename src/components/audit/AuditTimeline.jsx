@@ -16,9 +16,9 @@ export const AuditTimeline = () => {
   const getDotStyle = (type) => {
     switch (type) {
       case 'loaded':
-        return { bg: 'bg-secondary', text: 'text-on-secondary-container', icon: CheckCircle2 };
+        return { bg: 'bg-secondary', text: 'text-on-secondary', icon: CheckCircle2 };
       case 'damage':
-        return { bg: 'bg-error', text: 'text-on-error-container', icon: AlertTriangle };
+        return { bg: 'bg-error', text: 'text-on-error', icon: AlertTriangle };
       case 'bracha':
         return { bg: 'bg-tertiary-container', text: 'text-on-tertiary-container', icon: Briefcase };
       case 'add':
@@ -69,7 +69,7 @@ export const AuditTimeline = () => {
             onClick={() => setTypeFilter('ALL')}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
               typeFilter === 'ALL'
-                ? 'bg-primary text-on-primary-container border-primary'
+                ? 'bg-primary text-on-primary border-primary'
                 : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-outline'
             }`}
           >
@@ -79,7 +79,7 @@ export const AuditTimeline = () => {
             onClick={() => setTypeFilter('loaded')}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
               typeFilter === 'loaded'
-                ? 'bg-secondary text-on-secondary-container border-secondary'
+                ? 'bg-secondary text-on-secondary border-secondary'
                 : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-outline'
             }`}
           >
@@ -154,12 +154,12 @@ export const AuditTimeline = () => {
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs text-outline">{formattedFullDate} {formattedDate}</span>
                       {associatedJob && (
-                        <span className="bg-primary-container/40 text-on-primary-container border border-primary/30 px-2 py-0.5 rounded font-mono text-[10px] font-bold flex items-center gap-1">
+                        <span className="bg-primary-container/40 text-on-primary-container border border-primary/30 px-2 py-0.5 rounded font-mono text-xs font-bold flex items-center gap-1">
                           <FolderOpen className="w-3 h-3 text-primary" /> {associatedJob.name}
                         </span>
                       )}
                     </div>
-                    <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-surface-container-highest text-on-surface uppercase shrink-0">
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-surface-container-highest text-on-surface uppercase shrink-0">
                       {log.action}
                     </span>
                   </div>

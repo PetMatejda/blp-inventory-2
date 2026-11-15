@@ -86,7 +86,7 @@ const ResultSheet = ({ stocktake, lines, onClose }) => {
       )}
       <div className="flex flex-col gap-2">
         <button onClick={exportCsv} className="h-12 rounded-2xl border border-outline-variant bg-surface-container font-semibold flex items-center justify-center gap-2"><Download className="w-5 h-5" /> Export CSV</button>
-        <button onClick={approve} className="h-14 rounded-2xl bg-secondary text-on-secondary-container text-base font-bold shadow">Schválit a srovnat sklad</button>
+        <button onClick={approve} className="h-14 rounded-2xl bg-secondary text-on-secondary text-base font-bold shadow">Schválit a srovnat sklad</button>
       </div>
     </Sheet>
   );
@@ -147,7 +147,7 @@ export const StocktakeView = () => {
           </label>
           <button
             onClick={() => { const id = stock.startStocktake({ category }); if (id) toast({ text: 'Inventura zahájena' }); }}
-            className="h-14 rounded-2xl bg-primary text-on-primary-container text-base font-bold"
+            className="h-14 rounded-2xl bg-primary text-on-primary text-base font-bold"
           >
             Zahájit inventuru
           </button>
@@ -216,7 +216,7 @@ export const StocktakeView = () => {
         <div className="flex gap-2" role="tablist">
           {LINE_FILTERS.map((f) => (
             <button key={f.id} role="tab" aria-selected={filter === f.id} onClick={() => setFilter(f.id)}
-              className={`h-11 px-4 rounded-xl text-sm font-semibold border ${filter === f.id ? 'bg-primary text-on-primary-container border-primary' : 'bg-card-bg border-outline-variant text-on-surface-variant'}`}>
+              className={`h-11 px-4 rounded-xl text-sm font-semibold border ${filter === f.id ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg border-outline-variant text-on-surface-variant'}`}>
               {f.label}
             </button>
           ))}
@@ -272,7 +272,7 @@ export const StocktakeView = () => {
         >
           <X className="w-5 h-5" />
         </button>
-        <button onClick={() => setShowResult(true)} className="flex-1 h-14 rounded-2xl bg-secondary text-on-secondary-container text-base font-bold shadow">
+        <button onClick={() => setShowResult(true)} className="flex-1 h-14 rounded-2xl bg-secondary text-on-secondary text-base font-bold shadow">
           Vyhodnotit ({counted}/{lines.length})
         </button>
       </div>

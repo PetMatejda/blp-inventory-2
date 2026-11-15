@@ -2,169 +2,97 @@ import React, { useState, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { getCategoryMeta, getItemMeta, CATEGORIES } from '../../utils/categoryIcons';
 import {
-  Search, Plus, Layers, Zap, Weight, Ruler, Check, Info,
-  FolderOpen, ArrowRight, Edit3, Trash2, X, ChevronLeft,
-  ChevronRight, Filter, EyeOff, Eye, Package
+  Search, Plus, Layers, Check, FolderOpen, ArrowRight, Edit3, Trash2, X,
+  EyeOff, Eye, Package, MoreVertical,
 } from 'lucide-react';
 import { CatalogItemDrawer } from './CatalogItemDrawer';
-import { useDialogs } from '../common/Dialogs';
+import { useDialogs, Sheet, SheetAction } from '../common/Dialogs';
+import { SheetButtons } from '../common/FormField';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { resolveCode } from '../../domain/labels-qr';
 import { plural } from '../../domain/labels';
 
 // ─────────────────────────────────────────────────────────────────────
-// CATALOG CARD — compact, no "edit mode" concept
-// Admin always sees Edit/Delete actions via a small action bar at bottom
+// CATALOG ROW — one item per line on phones: big "add" button on the right,
+// admin actions behind ⋮ (no edit / delete next to each other).
 // ─────────────────────────────────────────────────────────────────────
-const CatalogCard = ({ item, isAlreadyInJob, currentJob, onAdd, onEdit, onDelete, onOpenBundle }) => {
+const CatalogCard = ({ item, isAlreadyInJob, onAdd, onMenu, onOpenBundle }) => {
   const { isAdmin } = useInventory();
   const catMeta = getItemMeta(item);
   const CatIcon = catMeta.icon;
+  const specs = [item.brand, item.power, item.weight, item.size].filter(Boolean).join(' · ');
 
   return (
-    <div className={`bg-card-bg rounded-2xl overflow-hidden border flex flex-col shadow-sm transition-all hover:shadow-md ${
-      isAlreadyInJob ? 'border-secondary/40' : 'border-outline-variant'
-    }`}>
-      {/* Content (catalog items have no photos — the category icon is enough) */}
-      <div className="p-3.5 flex flex-col flex-grow gap-2.5">
-        {/* Name + category */}
-        <div className="flex items-start gap-2.5">
-          <span className={`p-2 rounded-xl border shrink-0 ${catMeta.color}`} title={catMeta.label}>
-            <CatIcon className="w-5 h-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-sm text-on-surface leading-snug break-words">{item.name}</h3>
-            {(item.isBundle || isAlreadyInJob) && (
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {item.isBundle && (
-                  <span className="bg-primary-container text-on-primary-container px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold border border-primary/40 flex items-center gap-1">
-                    <Layers className="w-3 h-3" /> SET
-                  </span>
-                )}
-                {isAlreadyInJob && (
-                  <span className="bg-secondary-container/80 text-on-secondary-container px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold border border-secondary/50 flex items-center gap-1">
-                    <Check className="w-3 h-3 text-secondary" /> V zakázce
-                  </span>
-                )}
-              </div>
+    <div className={`bg-card-bg rounded-2xl border flex items-center gap-3 p-3 shadow-sm ${isAlreadyInJob ? 'border-secondary/50' : 'border-outline-variant'}`}>
+      <span className={`p-2.5 rounded-xl border shrink-0 ${catMeta.color}`} title={catMeta.label}>
+        <CatIcon className="w-6 h-6" />
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <h3 className="font-bold text-base text-on-surface leading-snug break-words">{item.name}</h3>
+        {specs && <p className="text-sm text-on-surface-variant truncate">{specs}</p>}
+        {(item.isBundle || isAlreadyInJob) && (
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            {isAlreadyInJob && (
+              <span className="inline-flex items-center gap-1 text-sm font-semibold text-secondary">
+                <Check className="w-4 h-4" /> V zakázce
+              </span>
+            )}
+            {item.isBundle && (
+              <button
+                onClick={() => onOpenBundle(item)}
+                className="inline-flex items-center gap-1 h-8 px-2 -my-1 rounded-lg bg-primary-container text-on-primary-container text-sm font-semibold border border-primary/40"
+              >
+                <Layers className="w-4 h-4" /> Set · {item.bundleItems?.length || 0} dílů
+              </button>
             )}
           </div>
-        </div>
-
-        {/* Specs row */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-mono text-on-surface-variant">
-          {item.weight && (
-            <span className="flex items-center gap-1">
-              <Weight className="w-3 h-3 text-outline" /> {item.weight}
-            </span>
-          )}
-          {item.power && (
-            <span className="flex items-center gap-1">
-              <Zap className="w-3 h-3 text-tertiary" /> {item.power}
-            </span>
-          )}
-          {item.size && (
-            <span className="flex items-center gap-1">
-              <Ruler className="w-3 h-3 text-outline" /> {item.size}
-            </span>
-          )}
-          {item.brand && <span className="text-outline">{item.brand}</span>}
-          {item.isBundle && (
-            <>
-              <button
-                onClick={(e) => { e.stopPropagation(); onOpenBundle(item); }}
-                className="flex items-center gap-1 text-primary hover:underline"
-              >
-                <Info className="w-3 h-3" /> {item.bundleItems?.length} dílů
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Spacer */}
-        <div className="flex-grow" />
-
-        {/* Action row */}
-        <div className="flex gap-2 mt-auto">
-          {/* Primary CTA — Add to job */}
-          <button
-            onClick={(e) => { e.stopPropagation(); onAdd(item); }}
-            className={`flex-1 h-10 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
-              isAlreadyInJob
-                ? 'bg-secondary/10 border border-secondary/40 text-secondary hover:bg-secondary/20'
-                : 'bg-secondary text-on-secondary-container shadow-sm hover:opacity-90'
-            }`}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            {isAlreadyInJob ? 'Přidat znovu' : 'Přidat'}
-          </button>
-
-          {/* Admin actions — always visible, no mode toggle */}
-          {isAdmin() && (
-            <div className="flex gap-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-                className="w-10 h-10 rounded-xl border border-outline-variant bg-surface-container hover:bg-surface-container-high text-primary flex items-center justify-center transition-all active:scale-90"
-                title="Upravit položku v katalogu"
-              >
-                <Edit3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.name); }}
-                className="w-10 h-10 rounded-xl border border-outline-variant bg-surface-container hover:bg-error-container/30 hover:border-error/40 text-outline hover:text-error flex items-center justify-center transition-all active:scale-90"
-                title="Smazat z katalogu"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </div>
+        )}
       </div>
+
+      {isAdmin() && (
+        <button
+          onClick={() => onMenu(item)}
+          aria-label={`Možnosti: ${item.name}`}
+          className="w-11 h-12 -mx-1 shrink-0 rounded-xl flex items-center justify-center text-on-surface-variant active:scale-90"
+        >
+          <MoreVertical className="w-5 h-5" />
+        </button>
+      )}
+      <button
+        onClick={() => onAdd(item)}
+        aria-label={`${isAlreadyInJob ? 'Přidat znovu' : 'Přidat do zakázky'}: ${item.name}`}
+        className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center active:scale-90 ${
+          isAlreadyInJob ? 'bg-secondary/10 border border-secondary/50 text-secondary' : 'bg-secondary text-on-secondary shadow-sm'
+        }`}
+      >
+        <Plus className="w-6 h-6 stroke-[2.5]" />
+      </button>
     </div>
   );
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// BUNDLE MODAL — simple bottom sheet
+// BUNDLE SHEET — what a set contains
 // ─────────────────────────────────────────────────────────────────────
 const BundleModal = ({ item, onClose, onAdd }) => {
   if (!item) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-card-bg rounded-t-3xl sm:rounded-2xl border border-outline-variant w-full sm:max-w-md p-5 flex flex-col gap-4 shadow-2xl">
-        <div className="flex justify-between items-start">
-          <div>
-            <span className="text-[10px] font-mono font-bold text-primary uppercase">Složení setu</span>
-            <h3 className="text-lg font-bold text-on-surface mt-0.5">{item.name}</h3>
-          </div>
-          <button onClick={onClose} className="p-1.5 text-outline hover:text-on-surface rounded-lg active:scale-90">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          {item.bundleItems?.map((sub, i) => (
-            <div key={i} className="flex justify-between items-center bg-surface-container p-3 rounded-xl border border-outline-variant text-sm">
-              <span className="text-on-surface font-medium">{sub.name}</span>
-              <span className="font-mono font-bold text-primary">{sub.qty} ks</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-sm active:scale-95">
-            Zavřít
-          </button>
-          <button
-            onClick={() => { onAdd(item); onClose(); }}
-            className="flex-1 py-3 bg-secondary text-on-secondary-container font-bold rounded-xl text-sm flex items-center justify-center gap-1.5 shadow active:scale-95"
-          >
-            <Plus className="w-4 h-4" /> Vložit set
-          </button>
-        </div>
-      </div>
-    </div>
+    <Sheet
+      title={item.name}
+      subtitle="Složení setu"
+      onClose={onClose}
+      footer={<SheetButtons onCancel={onClose} cancelLabel="Zavřít" onSubmit={() => { onAdd(item); onClose(); }} submitLabel="Vložit set" icon={Plus} tone="secondary" />}
+    >
+      <ul className="flex flex-col gap-1.5">
+        {item.bundleItems?.map((sub, i) => (
+          <li key={i} className="flex justify-between items-center gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant text-base">
+            <span className="text-on-surface font-medium min-w-0 break-words">{sub.name}</span>
+            <span className="font-mono font-bold text-primary shrink-0">{sub.qty} ks</span>
+          </li>
+        ))}
+      </ul>
+    </Sheet>
   );
 };
 
@@ -191,7 +119,7 @@ export const EquipmentCatalog = () => {
   const [hideAlreadyAdded, setHideAlreadyAdded] = useState(false);
   const [activeBundleModal, setActiveBundleModal] = useState(null);
   const [drawerItem, setDrawerItem] = useState(null);   // null | 'NEW' | catalogItem
-  const [addedItemSuccess, setAddedItemSuccess] = useState(null);
+  const [menuItem, setMenuItem] = useState(null); // admin actions (⋮) for one item
 
   const scrollRef = useRef(null);
 
@@ -217,8 +145,8 @@ export const EquipmentCatalog = () => {
       return;
     }
     addCatalogItemToJob(item);
-    setAddedItemSuccess(item.name);
-    setTimeout(() => setAddedItemSuccess(null), 2500);
+    if (navigator.vibrate) navigator.vibrate(30);
+    toast({ text: `Přidáno: ${item.name}`, actionLabel: 'Zobrazit', onAction: () => setActiveTab('packing') });
   };
 
   // Hardware barcode reader: scanning a label / EAN adds the item to the selected job.
@@ -241,124 +169,81 @@ export const EquipmentCatalog = () => {
     }
   };
 
+  const activeJob = currentJob?.status === 'ACTIVE' ? currentJob : null;
+  const chip = (active) => `h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap shrink-0 border flex items-center gap-1.5 ${
+    active ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg text-on-surface-variant border-outline-variant'
+  }`;
+
   return (
-    <div className="max-w-4xl mx-auto px-4 pt-4 pb-32 flex flex-col gap-4">
+    <div className="max-w-4xl mx-auto px-3 pt-3 pb-32 flex flex-col gap-3">
 
-      {/* ── Job selector banner ── */}
-      <div className="bg-card-bg border border-outline-variant rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="p-2 bg-primary-container text-on-primary-container rounded-xl shrink-0">
-            <FolderOpen className="w-4 h-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider block">
-              Přidávat do zakázky (pouze aktivní)
-            </span>
-            <select
-              value={currentJob?.status === 'ACTIVE' ? currentJob.id : ''}
-              onChange={(e) => setCurrentJobId(e.target.value)}
-              className="w-full bg-transparent text-on-surface font-bold text-sm focus:outline-none cursor-pointer truncate mt-0.5 border-none"
-            >
-              {currentJob?.status !== 'ACTIVE' && (
-                <option value="" disabled className="bg-surface-container text-on-surface">
-                  {jobs.some(j => j.status === 'ACTIVE') ? '— vyberte zakázku —' : 'Žádná aktivní zakázka'}
-                </option>
-              )}
-              {jobs.filter(j => j.status === 'ACTIVE').map((j) => (
-                <option key={j.id} value={j.id} className="bg-surface-container text-on-surface font-semibold">
-                  {j.name} ({j.client})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {currentJob && (
-          <button
-            onClick={() => setActiveTab('packing')}
-            className="w-full sm:w-auto px-3 py-2 bg-secondary/10 border border-secondary/40 text-secondary font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
-          >
-            <span>Packing list</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
-
-      {/* ── Header row ── */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-bold text-on-surface">Katalog techniky</h1>
-          <p className="text-xs text-outline mt-0.5">
-            {catalog.length} {plural(catalog.length, 'položka', 'položky', 'položek')} {isAdmin() && '· Klikněte ✏ pro úpravu'}
-          </p>
-        </div>
-        {isAdmin() && (
-          <div className="flex items-center gap-2">
-          <button
-            onClick={() => setDrawerItem('NEW')}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-secondary text-on-secondary-container font-bold text-sm rounded-2xl shadow-md active:scale-95 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden xs:inline">Nová položka</span>
-          </button>
-          </div>
-        )}
-      </div>
-
-      {/* ── Success toast ── */}
-      {addedItemSuccess && (
-        <div className="bg-secondary-container/20 border border-secondary/40 text-secondary p-3 rounded-xl font-semibold text-sm flex items-center justify-between gap-2 animate-pulse">
-          <span className="flex items-center gap-2">
-            <Check className="w-4 h-4" /> {addedItemSuccess} přidáno do <strong>{currentJob?.name}</strong>
+      {/* ── Which job the + button adds to (the job itself is chosen in the top bar) ── */}
+      {activeJob ? (
+        <button
+          onClick={() => setActiveTab('packing')}
+          className="min-h-[48px] px-3 py-2 bg-card-bg border border-outline-variant rounded-xl flex items-center gap-2 text-left active:scale-[0.99]"
+        >
+          <FolderOpen className="w-5 h-5 text-primary shrink-0" />
+          <span className="flex-1 min-w-0 text-sm text-on-surface-variant truncate">
+            Přidáváte do <strong className="text-on-surface">{activeJob.name}</strong>
           </span>
-          <button onClick={() => setActiveTab('packing')} className="text-xs underline opacity-80 hover:opacity-100 shrink-0">
-            Zobrazit →
-          </button>
-        </div>
+          <span className="text-sm font-semibold text-secondary flex items-center gap-1 shrink-0">Balení <ArrowRight className="w-4 h-4" /></span>
+        </button>
+      ) : (
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className="min-h-[48px] px-3 py-2 bg-amber-500/15 border border-amber-500/50 rounded-xl flex items-center gap-2 text-left text-sm font-semibold text-on-surface"
+        >
+          <FolderOpen className="w-5 h-5 shrink-0" />
+          <span className="flex-1">Pro přidávání techniky nejdřív vyberte aktivní zakázku.</span>
+          <ArrowRight className="w-4 h-4 shrink-0" />
+        </button>
       )}
 
       {/* ── Search + hide toggle ── */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
+          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
           <input
-            type="text"
+            type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Hledat techniku..."
-            className="w-full h-11 pl-9 pr-9 bg-surface-container border border-outline-variant rounded-xl text-on-surface text-sm focus:border-primary focus:outline-none placeholder:text-outline"
+            placeholder={`Hledat v katalogu (${catalog.length})`}
+            enterKeyHint="search"
+            autoComplete="off"
+            className="w-full h-12 pl-10 pr-11 bg-card-bg border border-outline-variant rounded-xl text-on-surface text-base focus:border-primary focus:outline-none placeholder:text-outline"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
-              <X className="w-4 h-4" />
+            <button onClick={() => setSearchQuery('')} aria-label="Vymazat hledání" className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-outline">
+              <X className="w-5 h-5" />
             </button>
           )}
         </div>
         <button
           onClick={() => setHideAlreadyAdded(!hideAlreadyAdded)}
-          className={`h-11 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 active:scale-90 ${
-            hideAlreadyAdded
-              ? 'bg-primary-container/30 border-primary/40 text-primary'
-              : 'bg-surface-container border-outline-variant text-outline'
+          aria-pressed={hideAlreadyAdded}
+          aria-label={hideAlreadyAdded ? 'Položky už přidané do zakázky jsou skryté' : 'Skrýt položky už přidané do zakázky'}
+          className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 active:scale-90 ${
+            hideAlreadyAdded ? 'bg-primary-container border-primary text-on-primary-container' : 'bg-card-bg border-outline-variant text-on-surface-variant'
           }`}
-          title={hideAlreadyAdded ? 'Skryty již přidané — kliknout pro zobrazení' : 'Zobrazeny všechny — kliknout pro skrytí přidaných'}
         >
-          {hideAlreadyAdded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          <span className="hidden xs:inline">{hideAlreadyAdded ? 'Skryty' : 'Vše'}</span>
+          {hideAlreadyAdded ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
         </button>
+        {isAdmin() && (
+          <button
+            onClick={() => setDrawerItem('NEW')}
+            aria-label="Nová položka katalogu"
+            className="h-12 px-3 rounded-xl bg-card-bg border border-outline-variant text-on-surface font-semibold text-sm flex items-center gap-1.5 shrink-0 active:scale-95"
+          >
+            <Plus className="w-5 h-5 text-secondary" /> <span className="hidden xs:inline">Nová</span>
+          </button>
+        )}
       </div>
 
-      {/* ── Category pills ── */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-        <button
-          onClick={() => setSelectedCategory('ALL')}
-          className={`px-3 py-1.5 rounded-full font-mono text-[11px] font-bold whitespace-nowrap shrink-0 border transition-all ${
-            selectedCategory === 'ALL'
-              ? 'bg-primary text-on-primary-container border-primary'
-              : 'bg-surface-container text-on-surface-variant border-outline-variant'
-          }`}
-        >
-          Vše ({catalog.length})
+      {/* ── Category chips ── */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-3 px-3">
+        <button onClick={() => setSelectedCategory('ALL')} aria-pressed={selectedCategory === 'ALL'} className={chip(selectedCategory === 'ALL')}>
+          Vše <span className="font-mono text-xs opacity-80">{catalog.length}</span>
         </button>
         {CATEGORIES.map((cat) => {
           const Icon = cat.icon;
@@ -369,65 +254,60 @@ export const EquipmentCatalog = () => {
           }).length;
           if (count === 0) return null;
           return (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-full font-mono text-[11px] font-bold whitespace-nowrap flex items-center gap-1 shrink-0 border transition-all ${
-                isSelected
-                  ? 'bg-primary-container text-on-primary-container border-primary shadow-sm'
-                  : 'bg-surface-container text-on-surface-variant border-outline-variant'
-              }`}
-            >
-              <Icon className="w-3 h-3" />
-              {cat.label} <span className="opacity-60">({count})</span>
+            <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} aria-pressed={isSelected} className={chip(isSelected)}>
+              <Icon className="w-4 h-4" />
+              {cat.label} <span className="font-mono text-xs opacity-80">{count}</span>
             </button>
           );
         })}
       </div>
 
-      {/* ── Catalog grid ── */}
+      {/* ── Catalog list ── */}
       {catalog.length === 0 ? (
         <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant flex flex-col items-center gap-3">
           <Package className="w-10 h-10 text-outline/40" />
-          <p className="text-base">Katalog techniky je prázdný. Přidejte první položku tlačítkem +.</p>
+          <p className="text-base">Katalog techniky je prázdný.{isAdmin() ? ' Přidejte první položku tlačítkem Nová.' : ''}</p>
         </div>
       ) : filteredCatalog.length === 0 ? (
-        <div className="bg-card-bg border border-outline-variant rounded-2xl p-10 text-center text-outline flex flex-col items-center gap-3">
+        <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant flex flex-col items-center gap-3">
           <Package className="w-10 h-10 text-outline/40" />
-          <p className="text-sm">
+          <p className="text-base">
             {searchQuery
-              ? `Žádná shoda pro „${searchQuery}"`
+              ? `Nic neodpovídá „${searchQuery}“.`
               : hideAlreadyAdded && addedCatalogIds.size > 0
-              ? 'Všechny položky jsou již v zakázce.'
-              : 'Katalog je prázdný.'}
+              ? 'Všechny položky už jsou v zakázce.'
+              : 'V této kategorii nic není.'}
           </p>
           {hideAlreadyAdded && addedCatalogIds.size > 0 && (
-            <button
-              onClick={() => setHideAlreadyAdded(false)}
-              className="text-primary text-sm font-semibold hover:underline"
-            >
-              Zobrazit vše →
+            <button onClick={() => setHideAlreadyAdded(false)} className="h-11 px-4 rounded-xl border border-outline-variant text-primary text-base font-semibold">
+              Zobrazit vše
             </button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {filteredCatalog.map((item) => (
             <CatalogCard
               key={item.id}
               item={item}
               isAlreadyInJob={addedCatalogIds.has(item.id)}
-              currentJob={currentJob}
               onAdd={handleAdd}
-              onEdit={(item) => setDrawerItem(item)}
-              onDelete={handleDelete}
+              onMenu={setMenuItem}
               onOpenBundle={setActiveBundleModal}
             />
           ))}
         </div>
       )}
 
-      {/* ── Bundle modal ── */}
+      {/* ── Admin actions for one item ── */}
+      {menuItem && (
+        <Sheet title={menuItem.name} subtitle="Položka katalogu" onClose={() => setMenuItem(null)}>
+          <SheetAction icon={Edit3} label="Upravit položku" onClick={() => { setDrawerItem(menuItem); setMenuItem(null); }} />
+          <SheetAction icon={Trash2} label="Smazat z katalogu" danger onClick={() => { const it = menuItem; setMenuItem(null); handleDelete(it.id, it.name); }} />
+        </Sheet>
+      )}
+
+      {/* ── Bundle sheet ── */}
       <BundleModal
         item={activeBundleModal}
         onClose={() => setActiveBundleModal(null)}

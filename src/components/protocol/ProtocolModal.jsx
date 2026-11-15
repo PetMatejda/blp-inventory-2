@@ -1,7 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { pdfService } from '../../services/pdfService';
-import { FileText, Download, X, Eraser, Check } from 'lucide-react';
+import { Download, Eraser } from 'lucide-react';
+import { Sheet } from '../common/Dialogs';
+import { SheetButtons } from '../common/FormField';
 
 export const ProtocolModal = () => {
   const { isProtocolModalOpen, setIsProtocolModalOpen, currentJob, jobItems, vehicles, userRole } = useInventory();
@@ -102,41 +104,30 @@ export const ProtocolModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[65] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-card-bg rounded-2xl border border-outline-variant max-w-2xl w-full p-6 flex flex-col gap-5 shadow-2xl relative my-8">
-        {/* Header */}
-        <div className="flex justify-between items-start border-b border-outline-variant pb-3">
-          <div>
-            <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest flex items-center gap-1">
-              <FileText className="w-4 h-4" /> GENERÁTOR PŘEDÁVACÍHO PROTOKOLU
-            </span>
-            <h2 className="text-xl font-bold text-on-surface mt-1">{currentJob.name}</h2>
-            <p className="text-xs text-outline font-mono">Klient: {currentJob.client} • Gaffer: {currentJob.assignedGaffer}</p>
-          </div>
-          <button
-            onClick={handleClose}
-            className="text-outline hover:text-on-surface p-1 rounded-full hover:bg-surface-variant transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
+    <Sheet
+      title="Předávací protokol"
+      subtitle={[currentJob.name, currentJob.client, currentJob.assignedGaffer && `gaffer ${currentJob.assignedGaffer}`].filter(Boolean).join(' · ')}
+      onClose={handleClose}
+      dismissOnBackdrop={false}
+      wide
+      footer={<SheetButtons onCancel={handleClose} cancelLabel="Zavřít" onSubmit={handleDownloadPDF} disabled={isGenerating} submitLabel={isGenerating ? 'Vytvářím PDF…' : 'Stáhnout PDF'} icon={Download} />}
+    >
         {/* Stats summary */}
         <div className="grid grid-cols-3 gap-3 bg-surface-container p-3.5 rounded-xl border border-outline-variant text-center font-mono">
           <div>
-            <span className="text-[10px] text-outline uppercase block">Celkem Kusů</span>
+            <span className="text-xs text-on-surface-variant block">Celkem</span>
             <span className="text-base font-bold text-on-surface">
               {jobItems.reduce((sum, i) => sum + i.quantityRequested, 0)} ks
             </span>
           </div>
           <div>
-            <span className="text-[10px] text-outline uppercase block">Naloženo</span>
+            <span className="text-xs text-on-surface-variant block">Naloženo</span>
             <span className="text-base font-bold text-secondary">
               {jobItems.reduce((sum, i) => sum + i.quantityLoaded, 0)} ks
             </span>
           </div>
           <div>
-            <span className="text-[10px] text-outline uppercase block">Závady</span>
+            <span className="text-xs text-on-surface-variant block">Závady</span>
             <span className="text-base font-bold text-error">
               {jobItems.filter(i => i.status === 'DAMAGED').length} ks
             </span>
@@ -147,14 +138,14 @@ export const ProtocolModal = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Gaffer signature */}
           <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-center text-xs font-mono text-outline">
-              <span className="font-bold text-on-surface">Podpis Lead Gaffera:</span>
+            <div className="flex justify-between items-center text-sm text-on-surface-variant">
+              <span className="font-bold text-on-surface">Podpis gaffera</span>
               <button
                 type="button"
                 onClick={clearCanvas(canvasGafferRef, setGafferHasSigned)}
-                className="text-outline hover:text-error flex items-center gap-1"
+                className="h-11 px-2 -mr-2 text-on-surface-variant flex items-center gap-1.5"
               >
-                <Eraser className="w-3 h-3" /> Vymazat
+                <Eraser className="w-4 h-4" /> Vymazat
               </button>
             </div>
             <div className="border border-outline-variant rounded-xl bg-white overflow-hidden relative">
@@ -162,7 +153,7 @@ export const ProtocolModal = () => {
                 ref={canvasGafferRef}
                 width={260}
                 height={100}
-                className="w-full h-24 touch-none cursor-crosshair"
+                className="w-full h-28 touch-none cursor-crosshair"
                 onMouseDown={startDrawing(canvasGafferRef, setIsDrawingGaffer, setGafferHasSigned)}
                 onMouseMove={draw(canvasGafferRef, isDrawingGaffer)}
                 onMouseUp={stopDrawing(setIsDrawingGaffer)}
@@ -172,8 +163,8 @@ export const ProtocolModal = () => {
                 onTouchEnd={stopDrawing(setIsDrawingGaffer)}
               />
               {!gafferHasSigned && (
-                <span className="absolute inset-0 flex items-center justify-center text-xs text-gray-400 pointer-events-none italic">
-                  Podepište se zde (Lead Gaffer)
+                <span className="absolute inset-0 flex items-center justify-center text-sm text-gray-500 pointer-events-none">
+                  Podepište se zde
                 </span>
               )}
             </div>
@@ -181,14 +172,14 @@ export const ProtocolModal = () => {
 
           {/* Custodian signature */}
           <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-center text-xs font-mono text-outline">
-              <span className="font-bold text-on-surface">Podpis Skladníka (Custodian):</span>
+            <div className="flex justify-between items-center text-sm text-on-surface-variant">
+              <span className="font-bold text-on-surface">Podpis skladníka</span>
               <button
                 type="button"
                 onClick={clearCanvas(canvasCustodianRef, setCustodianHasSigned)}
-                className="text-outline hover:text-error flex items-center gap-1"
+                className="h-11 px-2 -mr-2 text-on-surface-variant flex items-center gap-1.5"
               >
-                <Eraser className="w-3 h-3" /> Vymazat
+                <Eraser className="w-4 h-4" /> Vymazat
               </button>
             </div>
             <div className="border border-outline-variant rounded-xl bg-white overflow-hidden relative">
@@ -196,7 +187,7 @@ export const ProtocolModal = () => {
                 ref={canvasCustodianRef}
                 width={260}
                 height={100}
-                className="w-full h-24 touch-none cursor-crosshair"
+                className="w-full h-28 touch-none cursor-crosshair"
                 onMouseDown={startDrawing(canvasCustodianRef, setIsDrawingCustodian, setCustodianHasSigned)}
                 onMouseMove={draw(canvasCustodianRef, isDrawingCustodian)}
                 onMouseUp={stopDrawing(setIsDrawingCustodian)}
@@ -206,8 +197,8 @@ export const ProtocolModal = () => {
                 onTouchEnd={stopDrawing(setIsDrawingCustodian)}
               />
               {!custodianHasSigned && (
-                <span className="absolute inset-0 flex items-center justify-center text-xs text-gray-400 pointer-events-none italic">
-                  Podepište se zde (Rental Custodian)
+                <span className="absolute inset-0 flex items-center justify-center text-sm text-gray-500 pointer-events-none">
+                  Podepište se zde
                 </span>
               )}
             </div>
@@ -218,25 +209,6 @@ export const ProtocolModal = () => {
           <p className="text-sm text-error font-semibold bg-error-container/20 border border-error/30 rounded-xl p-3">{pdfError}</p>
         )}
 
-        {/* Export Buttons */}
-        <div className="flex gap-2 mt-2">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="flex-1 py-3 bg-surface-container text-on-surface border border-outline-variant font-semibold rounded-xl text-sm"
-          >
-            Zavřít
-          </button>
-          <button
-            type="button"
-            onClick={handleDownloadPDF}
-            disabled={isGenerating}
-            className="flex-1 py-3 bg-primary text-on-primary-container font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
-          >
-            <Download className="w-4 h-4" /> {isGenerating ? 'Generování PDF...' : 'Stáhnout PDF Protokol'}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Sheet>
   );
 };

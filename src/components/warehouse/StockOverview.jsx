@@ -200,7 +200,7 @@ export const StockOverview = () => {
               toast({ text: `Založeno ${n} položek skladu` });
             }
           }}
-          className="h-14 px-6 rounded-2xl bg-primary text-on-primary-container font-bold"
+          className="h-14 px-6 rounded-2xl bg-primary text-on-primary font-bold"
         >
           Založit stav podle katalogu
         </button>
@@ -266,7 +266,7 @@ export const StockOverview = () => {
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {[{ id: 'ALL', label: 'Vše' }, ...CATEGORIES].map((c) => (
           <button key={c.id} onClick={() => setCategory(c.id)}
-            className={`h-10 px-3 rounded-xl text-sm font-semibold whitespace-nowrap border shrink-0 ${category === c.id ? 'bg-primary text-on-primary-container border-primary' : 'bg-card-bg border-outline-variant text-on-surface-variant'}`}>
+            className={`h-10 px-3 rounded-xl text-sm font-semibold whitespace-nowrap border shrink-0 ${category === c.id ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg border-outline-variant text-on-surface-variant'}`}>
             {c.label}
           </button>
         ))}

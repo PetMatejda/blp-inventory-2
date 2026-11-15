@@ -131,7 +131,7 @@ export const ConsumableSwipeCard = ({ item }) => {
       >
         <div className="flex justify-between items-start mb-3 gap-2">
           <div>
-            <span className="text-[10px] font-mono text-outline uppercase">{item.category}</span>
+            <span className="text-xs font-mono text-outline uppercase">{item.category}</span>
             <h3 className="font-bold text-base text-on-surface leading-tight mt-0.5">{item.name}</h3>
           </div>
 
@@ -152,7 +152,7 @@ export const ConsumableSwipeCard = ({ item }) => {
             {vis.icon} {vis.label}
           </span>
 
-          <span className="text-[11px] font-mono text-outline flex items-center gap-0.5">
+          <span className="text-xs font-mono text-outline flex items-center gap-0.5">
             Swipe ↔ / Click
           </span>
         </div>
