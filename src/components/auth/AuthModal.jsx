@@ -56,14 +56,13 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
     setCurrentUser(user);
     const msg = via ? `Přihlášeno přes ${via}: ${user.name}` : `Přihlášen: ${user.name}`;
     setSuccessMsg(msg);
-    if (webAuthnSupported && !hasRegisteredCredential()) {
-      setShowBioRegister(true);
-    } else {
-      setTimeout(() => {
-        setSuccessMsg('');
-        if (onClose) onClose();
-      }, 800);
-    }
+    // Go straight into the app. Offering fingerprint sign-in here kept the dialog
+    // open and, on devices without a set-up passkey store, led to the system
+    // "scan a QR code with another device" prompt, which confused first-time users.
+    setTimeout(() => {
+      setSuccessMsg('');
+      if (onClose) onClose();
+    }, 800);
   };
 
   // ── Biometric ──
