@@ -32,7 +32,7 @@ export const ContextMenuModal = () => {
               const n = await askNumber({ title: target.name, message: `${phaseOf(mode).doneLabel} kusů`, value: target.quantityLoaded, max: target.quantityRequested });
               if (n != null) setItemExactQuantity(target.id, n);
             })} />
-          <SheetAction icon={ImageIcon} label="Fotky a detail" onClick={run(() => setPhotoViewerItem(target))} />
+          <SheetAction icon={ImageIcon} label="Detail položky" onClick={run(() => setPhotoViewerItem(target))} />
           <SheetAction icon={AlertTriangle} label="Nahlásit závadu" disabled={archived} onClick={run(() => setDamageReportItem(target))} />
           <SheetAction icon={Trash2} label="Odebrat ze zakázky" danger disabled={archived}
             onClick={run(() => {

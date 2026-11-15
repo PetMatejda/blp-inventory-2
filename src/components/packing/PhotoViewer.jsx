@@ -4,6 +4,7 @@ import { Sheet } from '../common/Dialogs';
 import { usePhotoSrc } from '../../services/photoService';
 import { getCategoryMeta } from '../../utils/categoryIcons';
 import { statusLabel } from '../../domain/labels';
+import { damagePhotos } from '../../domain/items';
 
 const Photo = ({ src, alt }) => {
   const url = usePhotoSrc(src);
@@ -18,18 +19,18 @@ const Row = ({ label, children }) => (
   </div>
 );
 
-/** Photos (catalog picture + damage photos) and details of a job item. */
+/** Details of a job item and its damage photos. */
 export const PhotoViewer = () => {
-  const { photoViewerItem: item, setPhotoViewerItem, currentJob } = useInventory();
+  const { photoViewerItem: item, setPhotoViewerItem, currentJob, catalog } = useInventory();
   if (!item) return null;
 
-  const photos = [...new Set([...(item.photoUrls || []), item.image].filter(Boolean))];
+  const photos = damagePhotos(item, catalog.find((c) => c.id === item.catalogId)?.image || '');
   const cat = getCategoryMeta(item.category);
 
   return (
     <Sheet title={item.name} subtitle={cat.label} onClose={() => setPhotoViewerItem(null)}>
       {photos.length === 0
-        ? <p className="text-sm text-on-surface-variant">Bez fotky.</p>
+        ? (item.status === 'DAMAGED' ? <p className="text-sm text-on-surface-variant">Závada bez fotky.</p> : null)
         : <div className="flex flex-col gap-3">{photos.map((p) => <Photo key={p} src={p} alt={item.name} />)}</div>}
       <div>
         <Row label="Stav">{statusLabel(item.status, currentJob?.mode)}</Row>

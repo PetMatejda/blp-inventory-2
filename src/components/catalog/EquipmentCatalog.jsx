@@ -27,8 +27,8 @@ const CatalogCard = ({ item, isAlreadyInJob, currentJob, onAdd, onEdit, onDelete
     <div className={`bg-card-bg rounded-2xl overflow-hidden border flex flex-col shadow-sm transition-all hover:shadow-md ${
       isAlreadyInJob ? 'border-secondary/40' : 'border-outline-variant'
     }`}>
-      {/* Image */}
-      <div className="relative h-40 bg-surface-container-lowest flex items-center justify-center overflow-hidden">
+      {/* Category icon (catalog items have no photos) */}
+      <div className="relative h-24 bg-surface-container-lowest flex items-center justify-center overflow-hidden">
         {item.isBundle && (
           <span className="absolute top-2.5 left-2.5 bg-primary-container text-on-primary-container px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold z-10 border border-primary/40 flex items-center gap-1">
             <Layers className="w-3 h-3" /> SET
@@ -39,7 +39,7 @@ const CatalogCard = ({ item, isAlreadyInJob, currentJob, onAdd, onEdit, onDelete
             <Check className="w-3 h-3 text-secondary" /> V zakázce
           </span>
         )}
-        <ItemThumbnail src={item.image} name={item.name} category={item.category} className="w-full h-full" />
+        <ItemThumbnail name={item.name} category={item.category} className="w-full h-full" />
       </div>
 
       {/* Content */}
@@ -205,7 +205,10 @@ export const EquipmentCatalog = () => {
   });
 
   const handleAdd = (item) => {
-    if (!currentJob) return;
+    if (!currentJob || currentJob.status !== 'ACTIVE') {
+      toast({ text: 'Nejdřív vyberte nebo založte aktivní zakázku.' });
+      return;
+    }
     addCatalogItemToJob(item);
     setAddedItemSuccess(item.name);
     setTimeout(() => setAddedItemSuccess(null), 2500);
@@ -245,10 +248,15 @@ export const EquipmentCatalog = () => {
               Přidávat do zakázky (pouze aktivní)
             </span>
             <select
-              value={currentJob?.id || ''}
+              value={currentJob?.status === 'ACTIVE' ? currentJob.id : ''}
               onChange={(e) => setCurrentJobId(e.target.value)}
               className="w-full bg-transparent text-on-surface font-bold text-sm focus:outline-none cursor-pointer truncate mt-0.5 border-none"
             >
+              {currentJob?.status !== 'ACTIVE' && (
+                <option value="" disabled className="bg-surface-container text-on-surface">
+                  {jobs.some(j => j.status === 'ACTIVE') ? '— vyberte zakázku —' : 'Žádná aktivní zakázka'}
+                </option>
+              )}
               {jobs.filter(j => j.status === 'ACTIVE').map((j) => (
                 <option key={j.id} value={j.id} className="bg-surface-container text-on-surface font-semibold">
                   {j.name} ({j.client})

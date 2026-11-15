@@ -2,7 +2,7 @@
 // interface ({ newId, set, update, remove, commit }) so it can be tested with an
 // in-memory repo. Rules for item states live in src/domain/items.js.
 import {
-  applyQuantityDelta, applyExactQuantity, markDone, markUndone, toggleStatus, reportDamage,
+  applyQuantityDelta, applyExactQuantity, applyRequestedQuantity, markDone, markUndone, toggleStatus, reportDamage,
   findSameEquipment, newItemFromCatalog, expandBundle, newAdHocItem, adHocName, copyItemsForTemplate,
 } from '../domain/items.js';
 
@@ -60,6 +60,15 @@ export function createInventoryActions({ repo, getState, getActor }) {
       const patch = applyExactQuantity(item, exact, mode);
       return patchItem(item, patch, 'Ruční zadání počtu',
         `${item.name}: ${patch.quantityLoaded}/${patch.quantityRequested} ks`);
+    },
+
+    setItemRequestedQuantity(itemId, requested, mode) {
+      const item = findItem(itemId);
+      if (!item) return null;
+      const patch = applyRequestedQuantity(item, requested, mode);
+      if (patch.quantityRequested === item.quantityRequested && patch.quantityLoaded === item.quantityLoaded) return item;
+      return patchItem(item, patch, 'Změna plánovaného počtu',
+        `${item.name}: plán ${item.quantityRequested} → ${patch.quantityRequested} ks`, 'add');
     },
 
     setItemLoadedOrPacked(itemId, mode) {
@@ -299,7 +308,7 @@ export function createInventoryActions({ repo, getState, getActor }) {
       if (itemData.name && itemData.name !== old.name) {
         jobItems.filter((i) => i.catalogId === catalogId).forEach((i) => ops.push({
           type: 'update', col: 'jobItems', id: i.id,
-          data: stamp({ name: itemData.name, category: itemData.category || i.category, ...(itemData.image ? { photoUrls: [itemData.image] } : {}) }),
+          data: stamp({ name: itemData.name, category: itemData.category || i.category }),
         }));
       }
       for (let i = 0; i < ops.length; i += 400) repo.commit(ops.slice(i, i + 400));

@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   applyQuantityDelta, applyExactQuantity, markDone, markUndone, toggleStatus, reportDamage,
   expandBundle, copyItemsForTemplate, jobProgress, findSameEquipment,
+  applyRequestedQuantity, damagePhotos, newItemFromCatalog,
 } from '../src/domain/items.js';
 import { makeItem, makeCatalogItem } from './helpers.js';
 
@@ -89,5 +90,35 @@ describe('sady, šablony, postup', () => {
     expect(findSameEquipment(items, 'job-1', { catalogId: 'cat-sky' })?.id).toBe('a');
     expect(findSameEquipment(items, 'job-1', { name: ' skypanel s60-c ' })?.id).toBe('a');
     expect(findSameEquipment(items, 'job-1', { catalogId: 'cat-x', name: 'X' })).toBeUndefined();
+  });
+});
+
+describe('plánovaný počet (příprava před nakládkou)', () => {
+  it('zvýšení plánu u nové položky ji nenaloží', () => {
+    const patch = applyRequestedQuantity(item({ quantityRequested: 1, quantityLoaded: 0 }), 2);
+    expect(patch).toMatchObject({ quantityRequested: 2, quantityLoaded: 0, status: 'PENDING' });
+  });
+  it('zvýšení plánu u naložené položky ji vrátí k naložení', () => {
+    const patch = applyRequestedQuantity(item({ quantityRequested: 2, quantityLoaded: 2, status: 'LOADED' }), 3);
+    expect(patch).toMatchObject({ quantityRequested: 3, quantityLoaded: 2, status: 'PENDING' });
+  });
+  it('snížení plánu ořízne naložený počet a dokončí položku', () => {
+    const patch = applyRequestedQuantity(item({ quantityRequested: 4, quantityLoaded: 3 }), 2);
+    expect(patch).toMatchObject({ quantityRequested: 2, quantityLoaded: 2, status: 'LOADED' });
+  });
+  it('plán je nejméně 1 a závada zůstává', () => {
+    expect(applyRequestedQuantity(item(), 0).quantityRequested).toBe(1);
+    expect(applyRequestedQuantity(item({ status: 'DAMAGED' }), 5)).not.toHaveProperty('status');
+  });
+});
+
+describe('fotky', () => {
+  it('nová položka z katalogu nepřebírá fotku katalogu', () => {
+    expect(newItemFromCatalog('j1', makeCatalogItem({ image: 'https://img/x.jpg' })).photoUrls).toEqual([]);
+  });
+  it('zobrazují se jen fotky závady, ne stará fotka z katalogu', () => {
+    const dmg = item({ status: 'DAMAGED', photoUrls: ['https://img/x.jpg', 'photo:cat', 'photo:d1'] });
+    expect(damagePhotos(dmg, 'photo:cat')).toEqual(['photo:d1']);
+    expect(damagePhotos(item({ photoUrls: ['photo:d1'] }))).toEqual([]);
   });
 });

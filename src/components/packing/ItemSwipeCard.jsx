@@ -4,6 +4,7 @@ import { useLongPress } from '../../hooks/useLongPress';
 import { useDialogs } from '../common/Dialogs';
 import { getCategoryMeta } from '../../utils/categoryIcons';
 import { phaseOf, statusLabel } from '../../domain/labels';
+import { damagePhotos } from '../../domain/items';
 import { ItemThumbnail } from '../common/ItemThumbnail';
 import { Plus, Minus, CheckCircle, AlertTriangle, RefreshCw, MoreVertical } from 'lucide-react';
 
@@ -30,12 +31,14 @@ export const ItemSwipeCard = ({ item, shortage = 0 }) => {
   const {
     updateItemQuantity,
     setItemExactQuantity,
+    setItemRequestedQuantity,
     setItemLoadedOrPacked,
     setItemPending,
     toggleItemStatus,
     currentJob,
     setContextMenu,
     setPhotoViewerItem,
+    catalog,
   } = useInventory();
   const { askNumber } = useDialogs();
 
@@ -50,7 +53,12 @@ export const ItemSwipeCard = ({ item, shortage = 0 }) => {
   const isArchived = currentJob?.status === 'ARCHIVED';
   const catMeta = getCategoryMeta(item.category);
   const CatIcon = catMeta.icon;
-  const photoUrl = item.photoUrls?.[0] || item.image || '';
+  // Only damage photos are shown; otherwise the category icon.
+  const catalogImage = catalog?.find((c) => c.id === item.catalogId)?.image || '';
+  const photoUrl = damagePhotos(item, catalogImage)[0] || '';
+  // Preparation: while rigging, the planned count can be changed separately
+  // from the loaded count (+ on the plan never marks the item as loaded).
+  const canPlan = mode === 'LOADING' && !isArchived;
   const openMenu = () => setContextMenu({ type: 'PACKING_ITEM', target: item });
 
   const { cancelLongPress, ...longPress } = useLongPress((e) => { e.stopPropagation(); openMenu(); }, () => {});
@@ -94,6 +102,13 @@ export const ItemSwipeCard = ({ item, shortage = 0 }) => {
     if (isArchived) return;
     const n = await askNumber({ title: item.name, message: `${phase.doneLabel} kusů`, value: item.quantityLoaded, max: item.quantityRequested });
     if (n != null) setItemExactQuantity(item.id, n);
+  };
+
+  const editPlan = async (e) => {
+    e.stopPropagation();
+    if (!canPlan) return;
+    const n = await askNumber({ title: item.name, message: 'Kolik kusů připravit k naložení', value: item.quantityRequested });
+    if (n != null && n > 0) setItemRequestedQuantity(item.id, n);
   };
 
   const stop = (fn) => (e) => { e.stopPropagation(); fn(); };
@@ -188,7 +203,38 @@ export const ItemSwipeCard = ({ item, shortage = 0 }) => {
 
           {item.bundleTag && <p className="text-xs text-on-surface-variant">{item.bundleTag}</p>}
 
+          {/* Plan (preparation) */}
+          {canPlan && (
+            <div className="flex items-center gap-2">
+              <span className="flex-1 text-sm font-semibold text-on-surface-variant">Připravit</span>
+              <button
+                onClick={stop(() => setItemRequestedQuantity(item.id, (item.quantityRequested || 1) - 1))}
+                disabled={(item.quantityRequested || 1) <= 1}
+                className="w-11 h-11 flex items-center justify-center bg-surface-container rounded-lg border border-outline-variant disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-transform"
+                aria-label={`Méně kusů v plánu: ${item.name}`}
+              >
+                <Minus className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={editPlan}
+                className="min-w-[4.5rem] h-11 px-2 rounded-lg border border-outline-variant bg-surface-container font-mono font-bold text-lg text-on-surface active:scale-95"
+                aria-label={`Zadat plánovaný počet: ${item.quantityRequested} ks`}
+              >
+                {item.quantityRequested} ks
+              </button>
+              <button
+                onClick={stop(() => setItemRequestedQuantity(item.id, (item.quantityRequested || 0) + 1))}
+                className="w-11 h-11 flex items-center justify-center bg-surface-container rounded-lg border border-outline-variant active:scale-90 transition-transform"
+                aria-label={`Více kusů v plánu: ${item.name}`}
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
           {/* Stepper */}
+          {canPlan && <span className="text-xs font-semibold text-on-surface-variant -mb-1.5">{phase.doneLabel}</span>}
           <div className="flex items-center gap-2 bg-surface-container rounded-xl border border-outline-variant p-1">
             <button
               onClick={stop(() => updateItemQuantity(item.id, -1))}

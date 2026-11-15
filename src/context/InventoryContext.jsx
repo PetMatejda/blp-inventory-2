@@ -84,6 +84,8 @@ export const InventoryProvider = ({ children }) => {
   const [templateJob, setTemplateJob] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [photoViewerItem, setPhotoViewerItem] = useState(null);
+  // Archived job opened on purpose in this session (see currentJob below).
+  const [openedArchivedId, setOpenedArchivedId] = useState('');
   const [finishingJob, setFinishingJob] = useState(null); // job shown in the "finish job" guide
 
   const noticeTimer = useRef(null);
@@ -208,9 +210,12 @@ export const InventoryProvider = ({ children }) => {
     jobs, jobItems: allJobItems, catalog, consumables, auditLogs,
     stockLevels, stockUnits, movements, stocktakes, stocktakeLines,
   } = data;
-  const currentJob = jobs.find((j) => j.id === currentJobId)
+  // The chosen job; an archived one only when it was opened on purpose in this
+  // session (from the archive). Otherwise the first active job, or none at all —
+  // an old finished job must not look like the current one.
+  const chosenJob = jobs.find((j) => j.id === currentJobId);
+  const currentJob = (chosenJob && (chosenJob.status !== 'ARCHIVED' || chosenJob.id === openedArchivedId) ? chosenJob : null)
     || jobs.find((j) => j.status === 'ACTIVE')
-    || jobs[0]
     || null;
   const jobItems = useMemo(
     () => (currentJob ? allJobItems.filter((i) => i.jobId === currentJob.id) : []),
@@ -234,6 +239,13 @@ export const InventoryProvider = ({ children }) => {
   const setCurrentJobId = (jobId) => {
     try { localStorage.setItem(CURRENT_JOB_KEY, jobId || ''); } catch { /* private mode */ }
     setCurrentJobIdState(jobId || '');
+    setOpenedArchivedId(jobId || '');
+  };
+  /** After a job is finished: switch to another active job, or to none. */
+  const leaveJob = (jobId) => {
+    if (currentJob?.id !== jobId) return;
+    const next = jobs.find((j) => j.status === 'ACTIVE' && j.id !== jobId);
+    setCurrentJobId(next ? next.id : '');
   };
 
   // ── Actions (same API as before) ───────────────────────────
@@ -250,6 +262,7 @@ export const InventoryProvider = ({ children }) => {
 
   const updateItemQuantity = (itemId, delta) => withItemJob(itemId, (mode) => actions.updateItemQuantity(itemId, delta, mode));
   const setItemExactQuantity = (itemId, qty) => withItemJob(itemId, (mode) => actions.setItemExactQuantity(itemId, qty, mode));
+  const setItemRequestedQuantity = (itemId, qty) => withItemJob(itemId, (mode) => actions.setItemRequestedQuantity(itemId, qty, mode));
   const setItemLoadedOrPacked = (itemId) => withItemJob(itemId, (mode) => actions.setItemLoadedOrPacked(itemId, mode));
   const setItemPending = (itemId) => withItemJob(itemId, (mode) => actions.setItemPending(itemId, mode));
   const toggleItemStatus = (itemId) => withItemJob(itemId, (mode) => actions.toggleItemStatus(itemId, mode));
@@ -292,10 +305,7 @@ export const InventoryProvider = ({ children }) => {
   // Callers show their own confirmation / undo toast (see FinishJobSheet).
   const finishJob = (jobId) => {
     actions.setJobStatus(jobId, 'ARCHIVED');
-    if (currentJob?.id === jobId) {
-      const next = jobs.find((j) => j.status === 'ACTIVE' && j.id !== jobId);
-      if (next) setCurrentJobId(next.id);
-    }
+    leaveJob(jobId);
   };
 
   const reactivateJob = (jobId) => {
@@ -347,10 +357,7 @@ export const InventoryProvider = ({ children }) => {
   /** Finish restock: stock updated, job archived. */
   const finishRestock = (jobId) => {
     const plan = stock.finishRestock(jobId);
-    if (currentJob?.id === jobId) {
-      const next = jobs.find((j) => j.status === 'ACTIVE' && j.id !== jobId);
-      if (next) setCurrentJobId(next.id);
-    }
+    leaveJob(jobId);
     return plan;
   };
 
@@ -442,6 +449,7 @@ export const InventoryProvider = ({ children }) => {
         // Actions
         updateItemQuantity,
         setItemExactQuantity,
+        setItemRequestedQuantity,
         setItemLoadedOrPacked,
         setItemPending,
         toggleItemStatus,

@@ -33,6 +33,29 @@ export function applyExactQuantity(item, exact, mode = MODES.LOADING) {
   return applyQuantityDelta(item, target - (item.quantityLoaded || 0), mode);
 }
 
+/**
+ * Planned quantity (preparation before loading). The counted quantity never
+ * exceeds the plan; a damaged item stays damaged.
+ */
+export function applyRequestedQuantity(item, requested, mode = MODES.LOADING) {
+  const plan = Math.max(1, Math.floor(Number(requested) || 0));
+  const loaded = Math.min(item.quantityLoaded || 0, plan);
+  if (item.status === 'DAMAGED') return { quantityRequested: plan, quantityLoaded: loaded };
+  const status = loaded > 0 && loaded >= plan ? doneStatus(mode) : 'PENDING';
+  return { quantityRequested: plan, quantityLoaded: loaded, status };
+}
+
+/**
+ * Damage photos of an item. Catalog pictures used to be copied into photoUrls;
+ * those are left out (catalog items no longer have photos), only photos taken
+ * in the app while reporting damage count.
+ */
+export function damagePhotos(item, catalogImage = '') {
+  if (!item || item.status !== 'DAMAGED') return [];
+  return [...new Set((item.photoUrls || []).filter((p) =>
+    typeof p === 'string' && p.startsWith('photo:') && p !== catalogImage && p !== item.image))];
+}
+
 /** Swipe right: full quantity loaded (rigging) or packed (derigging). */
 export function markDone(item, mode = MODES.LOADING) {
   return { quantityLoaded: item.quantityRequested || 0, status: doneStatus(mode) };
@@ -100,7 +123,7 @@ export function newItemFromCatalog(jobId, catalogItem, vehicleId = 'v1') {
     isAdHoc: false,
     isBundle: false,
     damageNotes: '',
-    photoUrls: catalogItem.image ? [catalogItem.image] : [],
+    photoUrls: [],
   };
 }
 
@@ -137,7 +160,7 @@ export function expandBundle(jobId, bundle, jobItems, catalog, vehicleId = 'v1')
         isAdHoc: false,
         isBundle: false,
         damageNotes: '',
-        photoUrls: match?.image ? [match.image] : (bundle.image ? [bundle.image] : []),
+        photoUrls: [],
       });
       summary.push(`${sub.name} (${qty} ks)`);
     }

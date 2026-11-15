@@ -1,22 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { CATEGORIES } from '../../utils/categoryIcons';
+import { CATEGORIES, getCategoryMeta } from '../../utils/categoryIcons';
 import {
-  X, Check, Plus, Trash2, Layers, Upload, Image as ImageIcon,
-  Weight, Zap, Package, ChevronDown, Camera, Search, QrCode
+  X, Check, Plus, Trash2, Layers,
+  Weight, Zap, Package, Camera, Search, QrCode
 } from 'lucide-react';
 // html5-qrcode is loaded on demand (see startBarcodeScanner).
-import { savePhoto, usePhotoSrc } from '../../services/photoService';
 import { useDialogs } from '../common/Dialogs';
 
-const PRESET_PHOTOS = [
-  { label: 'SkyPanel', url: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Aputure', url: 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80' },
-  { label: 'C-Stand', url: 'https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Kabel', url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Power', url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Case/Set', url: 'https://images.unsplash.com/photo-1585336261026-870a6d216b54?auto=format&fit=crop&w=600&q=80' },
-];
+const CategoryBadge = ({ category }) => {
+  const meta = getCategoryMeta(category);
+  const Icon = meta.icon;
+  return <span className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${meta.color}`}><Icon className="w-4 h-4" /></span>;
+};
 
 const EMPTY_FORM = {
   name: '',
@@ -25,7 +21,7 @@ const EMPTY_FORM = {
   power: '',
   barcode: '',
   serialPrefix: 'EQP',
-  image: PRESET_PHOTOS[0].url,
+  image: '',
   availableCount: 1,
   isBundle: false,
   bundleItems: [],
@@ -35,11 +31,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
   const { createCatalogItem, updateCatalogItem, catalog } = useInventory();
   const { confirm } = useDialogs();
   const [formData, setFormData] = useState(EMPTY_FORM);
-  const [showPresets, setShowPresets] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
-  const [imageUploading, setImageUploading] = useState(false);
-  const [imageError, setImageError] = useState('');
-  const previewSrc = usePhotoSrc(formData.image);
 
   // Barcode Camera Scanner state
   const [isScanningBarcode, setIsScanningBarcode] = useState(false);
@@ -65,14 +57,13 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
         power: item.power || '',
         barcode: item.barcode || '',
         serialPrefix: item.serialPrefix || 'EQP',
-        image: item.image || PRESET_PHOTOS[0].url,
+        image: '',
         availableCount: parseInt(item.availableCount) || 1,
         isBundle: !!item.isBundle,
         bundleItems: item.bundleItems ? [...item.bundleItems] : [],
       });
     }
     setIsDirty(false);
-    setShowPresets(false);
     setShowBundlePicker(false);
     setBundleSearch('');
     stopBarcodeScanner();
@@ -83,23 +74,6 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
     setIsDirty(true);
   };
 
-  // Photos are compressed and uploaded to Storage; the catalog keeps only the URL.
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setImageError('');
-    setImageUploading(true);
-    try {
-      const ref = await savePhoto(file, { kind: 'catalog', itemId: isEditing ? item.id : '' });
-      set({ image: ref });
-    } catch (err) {
-      setImageError(err.message || 'Fotku se nepodařilo uložit.');
-    } finally {
-      setImageUploading(false);
-    }
-  };
-  const handleCameraCapture = handleFileUpload;
 
   // Barcode Scanner in Drawer
   const startBarcodeScanner = async () => {
@@ -150,7 +124,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
 
   const handleSave = (e) => {
     e.preventDefault();
-    if (imageUploading) return; // wait for the photo URL
+    // Catalog items no longer carry photos — category icons are used instead.
     stopBarcodeScanner();
     if (isNew) {
       createCatalogItem(formData);
@@ -186,7 +160,6 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
           catalogId: catalogItem.id,
           name: catalogItem.name,
           category: catalogItem.category,
-          image: catalogItem.image,
           qty: 1,
         }],
       });
@@ -254,53 +227,6 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
 
         {/* Form body */}
         <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {/* Photo */}
-          <div className="flex gap-4 items-start">
-            <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-outline-variant bg-surface-container shrink-0 group">
-              <img
-                src={previewSrc || PRESET_PHOTOS[0].url}
-                alt="Preview"
-                className="w-full h-full object-cover"
-                onError={(e) => { e.target.src = PRESET_PHOTOS[0].url; }}
-              />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <ImageIcon className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="flex flex-col gap-1.5 flex-1">
-              <label className="flex items-center gap-1.5 text-xs text-primary font-bold cursor-pointer">
-                <Upload className="w-3.5 h-3.5" /> Nahrát foto
-                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-              </label>
-              <label className="flex items-center gap-1.5 text-xs text-secondary font-bold cursor-pointer">
-                <Camera className="w-3.5 h-3.5" /> Vyfotit techniku
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCameraCapture} />
-              </label>
-              {imageUploading && <span className="text-xs text-outline">Nahrávám fotku…</span>}
-              {imageError && <span className="text-xs text-error font-semibold">{imageError}</span>}
-              <button
-                type="button"
-                onClick={() => setShowPresets(!showPresets)}
-                className="flex items-center gap-1 text-[10px] text-outline hover:text-on-surface"
-              >
-                <ChevronDown className="w-3 h-3" /> Předvolby fotek
-              </button>
-              {showPresets && (
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {PRESET_PHOTOS.map((p) => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => { set({ image: p.url }); setShowPresets(false); }}
-                      className="w-10 h-10 rounded-lg overflow-hidden border border-outline-variant hover:border-primary transition-colors"
-                    >
-                      <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Basic Fields */}
           <div className="space-y-3.5">
@@ -485,12 +411,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                                     bundleCatalogIds.has(c.id) ? 'bg-primary/5' : ''
                                   }`}
                                 >
-                                  <img
-                                    src={c.image}
-                                    alt={c.name}
-                                    className="w-8 h-8 rounded-lg object-cover border border-outline-variant shrink-0"
-                                    onError={(e) => { e.target.src = PRESET_PHOTOS[0].url; }}
-                                  />
+                                  <CategoryBadge category={c.category} />
                                   <div className="flex-1 min-w-0">
                                     <div className="text-xs font-bold text-on-surface truncate">{c.name}</div>
                                     <div className="text-[10px] text-outline">{c.category}</div>
@@ -514,14 +435,6 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                   ) : (
                     formData.bundleItems.map((sub, idx) => (
                       <div key={sub.catalogId || idx} className="flex items-center gap-2 bg-surface-container/50 rounded-xl px-2 py-1.5">
-                        {sub.image && (
-                          <img
-                            src={sub.image}
-                            alt={sub.name}
-                            className="w-8 h-8 rounded-lg object-cover border border-outline-variant shrink-0"
-                            onError={(e) => { e.target.src = PRESET_PHOTOS[0].url; }}
-                          />
-                        )}
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-bold text-on-surface truncate">{sub.name}</div>
                           {sub.category && <div className="text-[10px] text-outline">{sub.category}</div>}
