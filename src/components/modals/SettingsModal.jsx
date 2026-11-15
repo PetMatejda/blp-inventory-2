@@ -3,6 +3,7 @@ import { useInventory } from '../../context/InventoryContext';
 import { Moon, Sun, CloudUpload, Download, ShieldCheck, LogOut, User } from 'lucide-react';
 import { useDialogs, Sheet } from '../common/Dialogs';
 import { firebaseAuth } from '../../services/firebaseAuth';
+import { McpAccessSection } from '../settings/McpAccessSection';
 
 export const SettingsModal = () => {
   const {
@@ -160,6 +161,9 @@ export const SettingsModal = () => {
           <Download className="w-5 h-5 text-secondary shrink-0" />
         </button>
       )}
+
+      {/* AI access (MCP tokens) */}
+      <McpAccessSection />
 
       {/* Data diagnostics */}
       <details className="bg-surface-container p-3 rounded-xl border border-outline-variant text-sm">

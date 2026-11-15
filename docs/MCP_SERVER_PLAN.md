@@ -238,9 +238,31 @@ Knihovna: oficiální `@modelcontextprotocol/sdk` 1.32.2 + `zod` – funguje bez
   Claude Code a Antigravity podle kap. 6 (místo `blp_mcp_XXXX` spike token).
 - Spike token se ve fázi A nahradí osobními tokeny.
 
+## 9b. Fáze A + B1 + B2 – stav (2026-11-15)
+
+- **Osobní tokeny:** Nastavení › Přístup pro AI (MCP) (`src/components/settings/McpAccessSection.jsx`)
+  → `api/mcp-tokens.js` (ověří Firebase ID token + schválený e-mail). Ve Firestore jen SHA-256 hash
+  v `mcpTokens/{hash}` (kolekce je jen pro server, klient k ní přes rules nemá přístup).
+  Rozsah `read` (výchozí) nebo `write`. Token v `Authorization: Bearer`, `X-API-Key`, `X-BLP-Token`
+  nebo `?key=`. Sdílený `MCP_SPIKE_TOKEN` dál funguje, ale jen pro čtení – po přechodu na osobní
+  tokeny ho ve Vercelu smazat.
+- **Čtení:** `list_jobs`, `get_job`, `search_catalog` (i aliasy, bez diakritiky), `check_availability`,
+  `get_job_history`, `ping`.
+- **Zápis (jen token `write`, vždy náhled → `confirm`):** `create_job`, `duplicate_job`,
+  `plan_job_items` (ADD / SET / REMOVE, sety, `previewId` hlídá změnu dat mezi náhledem a zápisem,
+  nedostatky skladu v náhledu), `add_adhoc_item`. Audit pod jménem vlastníka tokenu „Jméno (MCP)“.
+- **Kód:** `api/_lib/` (`firestoreAdmin`, `adminRepo` – stejné rozhraní jako `inventoryRepo`,
+  `dataSource`, `tokens`, `approvedEmails` + test shody s `firestore.rules`, `mcpServer`),
+  sdílená logika `src/domain/jobPlan.js`, `src/domain/availability.js`, akce `applyJobPlan`.
+- **Vercel env:** `FIREBASE_SERVICE_ACCOUNT` (JSON servisního účtu), `MCP_SPIKE_TOKEN` (přechodně).
+- Testy: `tests/mcp.test.js`, `tests/mcpTokens.test.js`, `tests/jobPlan.test.js`, `tests/approvedEmails.test.js`.
+- Lokálně: `node_modules` v OneDrive občas nejde načíst (firebase-admin) – kontrolu proti živým
+  datům spouštět z kopie mimo OneDrive.
+
 ## 10. Otevřené
 
-1. Servisní účet Firebase – vytvořit klíč (Firebase Console › Nastavení projektu › Servisní účty).
-2. Má mít token rozsah jen pro čtení jako výchozí? (Návrh: ano, zápis se zapíná zvlášť.)
-3. Kdo smí MCP používat – všichni schválení, nebo jen vybraní (např. vedoucí)?
-4. Hosting pro ostrý provoz (stejné rozhodnutí jako u hlasu).
+1. ~~Servisní účet Firebase~~ – hotovo. Klíč prošel konverzací s AI → zvážit jeho rotaci
+   (Firebase Console › Servisní účty › nový klíč, starý smazat, nový do Vercelu).
+2. Kdo smí MCP používat – teď všichni schválení; zápis jen s tokenem „čtení i zápis“.
+3. Hosting pro ostrý provoz (stejné rozhodnutí jako u hlasu).
+4. Fáze C (OAuth) – místo tokenu v URL pro Claude konektory.

@@ -5,6 +5,7 @@ import {
   applyQuantityDelta, applyExactQuantity, applyRequestedQuantity, markDone, markUndone, toggleStatus, reportDamage,
   findSameEquipment, newItemFromCatalog, expandBundle, newAdHocItem, adHocName, copyItemsForTemplate,
 } from '../domain/items.js';
+import { planJobItems, describePlan } from '../domain/jobPlan.js';
 
 const today = () => new Date().toISOString().split('T')[0];
 const CONSUMABLE_LABELS = ['OK', '50%', 'REFILL'];
@@ -164,6 +165,25 @@ export function createInventoryActions({ repo, getState, getActor }) {
       }
       const ops = createItems([newItemFromCatalog(jobId, catalogItem)]);
       repo.commit([...ops, auditOp(jobId, 'Přidáno z katalogu', `${catalogItem.name} vloženo do zakázky (1 ks)`, 'add')]);
+    },
+
+    /**
+     * Bulk plan of a job's equipment (domain/jobPlan.js): adds, changes and removes
+     * items in one go with one audit entry. Lines the plan skips come back as warnings.
+     */
+    applyJobPlan(jobId, lines, { source = '' } = {}) {
+      const { jobs, catalog } = getState();
+      const job = jobs.find((j) => j.id === jobId);
+      const plan = planJobItems({ job, jobItems: jobItemsOf(jobId), catalog, lines });
+      if (plan.errors.length || !plan.changes.length) return plan;
+      const ops = [
+        ...createItems(plan.creates),
+        ...plan.updates.map(({ item, patch }) => ({ type: 'update', col: 'jobItems', id: item.id, data: stamp(patch) })),
+        ...plan.deletes.map((item) => ({ type: 'delete', col: 'jobItems', id: item.id })),
+        auditOp(jobId, `Plán položek${source ? ` (${source})` : ''}`, describePlan(plan.changes), 'add'),
+      ];
+      for (let i = 0; i < ops.length; i += 400) repo.commit(ops.slice(i, i + 400));
+      return plan;
     },
 
     // ── Jobs ───────────────────────────────────────────────────

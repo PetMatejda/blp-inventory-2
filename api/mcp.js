@@ -1,9 +1,9 @@
-// Vercel Function: remote MCP endpoint, Streamable HTTP in stateless mode.
-//   POST /api/mcp   JSON-RPC (MCP)   Authorization: Bearer <MCP_SPIKE_TOKEN>  or  X-API-Key: <MCP_SPIKE_TOKEN>
-// Spike only (docs/MCP_SERVER_PLAN.md, phase 0). Personal tokens / OAuth come later.
-import { timingSafeEqual } from 'node:crypto';
+// Vercel Function: remote MCP endpoint, Streamable HTTP in stateless mode (POST only).
+// Token: personal token from Settings › Přístup pro AI (or the legacy shared spike
+// token, read-only) in Authorization: Bearer, X-API-Key, X-BLP-Token or ?key=.
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createBlpMcpServer } from './_lib/mcpServer.js';
+import { tokenFromRequest, resolveIdentity } from './_lib/tokens.js';
 
 const jsonRpcError = (res, status, code, message, headers = {}) => {
   res.statusCode = status;
@@ -12,65 +12,54 @@ const jsonRpcError = (res, status, code, message, headers = {}) => {
   res.end(JSON.stringify({ jsonrpc: '2.0', error: { code, message }, id: null }));
 };
 
-const sameToken = (given, expected) => {
-  const a = Buffer.from(String(given).trim());
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-};
+/** Factory so tests can inject the data source. `getDs` returns null when not configured. */
+export function createMcpHandler({ getDs, env = process.env, now = () => new Date() }) {
+  return async function handler(req, res) {
+    const ds = await getDs();
+    if (!ds && !env.MCP_SPIKE_TOKEN) return jsonRpcError(res, 503, -32000, 'MCP server is not configured.');
 
-// Header names that may carry the token besides Authorization. Claude custom connectors
-// (claude.ai, Cowork) reserve Authorization for OAuth and only allow approved names —
-// `x-api-key` is one of the standard ones.
-const TOKEN_HEADERS = ['x-api-key', 'x-blp-token'];
+    const token = tokenFromRequest(req.headers, req.url);
+    let identity;
+    try {
+      identity = await resolveIdentity(token, { ds, spikeToken: env.MCP_SPIKE_TOKEN || '', now });
+    } catch (err) {
+      console.error('MCP identity lookup failed', err);
+      return jsonRpcError(res, 500, -32603, 'Internal server error');
+    }
+    if (identity.error) {
+      // Never log the token itself – only where it came from and why it was refused.
+      const where = ['authorization', 'x-api-key', 'x-blp-token'].filter((h) => req.headers[h]);
+      if (/[?&]key=/.test(req.url || '')) where.push('?key');
+      console.warn(`MCP auth refused (${identity.error}): ${req.method} ua="${req.headers['user-agent'] || ''}" tokenIn=[${where.join(',')}]`);
+      // 403, not 401: a 401 makes MCP clients (Claude connectors) start OAuth discovery,
+      // which this server does not offer (personal tokens only).
+      return jsonRpcError(res, 403, -32001, 'Missing or invalid token. Create a personal token in BLP Inventory › Nastavení › Přístup pro AI.');
+    }
+    if (req.method !== 'POST') return jsonRpcError(res, 405, -32000, 'Method not allowed.', { Allow: 'POST' });
+    if (!ds) return jsonRpcError(res, 503, -32000, 'Database access is not configured (FIREBASE_SERVICE_ACCOUNT).');
 
-/**
- * Token check (constant time). Accepts `Authorization: Bearer <token>` (Claude Code,
- * Antigravity) or the token in `X-API-Key` / `X-BLP-Token` (Claude custom connectors).
- */
-export function isAuthorized(headers, expected) {
-  if (!expected) return false;
-  const bearer = /^Bearer\s+(.+)$/i.exec(String(headers?.authorization || ''));
-  if (bearer && sameToken(bearer[1], expected)) return true;
-  return TOKEN_HEADERS.some((name) => {
-    const value = headers?.[name];
-    return typeof value === 'string' && value.length > 0 && sameToken(value.replace(/^Bearer\s+/i, ''), expected);
-  });
+    const server = createBlpMcpServer({ identity, ds, now });
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
+    res.on('close', () => { transport.close(); server.close(); });
+    try {
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (err) {
+      console.error('MCP request failed', err);
+      if (!res.headersSent) jsonRpcError(res, 500, -32603, 'Internal server error');
+    }
+  };
 }
 
-/**
- * Token in the URL (`/api/mcp?key=<token>`). Fallback for Claude custom connectors
- * (Cowork, claude.ai) when request headers are not sent – a "secret URL". Weaker than a
- * header (the URL can end up in logs/history), acceptable for the spike only; phase C
- * replaces it with OAuth.
- */
-export function keyFromUrl(url) {
-  try { return new URL(url || '', 'http://localhost').searchParams.get('key') || ''; } catch { return ''; }
+let firestoreDs;
+async function productionDs() {
+  if (firestoreDs !== undefined) return firestoreDs;
+  const { adminDb, isAdminConfigured } = await import('./_lib/firestoreAdmin.js');
+  if (!isAdminConfigured()) { firestoreDs = null; return null; }
+  const { createFirestoreDataSource } = await import('./_lib/dataSource.js');
+  firestoreDs = createFirestoreDataSource(adminDb());
+  return firestoreDs;
 }
 
-export default async function handler(req, res) {
-  const expected = process.env.MCP_SPIKE_TOKEN;
-  if (!expected) return jsonRpcError(res, 503, -32000, 'MCP server is not configured (MCP_SPIKE_TOKEN missing).');
-  const urlKey = keyFromUrl(req.url);
-  if (!isAuthorized(req.headers, expected) && !(urlKey && sameToken(urlKey, expected))) {
-    // Header names only (never values) – shows in Vercel logs whether a client sent a token at all.
-    const sent = ['authorization', ...TOKEN_HEADERS].filter((h) => req.headers[h]);
-    if (urlKey) sent.push('?key');
-    console.warn(`MCP auth refused: ${req.method} ua="${req.headers['user-agent'] || ''}" tokenHeaders=[${sent.join(',')}]`);
-    // 403, not 401: a 401 makes MCP clients (Claude connectors) start OAuth discovery and
-    // dynamic client registration, which this server does not offer (static token only).
-    return jsonRpcError(res, 403, -32001, 'Missing or invalid token. Send X-API-Key: <token> or Authorization: Bearer <token>.');
-  }
-  // Stateless: no server-initiated SSE stream (GET) and no sessions to delete (DELETE).
-  if (req.method !== 'POST') return jsonRpcError(res, 405, -32000, 'Method not allowed.', { Allow: 'POST' });
-
-  const server = createBlpMcpServer();
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
-  res.on('close', () => { transport.close(); server.close(); });
-  try {
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
-  } catch (err) {
-    console.error('MCP request failed', err);
-    if (!res.headersSent) jsonRpcError(res, 500, -32603, 'Internal server error');
-  }
-}
+const handler = createMcpHandler({ getDs: productionDs });
+export default handler;
