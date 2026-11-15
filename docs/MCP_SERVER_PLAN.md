@@ -181,8 +181,10 @@ claude mcp add --transport http blp https://<app>.vercel.app/api/mcp --header "A
 }
 ```
 
-**claude.ai** – Nastavení › Konektory › Přidat vlastní konektor → URL `https://<app>.vercel.app/api/mcp`
-(až po fázi C, přihlášení proběhne přes BLP stránku).
+**claude.ai / Claude Cowork** – Nastavení › Konektory › Přidat vlastní konektor → URL
+`https://<app>.vercel.app/api/mcp`. Hlavička `Authorization` je u vlastních konektorů vyhrazená pro
+OAuth, proto server přijímá token i v hlavičce **`X-BLP-Token: <token>`** (Request headers v dialogu).
+Po fázi C se místo tokenu použije přihlášení přes BLP stránku (OAuth).
 
 Token se nikdy necommituje do repa (Antigravity workspace config patří do `.gitignore`).
 
@@ -221,6 +223,7 @@ Fáze A a B lze dělat souběžně s fázemi 0–1 hlasového rozhraní; společ
 
 Hotovo v kódu: `api/mcp.js` (Streamable HTTP, bezstavový, odpovědi jako JSON, jen `POST`),
 `api/_lib/mcpServer.js` (nástroj `ping`), ochrana jedním sdíleným tokenem `MCP_SPIKE_TOKEN`
+v `Authorization: Bearer …` nebo `X-BLP-Token: …` (Claude konektory)
 (bez něj server odpovídá 503, se špatným 401), `vercel.json` už nepřepisuje `/api/*` na `index.html`.
 Knihovna: oficiální `@modelcontextprotocol/sdk` 1.32.2 + `zod` – funguje bez Next.js.
 

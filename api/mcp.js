@@ -1,5 +1,5 @@
 // Vercel Function: remote MCP endpoint, Streamable HTTP in stateless mode.
-//   POST /api/mcp   JSON-RPC (MCP)          Authorization: Bearer <MCP_SPIKE_TOKEN>
+//   POST /api/mcp   JSON-RPC (MCP)   Authorization: Bearer <MCP_SPIKE_TOKEN>  or  X-BLP-Token: <MCP_SPIKE_TOKEN>
 // Spike only (docs/MCP_SERVER_PLAN.md, phase 0). Personal tokens / OAuth come later.
 import { timingSafeEqual } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -12,20 +12,29 @@ const jsonRpcError = (res, status, code, message, headers = {}) => {
   res.end(JSON.stringify({ jsonrpc: '2.0', error: { code, message }, id: null }));
 };
 
-/** Constant-time comparison of the bearer token with the configured one. */
-export function isAuthorized(authHeader, expected) {
-  if (!expected) return false;
-  const match = /^Bearer\s+(.+)$/i.exec(String(authHeader || ''));
-  if (!match) return false;
-  const a = Buffer.from(match[1].trim());
+const sameToken = (given, expected) => {
+  const a = Buffer.from(String(given).trim());
   const b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
+};
+
+/**
+ * Token check (constant time). Accepts `Authorization: Bearer <token>` (Claude Code,
+ * Antigravity) or `X-BLP-Token: <token>` — Claude custom connectors (claude.ai,
+ * Cowork) reserve the Authorization header for OAuth, so they send the custom one.
+ */
+export function isAuthorized(headers, expected) {
+  if (!expected) return false;
+  const bearer = /^Bearer\s+(.+)$/i.exec(String(headers?.authorization || ''));
+  if (bearer && sameToken(bearer[1], expected)) return true;
+  const custom = headers?.['x-blp-token'];
+  return typeof custom === 'string' && custom.length > 0 && sameToken(custom.replace(/^Bearer\s+/i, ''), expected);
 }
 
 export default async function handler(req, res) {
   const expected = process.env.MCP_SPIKE_TOKEN;
   if (!expected) return jsonRpcError(res, 503, -32000, 'MCP server is not configured (MCP_SPIKE_TOKEN missing).');
-  if (!isAuthorized(req.headers.authorization, expected)) {
+  if (!isAuthorized(req.headers, expected)) {
     return jsonRpcError(res, 401, -32001, 'Unauthorized', { 'WWW-Authenticate': 'Bearer realm="blp-inventory"' });
   }
   // Stateless: no server-initiated SSE stream (GET) and no sessions to delete (DELETE).

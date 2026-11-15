@@ -21,10 +21,11 @@ afterAll(async () => {
   await new Promise((resolve) => httpServer.close(resolve));
 });
 
-const connect = async (token = TOKEN) => {
+const connect = async (token = TOKEN, headerName = 'Authorization') => {
   const client = new Client({ name: 'test', version: '1.0.0' });
+  const value = headerName === 'Authorization' ? `Bearer ${token}` : token;
   const transport = new StreamableHTTPClientTransport(new URL(url), {
-    requestInit: { headers: { Authorization: `Bearer ${token}` } },
+    requestInit: { headers: { [headerName]: value } },
   });
   await client.connect(transport);
   return client;
@@ -44,8 +45,16 @@ describe('MCP spike endpoint', () => {
     await client.close();
   });
 
+  it('accepts the token in X-BLP-Token (Claude custom connectors)', async () => {
+    const client = await connect(TOKEN, 'X-BLP-Token');
+    const result = await client.callTool({ name: 'ping', arguments: {} });
+    expect(result.content[0].text).toMatch(/^pong/);
+    await client.close();
+  });
+
   it('refuses a wrong token', async () => {
     await expect(connect('wrong')).rejects.toThrow();
+    await expect(connect('wrong', 'X-BLP-Token')).rejects.toThrow();
   });
 
   it('refuses requests without a token and non-POST methods', async () => {
@@ -64,12 +73,25 @@ describe('MCP spike endpoint', () => {
 });
 
 describe('isAuthorized', () => {
+  const auth = (v) => ({ authorization: v });
+  const custom = (v) => ({ 'x-blp-token': v });
+
   it('accepts only the exact bearer token', () => {
-    expect(isAuthorized(`Bearer ${TOKEN}`, TOKEN)).toBe(true);
-    expect(isAuthorized(`bearer ${TOKEN}`, TOKEN)).toBe(true);
-    expect(isAuthorized(`Bearer ${TOKEN}x`, TOKEN)).toBe(false);
-    expect(isAuthorized(TOKEN, TOKEN)).toBe(false);
-    expect(isAuthorized(`Bearer ${TOKEN}`, '')).toBe(false);
+    expect(isAuthorized(auth(`Bearer ${TOKEN}`), TOKEN)).toBe(true);
+    expect(isAuthorized(auth(`bearer ${TOKEN}`), TOKEN)).toBe(true);
+    expect(isAuthorized(auth(`Bearer ${TOKEN}x`), TOKEN)).toBe(false);
+    expect(isAuthorized(auth(TOKEN), TOKEN)).toBe(false);
+    expect(isAuthorized(auth(`Bearer ${TOKEN}`), '')).toBe(false);
+    expect(isAuthorized({}, TOKEN)).toBe(false);
     expect(isAuthorized(undefined, TOKEN)).toBe(false);
+  });
+
+  it('accepts the exact token in X-BLP-Token, with or without "Bearer "', () => {
+    expect(isAuthorized(custom(TOKEN), TOKEN)).toBe(true);
+    expect(isAuthorized(custom(` ${TOKEN} `), TOKEN)).toBe(true);
+    expect(isAuthorized(custom(`Bearer ${TOKEN}`), TOKEN)).toBe(true);
+    expect(isAuthorized(custom(`${TOKEN}x`), TOKEN)).toBe(false);
+    expect(isAuthorized(custom(''), TOKEN)).toBe(false);
+    expect(isAuthorized({ ...auth('Bearer wrong'), ...custom(TOKEN) }, TOKEN)).toBe(true);
   });
 });
