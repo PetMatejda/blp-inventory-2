@@ -1,6 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { CATEGORIES, getCategoryMeta } from '../../utils/categoryIcons';
+import { CATEGORIES, ITEM_ICONS, getCategoryMeta, getItemMeta } from '../../utils/categoryIcons';
+
+/** Icon of the equipment type; "Kategorie" = the category icon. */
+const IconPicker = ({ value, category, onChange }) => {
+  const meta = getCategoryMeta(category);
+  const options = [{ id: '', label: `Podle kategorie (${meta.label})`, icon: meta.icon }, ...ITEM_ICONS];
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => {
+        const Icon = o.icon;
+        const active = (value || '') === o.id;
+        return (
+          <button key={o.id || 'category'} type="button" title={o.label} aria-label={o.label} aria-pressed={active}
+            onClick={() => onChange(o.id)}
+            className={`w-10 h-10 rounded-xl border flex items-center justify-center active:scale-95 ${active ? meta.color + ' ring-2 ring-primary' : 'border-outline-variant bg-surface-container text-on-surface-variant'}`}>
+            <Icon className="w-5 h-5" />
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 import {
   X, Check, Plus, Trash2, Layers,
   Weight, Zap, Package, Camera, Search, QrCode
@@ -8,8 +29,8 @@ import {
 // html5-qrcode is loaded on demand (see startBarcodeScanner).
 import { useDialogs } from '../common/Dialogs';
 
-const CategoryBadge = ({ category }) => {
-  const meta = getCategoryMeta(category);
+const CategoryBadge = ({ category, icon }) => {
+  const meta = getItemMeta({ category, icon });
   const Icon = meta.icon;
   return <span className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${meta.color}`}><Icon className="w-4 h-4" /></span>;
 };
@@ -19,6 +40,10 @@ const EMPTY_FORM = {
   category: 'Lights',
   weight: '',
   power: '',
+  size: '',
+  brand: '',
+  usage: '',
+  icon: '',
   barcode: '',
   serialPrefix: 'EQP',
   image: '',
@@ -55,6 +80,10 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
         category: item.category || 'Lights',
         weight: item.weight || '',
         power: item.power || '',
+        size: item.size || '',
+        brand: item.brand || '',
+        usage: item.usage || '',
+        icon: item.icon || '',
         barcode: item.barcode || '',
         serialPrefix: item.serialPrefix || 'EQP',
         image: '',
@@ -258,6 +287,21 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
 
             </div>
 
+            <div>
+              <label className="block text-xs font-bold text-outline mb-1 uppercase">Ikona</label>
+              <IconPicker value={formData.icon} category={formData.category} onChange={(icon) => set({ icon })} />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              {[['size', 'Velikost', '8x6 m'], ['brand', 'Výrobce', 'Inteca'], ['usage', 'Použití', 'Cloud 8x6']].map(([key, label, ph]) => (
+                <div key={key}>
+                  <label className="block text-xs font-bold text-outline mb-1 uppercase">{label}</label>
+                  <input type="text" value={formData[key]} onChange={(e) => set({ [key]: e.target.value })} placeholder={ph}
+                    className="w-full h-11 px-3 bg-surface-container border border-outline-variant rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary" />
+                </div>
+              ))}
+            </div>
+
             {/* Barcode / EAN / QR input with Camera Scan capability */}
             <div className="bg-surface-container/60 border border-outline-variant/80 rounded-2xl p-3">
               <label className="block text-xs font-bold text-outline mb-1 uppercase flex items-center justify-between">
@@ -411,7 +455,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                                     bundleCatalogIds.has(c.id) ? 'bg-primary/5' : ''
                                   }`}
                                 >
-                                  <CategoryBadge category={c.category} />
+                                  <CategoryBadge category={c.category} icon={c.icon} />
                                   <div className="flex-1 min-w-0">
                                     <div className="text-xs font-bold text-on-surface truncate">{c.name}</div>
                                     <div className="text-[10px] text-outline">{c.category}</div>

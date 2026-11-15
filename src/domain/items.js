@@ -119,6 +119,7 @@ export function newItemFromCatalog(jobId, catalogItem, vehicleId = 'v1') {
     catalogId: catalogItem.id,
     name: catalogItem.name,
     category: catalogItem.category,
+    icon: catalogItem.icon || '',
     assignedVehicleId: vehicleId,
     quantityRequested: 1,
     quantityLoaded: 0,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getCategoryMeta } from '../../utils/categoryIcons';
+import { getItemMeta } from '../../utils/categoryIcons';
 import { usePhotoSrc } from '../../services/photoService';
 
 /**
@@ -10,15 +10,15 @@ import { usePhotoSrc } from '../../services/photoService';
  * - className is applied to the outer container
  *
  * Usage:
- *   <ItemThumbnail src={item.image} name={item.name} category={item.category}
+ *   <ItemThumbnail src={item.image} name={item.name} category={item.category} icon={item.icon}
  *     className="w-full h-full" onClick={...} />
  */
-export const ItemThumbnail = ({ src: rawSrc, name, category, className = '', onClick }) => {
+export const ItemThumbnail = ({ src: rawSrc, name, category, icon, className = '', onClick }) => {
   // Photos taken in the app are stored as "photo:<id>" references (see photoService).
   const src = usePhotoSrc(rawSrc);
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const catMeta = getCategoryMeta(category);
+  const catMeta = getItemMeta({ category, icon });
   const CatIcon = catMeta.icon;
 
   const showFallback = !src || hasError;

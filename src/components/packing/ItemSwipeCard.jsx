@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
 import { useLongPress } from '../../hooks/useLongPress';
 import { useDialogs } from '../common/Dialogs';
-import { getCategoryMeta } from '../../utils/categoryIcons';
+import { getItemMeta } from '../../utils/categoryIcons';
 import { phaseOf, statusLabel } from '../../domain/labels';
 import { damagePhotos } from '../../domain/items';
 import { ItemThumbnail } from '../common/ItemThumbnail';
@@ -51,10 +51,12 @@ export const ItemSwipeCard = ({ item, shortage = 0 }) => {
   const mode = currentJob?.mode || 'LOADING';
   const phase = phaseOf(mode);
   const isArchived = currentJob?.status === 'ARCHIVED';
-  const catMeta = getCategoryMeta(item.category);
+  const catalogItem = catalog?.find((c) => c.id === item.catalogId);
+  const itemIcon = item.icon || catalogItem?.icon;
+  const catMeta = getItemMeta({ category: item.category, icon: itemIcon });
   const CatIcon = catMeta.icon;
-  // Only damage photos are shown; otherwise the category icon.
-  const catalogImage = catalog?.find((c) => c.id === item.catalogId)?.image || '';
+  // Only damage photos are shown; otherwise the item / category icon.
+  const catalogImage = catalogItem?.image || '';
   const photoUrl = damagePhotos(item, catalogImage)[0] || '';
   // Preparation: while rigging, the planned count can be changed separately
   // from the loaded count (+ on the plan never marks the item as loaded).
@@ -152,7 +154,7 @@ export const ItemSwipeCard = ({ item, shortage = 0 }) => {
               aria-label={`Fotky: ${item.name}`}
               className="w-14 h-14 shrink-0 rounded-xl overflow-hidden border border-outline-variant/50"
             >
-              <ItemThumbnail src={photoUrl} name={item.name} category={item.category} className="w-full h-full" />
+              <ItemThumbnail src={photoUrl} name={item.name} category={item.category} icon={itemIcon} className="w-full h-full" />
             </button>
 
             <div className="flex-1 min-w-0">

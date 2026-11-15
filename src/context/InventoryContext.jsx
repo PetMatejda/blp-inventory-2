@@ -6,7 +6,7 @@ import { createStockActions } from '../services/stockActions';
 import { availability } from '../domain/stock';
 import { migrateLegacyStore, restoreCatalog, MIGRATION_DOC } from '../services/migration';
 import { db, doc, getDoc, runTransaction, writeBatch } from '../services/firebase';
-import { INITIAL_VEHICLES, INITIAL_CATALOG, INITIAL_CONSUMABLES } from '../mockData/initialData';
+import { INITIAL_VEHICLES } from '../mockData/initialData';
 import { CATEGORIES, getCategoryMeta } from '../utils/categoryIcons';
 
 const InventoryContext = createContext();
@@ -375,15 +375,18 @@ export const InventoryProvider = ({ children }) => {
   const deleteCatalogItem = (catalogId) => actions.deleteCatalogItem(catalogId);
   const updateConsumableState = (consumableId, newState) => actions.updateConsumableState(consumableId, newState);
 
-  /** Fills a missing catalog from the legacy backup (or the built-in default catalog). */
+  /**
+   * Fills a missing catalog from the legacy backup. The built-in demo catalog is
+   * never used any more: the live catalog is the real warehouse (ZapSklad import).
+   */
   const restoreCatalogFromBackup = async () => {
     if (!navigator.onLine) { showNotice('📴 Obnova katalogu potřebuje připojení.'); return null; }
     try {
       const fs = { db, doc, getDoc, writeBatch };
-      const res = await restoreCatalog(fs, { existingIds: catalog.map((c) => c.id), defaults: INITIAL_CATALOG, jobItems: allJobItems });
+      const res = await restoreCatalog(fs, { existingIds: catalog.map((c) => c.id), defaults: [], jobItems: allJobItems });
       // Brácha (consumables) may be missing for the same reason — restore only when empty.
       if (consumables.length === 0) {
-        await restoreCatalog(fs, { collection: 'consumables', existingIds: [], defaults: INITIAL_CONSUMABLES });
+        await restoreCatalog(fs, { collection: 'consumables', existingIds: [], defaults: [] });
       }
       showNotice(res.count
         ? `✅ Doplněno ${res.count} položek katalogu (${res.source === 'legacy' ? 'ze zálohy' : 'z výchozího katalogu'}${res.fromJobs ? `, ${res.fromJobs} podle zakázek` : ''}).`

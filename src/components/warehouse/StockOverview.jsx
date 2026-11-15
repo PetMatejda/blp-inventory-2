@@ -263,7 +263,7 @@ export const StockOverview = () => {
         {visible.map(({ item, level, tracking }) => (
           <li key={item.id}>
             <button onClick={() => setSelected(item)} className="w-full text-left bg-card-bg border border-outline-variant rounded-2xl p-3 flex items-center gap-3 active:scale-[0.99]">
-              <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0"><ItemThumbnail name={item.name} category={item.category} className="w-full h-full" /></div>
+              <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0"><ItemThumbnail name={item.name} category={item.category} icon={item.icon} className="w-full h-full" /></div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-base text-on-surface leading-snug truncate">{item.name}</p>
                 <p className="text-sm text-on-surface-variant">

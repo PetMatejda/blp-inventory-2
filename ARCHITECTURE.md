@@ -122,6 +122,12 @@ Item cards in `ItemSwipeCard.jsx` feature a dedicated 12px left accent bar with 
 
 ### Thumbnail Fallback System
 
+Catalog items may carry an `icon` (equipment type: balloon shapes, LED panel / net, ballast, cable, fan…; list in `ITEM_ICONS`, `src/utils/categoryIcons.jsx`). `getItemMeta(item)` returns the category label/colour with that icon; without one the category icon is used. Job items copy the icon from the catalog.
+
+### ZapSklad import
+
+`scripts/zapsklad/`: `read_xlsx.py` (Excel export → JSON) → `build-plan.mjs` (merges names into models, category, icon, SERIAL/QUANTITY, labelled units with the old inventory number as code) → `upload.mjs` (admin write via `gcloud auth print-access-token`). IDs are deterministic (`zs-…`), so a fresh export re-imports over the same records. The built-in demo catalog is no longer used by "Obnovit katalog".
+
 Component `src/components/common/ItemThumbnail.jsx` renders image previews. If an image fails to load (404, CORS, offline), it automatically renders a styled category icon card (e.g. Light bulb for Lights, Tripod for Grip, Cable plug for Cables). Photos taken in the app (`photo:<id>`) are resolved through `usePhotoSrc()`.
 
 ---

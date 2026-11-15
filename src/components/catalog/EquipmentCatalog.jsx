@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { getCategoryMeta, CATEGORIES } from '../../utils/categoryIcons';
+import { getCategoryMeta, getItemMeta, CATEGORIES } from '../../utils/categoryIcons';
 import {
-  Search, Plus, Layers, Zap, Weight, Check, Info,
+  Search, Plus, Layers, Zap, Weight, Ruler, Check, Info,
   FolderOpen, ArrowRight, Edit3, Trash2, X, ChevronLeft,
   ChevronRight, Filter, EyeOff, Eye, Package, RefreshCw
 } from 'lucide-react';
@@ -19,7 +19,7 @@ import { plural } from '../../domain/labels';
 // ─────────────────────────────────────────────────────────────────────
 const CatalogCard = ({ item, isAlreadyInJob, currentJob, onAdd, onEdit, onDelete, onOpenBundle }) => {
   const { isAdmin } = useInventory();
-  const catMeta = getCategoryMeta(item.category);
+  const catMeta = getItemMeta(item);
   const CatIcon = catMeta.icon;
 
   return (
@@ -53,17 +53,25 @@ const CatalogCard = ({ item, isAlreadyInJob, currentJob, onAdd, onEdit, onDelete
         </div>
 
         {/* Specs row */}
-        <div className="flex items-center gap-3 text-[11px] font-mono text-on-surface-variant">
-          <span className="flex items-center gap-1">
-            <Weight className="w-3 h-3 text-outline" /> {item.weight}
-          </span>
-          <span className="w-px h-3 bg-outline-variant" />
-          <span className="flex items-center gap-1">
-            <Zap className="w-3 h-3 text-tertiary" /> {item.power}
-          </span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-mono text-on-surface-variant">
+          {item.weight && (
+            <span className="flex items-center gap-1">
+              <Weight className="w-3 h-3 text-outline" /> {item.weight}
+            </span>
+          )}
+          {item.power && (
+            <span className="flex items-center gap-1">
+              <Zap className="w-3 h-3 text-tertiary" /> {item.power}
+            </span>
+          )}
+          {item.size && (
+            <span className="flex items-center gap-1">
+              <Ruler className="w-3 h-3 text-outline" /> {item.size}
+            </span>
+          )}
+          {item.brand && <span className="text-outline">{item.brand}</span>}
           {item.isBundle && (
             <>
-              <span className="w-px h-3 bg-outline-variant" />
               <button
                 onClick={(e) => { e.stopPropagation(); onOpenBundle(item); }}
                 className="flex items-center gap-1 text-primary hover:underline"
@@ -198,7 +206,8 @@ export const EquipmentCatalog = () => {
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      if (!item.name.toLowerCase().includes(q) && !item.category.toLowerCase().includes(q)) return false;
+      const text = [item.name, item.category, getCategoryMeta(item.category).label, item.brand, item.usage, item.size].filter(Boolean).join(' ').toLowerCase();
+      if (!text.includes(q)) return false;
     }
     if (hideAlreadyAdded && addedCatalogIds.has(item.id)) return false;
     return true;
