@@ -184,7 +184,10 @@ claude mcp add --transport http blp https://<app>.vercel.app/api/mcp --header "A
 **claude.ai / Claude Cowork** – Nastavení › Konektory › Přidat vlastní konektor → URL
 `https://<app>.vercel.app/api/mcp`. Hlavička `Authorization` je u vlastních konektorů vyhrazená pro
 OAuth, proto server přijímá token i v hlavičce **`X-API-Key: <token>`** (standardní název, v Request headers; vlastní názvy jako `X-BLP-Token` Claude bez schválení nepovolí).
-Po fázi C se místo tokenu použije přihlášení přes BLP stránku (OAuth).
+V praxi Cowork hlavičku neposlal (v logu `tokenHeaders=[]`, `python-httpx`), proto spike přijímá
+token i v adrese: **`https://<app>.vercel.app/api/mcp?key=<token>`** („tajná URL“, bez hlavičky).
+Je to slabší (adresa se může objevit v logu či historii) – jen pro spike s nástrojem `ping`; po fázi C
+se místo tokenu použije přihlášení přes BLP stránku (OAuth) a `?key=` se odstraní.
 
 Token se nikdy necommituje do repa (Antigravity workspace config patří do `.gitignore`).
 

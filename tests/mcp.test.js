@@ -57,6 +57,17 @@ describe('MCP spike endpoint', () => {
     await expect(connect('wrong', 'X-BLP-Token')).rejects.toThrow();
   });
 
+  it('accepts the token as ?key= in the URL (secret URL for connectors without headers)', async () => {
+    const client = new Client({ name: 'test', version: '1.0.0' });
+    await client.connect(new StreamableHTTPClientTransport(new URL(`${url}?key=${TOKEN}`)));
+    const result = await client.callTool({ name: 'ping', arguments: {} });
+    expect(result.content[0].text).toMatch(/^pong/);
+    await client.close();
+
+    const wrong = await fetch(`${url}?key=wrong`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    expect(wrong.status).toBe(403);
+  });
+
   it('refuses requests without a token and non-POST methods', async () => {
     const noAuth = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     expect(noAuth.status).toBe(403);

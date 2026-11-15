@@ -37,12 +37,24 @@ export function isAuthorized(headers, expected) {
   });
 }
 
+/**
+ * Token in the URL (`/api/mcp?key=<token>`). Fallback for Claude custom connectors
+ * (Cowork, claude.ai) when request headers are not sent – a "secret URL". Weaker than a
+ * header (the URL can end up in logs/history), acceptable for the spike only; phase C
+ * replaces it with OAuth.
+ */
+export function keyFromUrl(url) {
+  try { return new URL(url || '', 'http://localhost').searchParams.get('key') || ''; } catch { return ''; }
+}
+
 export default async function handler(req, res) {
   const expected = process.env.MCP_SPIKE_TOKEN;
   if (!expected) return jsonRpcError(res, 503, -32000, 'MCP server is not configured (MCP_SPIKE_TOKEN missing).');
-  if (!isAuthorized(req.headers, expected)) {
+  const urlKey = keyFromUrl(req.url);
+  if (!isAuthorized(req.headers, expected) && !(urlKey && sameToken(urlKey, expected))) {
     // Header names only (never values) – shows in Vercel logs whether a client sent a token at all.
     const sent = ['authorization', ...TOKEN_HEADERS].filter((h) => req.headers[h]);
+    if (urlKey) sent.push('?key');
     console.warn(`MCP auth refused: ${req.method} ua="${req.headers['user-agent'] || ''}" tokenHeaders=[${sent.join(',')}]`);
     // 403, not 401: a 401 makes MCP clients (Claude connectors) start OAuth discovery and
     // dynamic client registration, which this server does not offer (static token only).
