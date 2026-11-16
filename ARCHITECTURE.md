@@ -141,6 +141,10 @@ Catalog items may carry an `icon` (equipment type: balloon shapes, LED panel / n
 
 `scripts/zapsklad/`: `read_xlsx.py` (Excel export → JSON) → `build-plan.mjs` (merges names into models, category, icon, SERIAL/QUANTITY, labelled units with the old inventory number as code) → `upload.mjs` (admin write via `gcloud auth print-access-token`). IDs are deterministic (`zs-…`), so a fresh export re-imports over the same records. The "Obnovit / Doplnit katalog" buttons were removed (the demo catalog must never reach production data).
 
+### Comsys comparison (one-off, 16 Nov 2026)
+
+`scripts/comsys/`: `read_xls.py` (report "Přehled evidenčních čísel", `.xls`, needs `xlrd`) → `dump-live.mjs` (reads the live collections) → `build-delta.mjs` (delta plan + Markdown preview; nothing is written) → `apply.mjs <plan> --confirm` (one atomic commit). Unlike the ZapSklad upload it never replaces whole records: counts change by `increment`, existing records get only the listed fields. Rules used: everything in the warehouse, items missing from the export are deleted, Comsys kind numbers are kept in `catalog.comsysZn`. Free-text notes are turned into unit fields by `notes.mjs` (`condition` A–D, `led`, `serialNumber` = maker's number, `note`); the unit list in Sklad › item detail shows them (`unitDetails` in `src/domain/stock.js`). No recurring sync — which system is the main one has not been decided.
+
 Component `src/components/common/ItemThumbnail.jsx` renders image previews. If an image fails to load (404, CORS, offline), it automatically renders a styled category icon card (e.g. Light bulb for Lights, Tripod for Grip, Cable plug for Cables). Photos taken in the app (`photo:<id>`) are resolved through `usePhotoSrc()`.
 
 ---

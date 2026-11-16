@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   trackingOf, availability, jobsOverlap, issuePlan, restockPlan,
-  buildStocktakeLines, stocktakeResult, countedOf, toCsv, ownedCount, levelOf,
+  buildStocktakeLines, stocktakeResult, countedOf, toCsv, ownedCount, levelOf, unitDetails,
 } from '../src/domain/stock.js';
 import { applyQuantityDelta, markDone, markUndone, enterRestock, toggleStatus } from '../src/domain/items.js';
 import { phaseSummary, statusLabel, matchesFilter } from '../src/domain/labels.js';
@@ -154,5 +154,14 @@ describe('export CSV', () => {
   it('středník, BOM a escapování pro Excel', () => {
     const csv = toCsv([{ name: 'Kabel; 25m "PRO"', n: 3 }], [{ label: 'Název', value: 'name' }, { label: 'Ks', value: (r) => r.n * 2 }]);
     expect(csv).toBe('﻿Název;Ks\r\n"Kabel; 25m ""PRO""";6');
+  });
+});
+
+describe('unitDetails', () => {
+  it('lists what is known about a labelled piece', () => {
+    expect(unitDetails({ code: '1634', condition: 'A', led: true, serialNumber: '5/2026' })).toEqual(['stav A', 'LED', 'v. č. 5/2026']);
+    expect(unitDetails({ code: '1001', condition: 'B', led: false, serialNumber: '1001' })).toEqual(['stav B', 'bez LED']);
+    expect(unitDetails({ code: '1', serialNumber: '1', revisionDate: '2022-06-27' })).toEqual(['revize 27. 6. 2022']);
+    expect(unitDetails({ code: 'FLT-001' })).toEqual([]);
   });
 });

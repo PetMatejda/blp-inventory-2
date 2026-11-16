@@ -30,6 +30,24 @@ export const trackingOf = (catalogItem) =>
 import { levelOf } from './availability.js';
 export { emptyLevel, levelOf, ownedCount, jobsOverlap, availability } from './availability.js';
 
+/**
+ * What is known about one labelled piece, as short texts for the unit list:
+ * condition A–D, LED yes/no, maker's number (only when it is not just the code)
+ * and the revision date.
+ */
+export function unitDetails(unit) {
+  const parts = [];
+  if (unit.condition) parts.push(`stav ${unit.condition}`);
+  if (unit.led === true) parts.push('LED');
+  if (unit.led === false) parts.push('bez LED');
+  if (unit.serialNumber && String(unit.serialNumber) !== String(unit.code)) parts.push(`v. č. ${unit.serialNumber}`);
+  if (unit.revisionDate) {
+    const [y, m, d] = unit.revisionDate.split('-').map(Number);
+    parts.push(`revize ${d}. ${m}. ${y}`);
+  }
+  return parts;
+}
+
 /** Pieces per catalog item that physically left the warehouse with the job. */
 export function issuePlan(items) {
   const plan = {};

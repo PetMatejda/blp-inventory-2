@@ -8,3 +8,4 @@ dist
 
 # Firestore data backups (contain personal data)
 scratch/backup/
+COMSYS_IMPORT_NAHLED.md

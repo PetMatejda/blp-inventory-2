@@ -5,7 +5,7 @@ import { CodeInput } from '../common/CodeInput';
 import { ScannerScreen } from '../common/ScannerScreen';
 import { ItemThumbnail } from '../common/ItemThumbnail';
 import { CATEGORIES, getCategoryMeta } from '../../utils/categoryIcons';
-import { levelOf, trackingOf } from '../../domain/stock';
+import { levelOf, trackingOf, unitDetails } from '../../domain/stock';
 import { plural } from '../../domain/labels';
 import { catalogLabelPayload, resolveCode } from '../../domain/labels-qr';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
@@ -106,6 +106,8 @@ const StockItemSheet = ({ item, onClose }) => {
               <li key={u.id} className="flex items-center justify-between gap-2 rounded-xl border border-outline-variant px-3 py-2">
                 <span className="min-w-0">
                   <span className="font-mono text-sm text-on-surface">{u.code}</span>
+                  {unitDetails(u).length > 0 && <span className="ml-2 text-xs text-on-surface-variant">{unitDetails(u).join(' · ')}</span>}
+                  {u.note && <span className="block text-xs text-on-surface break-words">{u.note}</span>}
                   {u.jobName && <span className="block text-xs text-on-surface-variant truncate">na zakázce {u.jobName}</span>}
                 </span>
                 <select
