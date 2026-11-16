@@ -75,6 +75,31 @@ service cloud.firestore {
       allow delete: if isApprovedUser() && resource.data.uid == request.auth.uid;
     }
 
+    // Hry v Osobní („Udrž balón“ = gameScores, „Filmový kvíz“ = quizScores): žebříček čtou
+    // všichni schválení, každý zapisuje jen svůj výsledek (dokument {uid}_{týden}, pole uid =
+    // přihlášený uživatel). Rekord se nesmí zhoršit (např. zápis z telefonu, který ještě
+    // neměl načtený žebříček) a výsledky se nemažou.
+    function isOwnScore(id) {
+      return isApprovedUser()
+        && request.resource.data.uid == request.auth.uid
+        && id == request.auth.uid + '_' + request.resource.data.week
+        && request.resource.data.best is number
+        && request.resource.data.best >= 0
+        && request.resource.data.best < 100000;
+    }
+    match /gameScores/{id} {
+      allow read: if isApprovedUser();
+      allow create: if isOwnScore(id);
+      allow update: if isOwnScore(id) && request.resource.data.best >= resource.data.best;
+      allow delete: if false;
+    }
+    match /quizScores/{id} {
+      allow read: if isApprovedUser();
+      allow create: if isOwnScore(id);
+      allow update: if isOwnScore(id) && request.resource.data.best >= resource.data.best;
+      allow delete: if false;
+    }
+
     // Pohyby skladu jsou neměnná historie (stejně jako audit).
     match /movements/{id} {
       allow read, create: if isApprovedUser();

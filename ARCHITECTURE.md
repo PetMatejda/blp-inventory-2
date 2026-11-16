@@ -141,6 +141,15 @@ Catalog items may carry an `icon` (equipment type: balloon shapes, LED panel / n
 - The Brácha (consumables) section was removed from the UI in 11/2026; the `consumables` collection and `updateConsumableState` action remain, unused.
 - Seed of the fleet from the whiteboard: `scripts/seed-vehicles.mjs`.
 
+### Games (Osobní › Moje › „Čekáš na place?“)
+
+Two small games for waiting on set, loaded lazily from `src/components/game/GameCard.jsx`. No sound, never offered on work screens, no notifications.
+
+- **Udrž balón** (`BalloonGame.jsx`, canvas): pure simulation in `src/domain/balloonGame.js` (seeded, tested) — drag moves the rope, wind pushes the balloon, score = seconds with every actor in the light; a second actor comes at 40 s.
+- **Filmový kvíz** (`QuizGame.jsx`): 10 questions per round, 15 s each, 100 points + up to 50 for speed (`src/domain/quiz.js`). Questions in `src/data/quizQuestions.js` (first answer is the correct one; add new ones at the end). Seen questions are remembered per phone in `localStorage` (`blp_quiz_seen_v1`).
+- **Leaderboards**: collections `gameScores` and `quizScores`, documents `{uid}_{week}` and `{uid}_all` with `{ uid, userName, week ('2026-W47' | 'all'), best, bestAt, plays }` (`src/domain/gameScores.js`, `src/services/gameActions.js`). The listener loads last week onwards plus the all-time records. Rules: everyone approved reads, each person writes only their own document, `best` can never go down, no deletes. A refused write stays silent (must never lock the app).
+- **Attendance bonus** (`hasAttendanceBonus`): today's attendance record (on a weekend / holiday the last working day) gives an extra life in the balloon game (one continue after „Stop!“) and a 50:50 joker in each quiz round. Playing itself is unlimited. Nothing in the games is tied to loading or stock, so nobody clicks inventory for points.
+
 ### ZapSklad import
 
 `scripts/zapsklad/`: `read_xlsx.py` (Excel export → JSON) → `build-plan.mjs` (merges names into models, category, icon, SERIAL/QUANTITY, labelled units with the old inventory number as code) → `upload.mjs` (admin write via `gcloud auth print-access-token`). IDs are deterministic (`zs-…`), so a fresh export re-imports over the same records. The "Obnovit / Doplnit katalog" buttons were removed (the demo catalog must never reach production data).

@@ -5,6 +5,7 @@ import { createInventoryActions } from '../services/inventoryActions';
 import { createStockActions } from '../services/stockActions';
 import { createVehicleActions } from '../services/vehicleActions';
 import { createAttendanceActions } from '../services/attendanceActions';
+import { createGameActions } from '../services/gameActions';
 import { availability } from '../domain/stock';
 import { buildAlerts } from '../domain/alerts';
 import { todayIso } from '../domain/vehicles';
@@ -18,7 +19,7 @@ const CURRENT_JOB_KEY = 'blp_current_job_id_v2';
 const EMPTY_DATA = {
   jobs: [], jobItems: [], catalog: [], consumables: [], auditLogs: [],
   stockLevels: [], stockUnits: [], movements: [], stocktakes: [], stocktakeLines: [],
-  vehicles: [], attendance: [],
+  vehicles: [], attendance: [], gameScores: [], quizScores: [],
 };
 // Single documents in `meta` used by the Osobní screen.
 const PERSONAL_LINKS_DOC = ['meta', 'personalLinks'];
@@ -45,6 +46,8 @@ const SORTERS = {
   stockUnits: (a, b) => String(a.code || '').localeCompare(String(b.code || ''), 'cs', { numeric: true }),
   stocktakeLines: byCategoryThenName,
   attendance: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(a.from || '').localeCompare(String(b.from || '')),
+  gameScores: (a, b) => (b.best || 0) - (a.best || 0),
+  quizScores: (a, b) => (b.best || 0) - (a.best || 0),
   vehicles: (a, b) => (a.active === false) - (b.active === false) || (a.order || 0) - (b.order || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'cs'),
 };
 
@@ -123,6 +126,8 @@ export const InventoryProvider = ({ children }) => {
     onWriteError: (err, what = '') => {
       // A refused attendance write (e.g. rules not published yet) must not lock the whole app.
       if (isPermissionError(err) && /attendance/.test(what)) showNotice('⚠️ Docházku se nepodařilo uložit – chybí oprávnění.');
+      // The games are only for fun: a refused result (rules not published yet) stays silent.
+      else if (isPermissionError(err) && /gameScores|quizScores/.test(what)) console.warn('[Context] Game score refused:', err);
       else if (isPermissionError(err)) denyAccess();
       else showNotice('⚠️ Změnu se nepodařilo uložit do cloudu. Zkuste to prosím znovu.');
     },
@@ -143,6 +148,11 @@ export const InventoryProvider = ({ children }) => {
   const userRef = useRef(null);
   userRef.current = currentUser;
   const attendanceActions = useMemo(() => createAttendanceActions({
+    repo,
+    getState: () => dataRef.current,
+    getUser: () => userRef.current,
+  }), [repo]);
+  const gameActions = useMemo(() => createGameActions({
     repo,
     getState: () => dataRef.current,
     getUser: () => userRef.current,
@@ -253,7 +263,7 @@ export const InventoryProvider = ({ children }) => {
   // ── Derived state ──────────────────────────────────────────
   const {
     jobs, jobItems: allJobItems, catalog, consumables, auditLogs,
-    stockLevels, stockUnits, movements, stocktakes, stocktakeLines, vehicles, attendance,
+    stockLevels, stockUnits, movements, stocktakes, stocktakeLines, vehicles, attendance, gameScores, quizScores,
   } = data;
   // The chosen job; an archived one only when it was opened on purpose in this
   // session (from the archive). Otherwise the first active job, or none at all —
@@ -478,6 +488,9 @@ export const InventoryProvider = ({ children }) => {
         saveAttendance: attendanceActions.saveEntry,
         deleteAttendance: attendanceActions.deleteEntry,
         fillAttendanceDays: attendanceActions.fillDays,
+        gameScores,
+        quizScores,
+        submitGameScore: gameActions.submitScore,
         personalLinks,
         setPersonalLinks,
         productionCalendar,

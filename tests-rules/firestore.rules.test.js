@@ -145,3 +145,34 @@ describe('docházka', () => {
     await assertFails(deleteDoc(doc(member(), 'attendance/theirs')));
   });
 });
+
+describe.each(['gameScores', 'quizScores'])('hry – žebříček %s', (col) => {
+  const score = (uid, best, week = '2026-W47') => ({ uid, userName: 'Petr', week, best, plays: 1 });
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `${col}/member_2026-W47`), score('member', 40));
+      await setDoc(doc(ctx.firestore(), `${col}/someone-else_2026-W47`), score('someone-else', 60));
+    });
+  });
+  it('žebříček čtou jen schválení', async () => {
+    await assertSucceeds(getDoc(doc(member(), `${col}/someone-else_2026-W47`)));
+    await assertFails(getDoc(doc(db('u', { email: 'cizi@example.com', email_verified: true }), `${col}/member_2026-W47`)));
+  });
+  it('vlastní výsledek jde založit a zlepšit', async () => {
+    await assertSucceeds(setDoc(doc(member(), `${col}/member_all`), score('member', 40, 'all')));
+    await assertSucceeds(setDoc(doc(member(), `${col}/member_2026-W47`), { uid: 'member', week: '2026-W47', best: 55.5 }, { merge: true }));
+    await assertSucceeds(setDoc(doc(member(), `${col}/member_2026-W47`), { uid: 'member', week: '2026-W47', plays: 3 }, { merge: true }));
+  });
+  it('rekord nejde zhoršit, smazat ani zapsat nesmyslně', async () => {
+    await assertFails(setDoc(doc(member(), `${col}/member_2026-W47`), { uid: 'member', week: '2026-W47', best: 10 }, { merge: true }));
+    await assertFails(deleteDoc(doc(member(), `${col}/member_2026-W47`)));
+    await assertFails(setDoc(doc(member(), `${col}/member_2026-W48`), score('member', 'hodně', '2026-W48')));
+    await assertFails(setDoc(doc(member(), `${col}/member_2026-W48`), score('member', 1e9, '2026-W48')));
+    await assertFails(setDoc(doc(member(), `${col}/member_2026-W48`), score('member', 30, '2026-W47'))); // id neodpovídá týdnu
+  });
+  it('cizí výsledek nejde založit ani přepsat', async () => {
+    await assertFails(setDoc(doc(member(), `${col}/someone-else_2026-W48`), score('someone-else', 99, '2026-W48')));
+    await assertFails(updateDoc(doc(member(), `${col}/someone-else_2026-W47`), { best: 999 }));
+    await assertFails(updateDoc(doc(member(), `${col}/someone-else_2026-W47`), { uid: 'member', best: 999 }));
+  });
+});

@@ -8,6 +8,7 @@ import { useInventory } from '../../context/InventoryContext';
 import { Sheet, useDialogs } from '../common/Dialogs';
 import { Field, inputCls, SheetButtons } from '../common/FormField';
 import { EntrySheet } from './EntrySheet';
+import { GameCard } from '../game/GameCard';
 import {
   typeOf, hoursOf, monthSummary, teamMonth, daysOfMonth, isWorkday, isoDate, defaultTimes, fmtHours, fmtDays,
 } from '../../domain/attendance';
@@ -233,6 +234,8 @@ const MySection = ({ month, setMonth, today }) => {
           </p>
         )}
       </section>
+
+      <GameCard today={today} />
 
       {openDay && (
         <Sheet title={fmtDayLong(openDay)} subtitle="Klepnutím záznam opravíte" onClose={() => setOpenDay(null)}>
