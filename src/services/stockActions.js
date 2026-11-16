@@ -5,7 +5,7 @@ import {
   MOVEMENT_TYPES, trackingOf, issuePlan, restockPlan, buildStocktakeLines, stocktakeResult, levelOf,
 } from '../domain/stock.js';
 import { enterRestock, applyQuantityDelta, markDone } from '../domain/items.js';
-import { nextUnitCodes, resolveCode, unitScanProblem, missingUnitIds } from '../domain/labels-qr.js';
+import { nextUnitCodes, resolveCode, unitScanProblem, missingUnitIds, codeKey } from '../domain/labels-qr.js';
 import { phaseOf } from '../domain/labels.js';
 
 const BATCH = 400;
@@ -87,7 +87,7 @@ export function createStockActions({ repo, getState, getActor }) {
     addUnit(catalogId, code, serialNumber = '') {
       const clean = String(code || '').trim();
       if (!clean) return 'Zadejte kód kusu.';
-      if (getState().stockUnits.some((u) => String(u.code).toLowerCase() === clean.toLowerCase())) return `Kód ${clean} už má jiný kus.`;
+      if (getState().stockUnits.some((u) => codeKey(u.code) === codeKey(clean))) return `Kód ${clean} už má jiný kus.`;
       const id = repo.newId('stockUnits');
       repo.commit([
         { type: 'set', col: 'stockUnits', id, data: { id, catalogId, code: clean, serialNumber: serialNumber || clean, status: 'IN_STOCK', createdAt: now(), updatedAt: now(), updatedBy: getActor() } },
@@ -326,9 +326,9 @@ export function createStockActions({ repo, getState, getActor }) {
 
     /** Scanned code → finds the unit and marks it in its line. Returns a short result for the UI. */
     scanUnitCode(stocktakeId, code) {
-      const clean = String(code || '').trim().toLowerCase();
+      const clean = codeKey(code);
       const { stockUnits, stocktakeLines } = getState();
-      const unit = stockUnits.find((u) => String(u.code).toLowerCase() === clean || String(u.serialNumber || '').toLowerCase() === clean);
+      const unit = stockUnits.find((u) => codeKey(u.code) === clean || (u.serialNumber && codeKey(u.serialNumber) === clean));
       if (!unit) return { ok: false, message: `Neznámý kód ${code}` };
       const line = stocktakeLines.find((l) => l.stocktakeId === stocktakeId && l.catalogId === unit.catalogId);
       if (!line) return { ok: false, message: `${nameOf(unit.catalogId)} není v této inventuře` };

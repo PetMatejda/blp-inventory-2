@@ -18,6 +18,25 @@ import { useBackLayer } from '../../hooks/useBackLayer';
 const READER_ID = 'blp-scanner-reader';
 const REPEAT_MS = 2000; // the same code is ignored for 2 s
 
+/**
+ * iPhones have no built-in barcode detector, so html5-qrcode falls back to its
+ * ZXing decoder — with "try harder" switched off. In that mode a 1D barcode is
+ * read only when its bars stand upright in the picture; the Comsys labels are
+ * stuck rotated by 90°, so they were never found. The library has no option
+ * for it: the decoder keeps its hints in a Map where "try harder" is the only
+ * `false` entry, and we flip it. If the library changes, this does nothing.
+ */
+const enableThoroughDecoding = (scanner) => {
+  try {
+    for (const decoder of [scanner.qrcode?.primaryDecoder, scanner.qrcode?.secondaryDecoder]) {
+      if (!(decoder?.hints instanceof Map)) continue;
+      for (const [hint, value] of decoder.hints) if (value === false) decoder.hints.set(hint, true);
+    }
+  } catch (e) {
+    // keep the library defaults
+  }
+};
+
 const beep = (frequency, type, seconds, volume) => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -99,9 +118,15 @@ export const ScannerScreen = ({ title = 'Skener', subtitle = '', hint = 'Namiřt
 
     const timer = setTimeout(async () => {
       try {
-        const { Html5Qrcode } = await import('html5-qrcode');
+        const { Html5Qrcode, Html5QrcodeSupportedFormats: F } = await import('html5-qrcode');
         if (cancelled) return;
-        scanner = new Html5Qrcode(READER_ID);
+        // Only the kinds of codes found on equipment: our QR labels, the old
+        // Comsys barcode labels and EAN codes on boxes. Fewer formats = faster frames.
+        scanner = new Html5Qrcode(READER_ID, {
+          verbose: false,
+          formatsToSupport: [F.QR_CODE, F.DATA_MATRIX, F.CODE_128, F.CODE_39, F.CODE_93, F.CODABAR, F.ITF, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E],
+        });
+        enableThoroughDecoding(scanner);
         scannerRef.current = scanner;
         await scanner.start(
           { facingMode: facing },

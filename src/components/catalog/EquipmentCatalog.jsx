@@ -11,7 +11,7 @@ import { useDialogs, Sheet, SheetAction } from '../common/Dialogs';
 import { SheetButtons } from '../common/FormField';
 import { ScannerScreen } from '../common/ScannerScreen';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
-import { resolveCode } from '../../domain/labels-qr';
+import { resolveCode, catalogIdsByCode } from '../../domain/labels-qr';
 import { plural } from '../../domain/labels';
 
 // ─────────────────────────────────────────────────────────────────────
@@ -129,14 +129,16 @@ export const EquipmentCatalog = () => {
   const addedCatalogIds = new Set(jobItems.map(i => i.catalogId).filter(Boolean));
 
   const searching = searchQuery.trim() !== '';
-  const nameHit = (item) => matchesSearch(item.name, searchQuery);
+  // A typed number from a label ("000241") finds the item that unit belongs to.
+  const byCode = catalogIdsByCode(searchQuery, { catalog, units: stockUnits });
+  const nameHit = (item) => (byCode.has(item.id) ? 2 : Number(matchesSearch(item.name, searchQuery)));
   const filteredCatalog = catalog.filter((item) => {
     if (hideAlreadyAdded && addedCatalogIds.has(item.id)) return false;
     // While searching, look through every category so a found item is never hidden by the chip.
-    if (searching) return matchesSearch([item.name, item.category, getCategoryMeta(item.category).label, item.brand, item.usage, item.size], searchQuery);
+    if (searching) return byCode.has(item.id) || matchesSearch([item.name, item.category, getCategoryMeta(item.category).label, item.brand, item.usage, item.size], searchQuery);
     return selectedCategory === 'ALL' || filterIdOf(item) === selectedCategory;
   });
-  // Items found by their name come first; matches in brand / usage / size follow.
+  // Items found by a code come first, then by their name; matches in brand / usage / size follow.
   if (searching) filteredCatalog.sort((a, b) => nameHit(b) - nameHit(a));
 
   const handleAdd = (item) => {
@@ -236,7 +238,7 @@ export const EquipmentCatalog = () => {
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Hledat nebo načíst kód…"
+            placeholder="Název nebo číslo ze štítku…"
             {...SEARCH_INPUT_PROPS}
             className="w-full h-12 pl-10 pr-11 bg-card-bg border border-outline-variant rounded-xl text-on-surface text-base focus:border-primary focus:outline-none placeholder:text-outline"
           />

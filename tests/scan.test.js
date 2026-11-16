@@ -1,6 +1,6 @@
 // Labels and scanning of labelled units on jobs (phase 4b).
 import { describe, it, expect, beforeEach } from 'vitest';
-import { nextUnitCodes, resolveCode, unitScanProblem, missingUnitIds, catalogLabelPayload } from '../src/domain/labels-qr.js';
+import { nextUnitCodes, resolveCode, unitScanProblem, missingUnitIds, catalogLabelPayload, codeKey, catalogIdsByCode } from '../src/domain/labels-qr.js';
 import { createStockActions } from '../src/services/stockActions.js';
 import { createMemoryRepo } from './memoryRepo.js';
 import { makeJob, makeItem, makeCatalogItem } from './helpers.js';
@@ -26,6 +26,27 @@ describe('kódy a rozpoznání skenu', () => {
     expect(resolveCode('cab-2', { jobItems, catalog, units }).item.id).toBe('i2');
     expect(resolveCode('BLP:dedo', { jobItems, catalog, units })).toMatchObject({ kind: 'CATALOG' });
     expect(resolveCode('nic', { jobItems, catalog, units }).kind).toBe('UNKNOWN');
+  });
+
+  it('úvodní nuly na starých štítcích nevadí (štítek 000241, kus 241)', () => {
+    const comsys = [{ id: 'zs-241', catalogId: 'sky', code: '241', serialNumber: '241', status: 'IN_STOCK' }, { id: 'u7', catalogId: 'dedo', code: '0070', status: 'IN_STOCK' }];
+    expect(codeKey(' 000241 ')).toBe('241');
+    expect(codeKey('000')).toBe('0');
+    expect(codeKey('FL-001')).toBe('fl-001'); // only codes made of digits lose zeros
+    expect(resolveCode('000241', { jobItems, catalog, units: comsys })).toMatchObject({ kind: 'UNIT', unit: comsys[0] });
+    expect(resolveCode('241', { jobItems, catalog, units: comsys }).unit.id).toBe('zs-241');
+    expect(resolveCode('70', { jobItems, catalog, units: comsys }).unit.id).toBe('u7');
+    expect(resolveCode('0008590001', { jobItems, catalog, units: comsys }).item.id).toBe('i2');
+    expect(resolveCode('2410', { jobItems, catalog, units: comsys }).kind).toBe('UNKNOWN');
+  });
+
+  it('číslo ze štítku napsané do hledání najde položku kusu', () => {
+    const comsys = [{ id: 'zs-241', catalogId: 'sky', code: '241', status: 'IN_STOCK' }, { id: 'zs-9', catalogId: 'dedo', code: '9', status: 'RETIRED' }];
+    const cat = [...catalog, makeCatalogItem({ id: 'box', name: 'Krabice', barcode: '8590002' })];
+    expect([...catalogIdsByCode('000241', { catalog: cat, units: comsys })]).toEqual(['sky']);
+    expect([...catalogIdsByCode('8590002', { catalog: cat, units: comsys })]).toEqual(['box']);
+    expect(catalogIdsByCode('9', { catalog: cat, units: comsys }).size).toBe(0); // retired unit
+    expect(catalogIdsByCode('cloud', { catalog: cat, units: comsys }).size).toBe(0);
   });
 
   it('kdy kus nejde naskenovat', () => {

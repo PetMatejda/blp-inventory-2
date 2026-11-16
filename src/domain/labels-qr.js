@@ -9,7 +9,32 @@ export const CATALOG_PREFIX = 'BLP:';
 
 export const catalogLabelPayload = (catalogItem) => `${CATALOG_PREFIX}${catalogItem.id}`;
 
-const norm = (s) => String(s ?? '').trim().toLowerCase();
+/**
+ * Form in which two codes are compared: trimmed, lower case and — for codes made
+ * of digits only — without leading zeros. The old Comsys labels carry the
+ * evidence number padded to six digits ("000241"), the unit is stored as "241".
+ */
+export const codeKey = (s) => {
+  const key = String(s ?? '').trim().toLowerCase();
+  return /^\d+$/.test(key) ? key.replace(/^0+(?=\d)/, '') : key;
+};
+const norm = codeKey;
+
+/**
+ * Catalog ids a typed text points to as a code: a labelled unit (code or serial
+ * number) or the item's own barcode. Used by the search fields, where people
+ * type the number from the label instead of scanning it.
+ */
+export function catalogIdsByCode(text, { catalog = [], units = [] }) {
+  const code = codeKey(text);
+  const ids = new Set();
+  if (!code) return ids;
+  for (const u of units) {
+    if (u.status !== 'RETIRED' && (codeKey(u.code) === code || (u.serialNumber && codeKey(u.serialNumber) === code))) ids.add(u.catalogId);
+  }
+  for (const c of catalog) if (c.barcode && codeKey(c.barcode) === code) ids.add(c.id);
+  return ids;
+}
 
 /**
  * Next free unit codes for a catalog item: PREFIX-001, PREFIX-002 …
@@ -48,7 +73,7 @@ export function resolveCode(rawCode, { jobItems = [], catalog = [], units = [] }
   const item = jobItems.find((i) =>
     (catalogId && i.catalogId === catalogId)
     || (i.barcode && norm(i.barcode) === code)
-    || (i.serialNumber && norm(i.serialNumber).split(/,\s*/).includes(code)));
+    || (i.serialNumber && String(i.serialNumber).split(',').map(norm).includes(code)));
   if (item) return { kind: 'ITEM', item };
 
   const catalogItem = catalog.find((c) =>

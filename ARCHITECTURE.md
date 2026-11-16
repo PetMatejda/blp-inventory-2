@@ -79,6 +79,8 @@ Screen ──► InventoryContext (same API as before)
 - **iPhone status bar**: the installed app draws under the status bar (`black-translucent`), so the top bar is `h-app-bar pt-safe-top` and bars pinned below it use `top-app-bar` (Tailwind spacing in `tailwind.config.js`).
 - **Bundle**: camera scanner (`html5-qrcode`), PDF, QR generator and the Sklad / Historie screens load on demand; Firebase and React are separate cached chunks.
 - **Labels & scanning** (`src/domain/labels-qr.js`, `stockActions.scanOnJob`, `LabelPrint.jsx`):
+  - Codes are compared through `codeKey` (trim, lower case, leading zeros of all-digit codes dropped): the old Comsys barcode labels read `000241`, the unit is stored as `241`. `catalogIdsByCode` lets the search fields in Sklad › Stav and Katalog find an item by a typed unit code / barcode.
+  - Camera (`ScannerScreen.jsx`): formats limited to those on equipment; ZXing's "try harder" is switched on (`enableThoroughDecoding`) so iPhones read 1D barcodes in any rotation.
   - Payloads: labelled unit → its code (`FLT-MOD-001`); item tracked by count → `BLP:<catalogId>`; EAN and serial numbers still work.
   - *Vytvořit štítky* labels pieces already in stock (no count change, `LABEL` movement); codes `<serialPrefix>-001…`.
   - Print: A4 sheet 3 × 8 labels 70 × 37 mm (`#label-print` print CSS in `index.css`), QR via `qrcode` (loaded on demand).

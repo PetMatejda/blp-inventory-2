@@ -8,7 +8,7 @@ import { FILTER_CATEGORIES, filterIdOf, getCategoryMeta } from '../../utils/cate
 import { matchesSearch, SEARCH_INPUT_PROPS } from '../../domain/search';
 import { levelOf, trackingOf, unitDetails } from '../../domain/stock';
 import { plural } from '../../domain/labels';
-import { catalogLabelPayload, resolveCode } from '../../domain/labels-qr';
+import { catalogLabelPayload, resolveCode, catalogIdsByCode } from '../../domain/labels-qr';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { LabelPrint } from './LabelPrint';
 import {
@@ -183,9 +183,11 @@ export const StockOverview = () => {
     .map((c) => ({ item: c, level: levelOf(stockLevels, c.id), tracking: trackingOf(c) })), [catalog, stockLevels]);
 
   const searching = query.trim() !== '';
+  // A typed number from a label ("000241") finds the item that unit belongs to.
+  const byCode = useMemo(() => catalogIdsByCode(query, { catalog, units: stockUnits }), [query, catalog, stockUnits]);
   const visible = rows.filter(({ item, level }) => {
     // While searching, look through every category so a found item is never hidden by the chip.
-    if (searching) return matchesSearch([item.name, getCategoryMeta(item.category).label, item.brand, item.usage, item.size], query);
+    if (searching) return byCode.has(item.id) || matchesSearch([item.name, getCategoryMeta(item.category).label, item.brand, item.usage, item.size], query);
     if (category !== 'ALL' && filterIdOf(item) !== category) return false;
     return !(onlyProblems && !(level.missing || level.inService));
   });
@@ -237,7 +239,7 @@ export const StockOverview = () => {
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat nebo načíst kód…" {...SEARCH_INPUT_PROPS}
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Název nebo číslo ze štítku…" {...SEARCH_INPUT_PROPS}
             className="w-full h-12 pl-10 pr-3 bg-card-bg border border-outline-variant rounded-xl text-base text-on-surface focus:border-primary focus:outline-none" />
         </div>
         <button onClick={() => setScanning(true)} aria-label="Najít položku načtením kódu"
