@@ -23,7 +23,7 @@ export const PackingList = () => {
     currentJob, jobItems, selectedStatusFilter, setSelectedStatusFilter, searchQuery, setSearchQuery,
     setIsAdHocModalOpen, setIsScannerModalOpen, setActiveTab, changeJobPhase, reactivateJob,
     setTemplateJob, setIsProtocolModalOpen, setFinishingJob, availabilityFor, stockLevels, setWarehouseTab,
-    stock, addCatalogItemToJob, isScannerModalOpen,
+    stock, addCatalogItemToJob, isScannerModalOpen, setNavFocus,
   } = useInventory();
   const { confirm, toast } = useDialogs();
   const [fabOpen, setFabOpen] = useState(false);
@@ -40,6 +40,14 @@ export const PackingList = () => {
     else toast({ text: `✗ ${r.message}` });
   }, { enabled: !!currentJob && currentJob.status !== 'ARCHIVED' && !isScannerModalOpen });
 
+  // Nothing left to do here → a quiet invitation to the games in Osobní.
+  const openGames = () => { setNavFocus({ type: 'games' }); setActiveTab('personal'); };
+  const gamesLink = (
+    <button onClick={openGames} className="min-h-[44px] px-3 text-sm text-on-surface-variant active:scale-95">
+      Máš hotovo? Tak trénuj na příště <span aria-hidden="true">🎈</span> <span className="underline">Zahrát si</span>
+    </button>
+  );
+
   if (!currentJob) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12 text-center text-on-surface-variant flex flex-col items-center gap-4">
@@ -48,6 +56,7 @@ export const PackingList = () => {
         <button onClick={() => setActiveTab('dashboard')} className="h-14 px-6 bg-primary text-on-primary font-semibold rounded-2xl active:scale-95">
           Přejít na zakázky
         </button>
+        {gamesLink}
       </div>
     );
   }
@@ -228,6 +237,7 @@ export const PackingList = () => {
                 Ukončit bez naskladnění
               </button>
             )}
+            {gamesLink}
           </div>
         ) : (
           <div className="bg-card-bg border border-outline-variant rounded-2xl p-8 text-center text-on-surface-variant flex flex-col items-center gap-2">

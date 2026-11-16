@@ -19,7 +19,7 @@ const CURRENT_JOB_KEY = 'blp_current_job_id_v2';
 const EMPTY_DATA = {
   jobs: [], jobItems: [], catalog: [], consumables: [], auditLogs: [],
   stockLevels: [], stockUnits: [], movements: [], stocktakes: [], stocktakeLines: [],
-  vehicles: [], attendance: [], gameScores: [], quizScores: [],
+  vehicles: [], attendance: [], gameScores: [], quizScores: [], flatScores: [],
 };
 // Single documents in `meta` used by the Osobní screen.
 const PERSONAL_LINKS_DOC = ['meta', 'personalLinks'];
@@ -48,6 +48,7 @@ const SORTERS = {
   attendance: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(a.from || '').localeCompare(String(b.from || '')),
   gameScores: (a, b) => (b.best || 0) - (a.best || 0),
   quizScores: (a, b) => (b.best || 0) - (a.best || 0),
+  flatScores: (a, b) => (b.best || 0) - (a.best || 0),
   vehicles: (a, b) => (a.active === false) - (b.active === false) || (a.order || 0) - (b.order || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'cs'),
 };
 
@@ -127,7 +128,7 @@ export const InventoryProvider = ({ children }) => {
       // A refused attendance write (e.g. rules not published yet) must not lock the whole app.
       if (isPermissionError(err) && /attendance/.test(what)) showNotice('⚠️ Docházku se nepodařilo uložit – chybí oprávnění.');
       // The games are only for fun: a refused result (rules not published yet) stays silent.
-      else if (isPermissionError(err) && /gameScores|quizScores/.test(what)) console.warn('[Context] Game score refused:', err);
+      else if (isPermissionError(err) && /Scores/.test(what)) console.warn('[Context] Game score refused:', err);
       else if (isPermissionError(err)) denyAccess();
       else showNotice('⚠️ Změnu se nepodařilo uložit do cloudu. Zkuste to prosím znovu.');
     },
@@ -263,7 +264,7 @@ export const InventoryProvider = ({ children }) => {
   // ── Derived state ──────────────────────────────────────────
   const {
     jobs, jobItems: allJobItems, catalog, consumables, auditLogs,
-    stockLevels, stockUnits, movements, stocktakes, stocktakeLines, vehicles, attendance, gameScores, quizScores,
+    stockLevels, stockUnits, movements, stocktakes, stocktakeLines, vehicles, attendance, gameScores, quizScores, flatScores,
   } = data;
   // The chosen job; an archived one only when it was opened on purpose in this
   // session (from the archive). Otherwise the first active job, or none at all —
@@ -490,6 +491,7 @@ export const InventoryProvider = ({ children }) => {
         fillAttendanceDays: attendanceActions.fillDays,
         gameScores,
         quizScores,
+        flatScores,
         submitGameScore: gameActions.submitScore,
         personalLinks,
         setPersonalLinks,

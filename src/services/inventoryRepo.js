@@ -3,7 +3,7 @@
 //   jobs  jobItems  catalog  consumables  auditLogs  photos
 //   stockLevels/{catalogId}  stockUnits  movements  stocktakes  stocktakeLines
 //   vehicles  attendance (docházka; everyone writes only their own records)
-//   gameScores, quizScores (leaderboards of the two games; own records only, see src/domain/gameScores.js)
+//   gameScores, quizScores, flatScores (leaderboards of the games; own records only, see src/domain/gameScores.js)
 //
 // Writes are not awaited by the UI. With the persistent cache they apply locally
 // at once (listeners fire immediately), are queued while offline and are sent
@@ -22,7 +22,7 @@ import { previousWeekId } from '../domain/gameScores.js';
 export const COLLECTIONS = [
   'jobs', 'jobItems', 'catalog', 'consumables', 'auditLogs',
   'stockLevels', 'stockUnits', 'movements', 'stocktakes', 'stocktakeLines',
-  'vehicles', 'attendance', 'gameScores', 'quizScores',
+  'vehicles', 'attendance', 'gameScores', 'quizScores', 'flatScores',
 ];
 export const AUDIT_LIMIT = 300;
 export const MOVEMENTS_LIMIT = 500;
@@ -52,7 +52,7 @@ const sourceFor = (col) => {
   if (col === 'stocktakeLines') return query(ref, where('open', '==', true));
   if (col === 'attendance') return query(ref, where('date', '>=', daysAgoIso(ATTENDANCE_DAYS)));
   // Last week, this week and the all-time records ('all' sorts after every '2026-W47').
-  if (col === 'gameScores' || col === 'quizScores') return query(ref, where('week', '>=', previousWeekId(daysAgoIso(0))));
+  if (col.endsWith('Scores')) return query(ref, where('week', '>=', previousWeekId(daysAgoIso(0))));
   return ref;
 };
 

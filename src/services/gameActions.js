@@ -1,4 +1,5 @@
-// Results of the games (collections `gameScores` – Udrž balón, `quizScores` – Filmový kvíz):
+// Results of the games (collections `gameScores` – Udrž balón, `quizScores` – Filmový kvíz,
+// `flatScores` – Silikonová lázeň):
 // everyone writes only their own documents,
 // everyone approved reads the leaderboard (firestore.rules). See src/domain/gameScores.js.
 import { ALL_TIME, scoreDocId, weekId, roundScore } from '../domain/gameScores.js';

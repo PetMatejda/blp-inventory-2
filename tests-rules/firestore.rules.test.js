@@ -146,7 +146,7 @@ describe('docházka', () => {
   });
 });
 
-describe.each(['gameScores', 'quizScores'])('hry – žebříček %s', (col) => {
+describe.each(['gameScores', 'quizScores', 'flatScores'])('hry – žebříček %s', (col) => {
   const score = (uid, best, week = '2026-W47') => ({ uid, userName: 'Petr', week, best, plays: 1 });
   beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {

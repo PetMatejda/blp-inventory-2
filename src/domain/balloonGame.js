@@ -21,17 +21,17 @@ export const CFG = {
   GUST_WARNING: 0.8,
 };
 
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 // Seeded random numbers (mulberry32) kept in the state, so a run can be replayed in tests.
-const rand = (s) => {
+export const rand = (s) => {
   s.seed = (s.seed + 0x6D2B79F5) | 0;
   let t = s.seed;
   t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
-const between = (s, lo, hi) => lo + rand(s) * (hi - lo);
+export const between = (s, lo, hi) => lo + rand(s) * (hi - lo);
 
 export const levelOf = (s) => s.t / CFG.LEVEL_SECONDS;
 export const radiusOf = (s) => Math.max(CFG.RADIUS_MIN, CFG.RADIUS_START - levelOf(s) * 0.004);
@@ -44,7 +44,7 @@ export const gustWarning = (s) => {
   return wait > 0 && wait < CFG.GUST_WARNING ? Math.sign(s.gust.force) : 0;
 };
 
-const newActor = (x) => ({ x, target: x, pause: 1, speed: 0, sprint: false, dir: 1, moving: false });
+export const newActor = (x) => ({ x, target: x, pause: 1, speed: 0, sprint: false, dir: 1, moving: false });
 
 const scheduleGust = (s) => {
   const level = levelOf(s);
@@ -93,7 +93,7 @@ const pickTarget = (s, actor, lead) => {
   actor.speed = Math.min(0.24, 0.07 + level * 0.012) * (actor.sprint ? 2 : 1);
 };
 
-const stepActor = (s, actor, lead, dt) => {
+export const stepActor = (s, actor, lead, dt) => {
   if (actor.pause > 0) {
     actor.pause -= dt;
     actor.moving = false;
