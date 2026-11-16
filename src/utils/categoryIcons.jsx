@@ -4,6 +4,7 @@ import {
   Cloud, Cylinder, Globe, Box, Egg, Disc3, LampFloor, Lightbulb, PanelTop, Grid3x3,
   SlidersHorizontal, Cable, PlugZap, Split, Fan, Aperture, SquareDashed, Grid2x2, Frame,
 } from 'lucide-react';
+import { LIGHT_GROUPS, lightGroupOf } from '../domain/lightGroups.js';
 
 export const CATEGORIES = [
   { id: 'Lights', label: 'Světla', icon: Sun, color: 'text-amber-400 bg-amber-500/20 border-amber-500/40' },
@@ -29,6 +30,21 @@ export const getCategoryMeta = (catName) => {
   if (q.includes('kit') || q.includes('set') || q.includes('balíček')) return CATEGORIES[7];
 
   return { id: catName, label: catName, icon: Package, color: 'text-slate-400 bg-slate-500/20 border-slate-500/40' };
+};
+
+// ── Filter chips (Sklad › Stav, Katalog) ──
+// Same as CATEGORIES, but "Světla" is split into finer groups (domain/lightGroups.js).
+const LIGHT_GROUP_ICONS = { led: PanelTop, hmi: Lightbulb, balloon: Cloud, other: Sun };
+
+export const FILTER_CATEGORIES = [
+  ...LIGHT_GROUPS.map((g) => ({ id: `Lights:${g.id}`, label: g.label, icon: LIGHT_GROUP_ICONS[g.id], color: CATEGORIES[0].color })),
+  ...CATEGORIES.slice(1),
+];
+
+/** Id of the filter chip an item belongs to. */
+export const filterIdOf = (item) => {
+  const id = getCategoryMeta(item?.category).id;
+  return id === 'Lights' ? `Lights:${lightGroupOf(item?.name)}` : id;
 };
 
 /** Springball balloon: a sphere on a short stand (no fitting Lucide icon). */

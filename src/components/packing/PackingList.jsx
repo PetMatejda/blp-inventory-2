@@ -9,6 +9,7 @@ import { phaseOf, filtersFor, filterCounts, matchesFilter, phaseSummary, plural 
 import {
   Search, QrCode, Plus, Package, Lock, Unlock, Truck, Copy, X, BookOpen, FileText, CheckCircle2, ArrowRight, Warehouse,
 } from 'lucide-react';
+import { matchesSearch, SEARCH_INPUT_PROPS } from '../../domain/search';
 
 const PHASE_COLOR = {
   LOADING: 'text-emerald-700 dark:text-emerald-300',
@@ -72,13 +73,11 @@ export const PackingList = () => {
     }
   }
 
-  const q = searchQuery.trim().toLowerCase();
+  const q = searchQuery.trim();
   // While searching, look through everything so a found item is never hidden by the filter.
   const visibleItems = jobItems.filter((item) => {
     if (q) {
-      return item.name.toLowerCase().includes(q)
-        || item.serialNumber?.toLowerCase().includes(q)
-        || item.category?.toLowerCase().includes(q);
+      return matchesSearch([item.name, item.serialNumber, item.category], q);
     }
     return matchesFilter(item, activeFilter, mode);
   });
@@ -109,7 +108,7 @@ export const PackingList = () => {
   return (
     <div className="max-w-4xl mx-auto pb-32">
       {/* Sticky command bar */}
-      <div className="sticky top-14 z-30 bg-surface-container border-b border-outline-variant shadow-sm">
+      <div className="sticky top-app-bar z-30 bg-surface-container border-b border-outline-variant shadow-sm">
         {isArchived && (
           <div className="bg-surface-container-high border-b border-outline px-4 py-2 flex justify-between items-center gap-2">
             <span className="flex items-center gap-2 text-sm text-on-surface-variant">
@@ -160,8 +159,7 @@ export const PackingList = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              enterKeyHint="search"
-              autoComplete="off"
+              {...SEARCH_INPUT_PROPS}
               placeholder="Hledat techniku, SN…"
               className="w-full h-12 pl-10 pr-11 bg-card-bg border border-outline-variant rounded-xl text-on-surface text-base focus:border-primary focus:outline-none placeholder:text-outline"
             />

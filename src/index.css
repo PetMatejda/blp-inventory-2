@@ -113,6 +113,17 @@ html.light nav {
   background-color: #ffffff;
 }
 
+/* Installed on an iPhone the status bar (clock, battery) is drawn over the page
+   in white. The top bar is padded by the safe area (TopAppBar.jsx); in the light
+   theme that strip is kept dark so the system icons stay readable. */
+html.light .app-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: env(safe-area-inset-top, 0px);
+  background: #0f172a;
+}
+
 /* Respect "reduce motion" in the system settings */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

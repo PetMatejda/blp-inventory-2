@@ -75,8 +75,9 @@ Screen ──► InventoryContext (same API as before)
 - **Hardware barcode readers** (`src/hooks/useBarcodeScanner.js`): USB/Bluetooth readers type fast + Enter; a burst detector turns that into a scan anywhere on the screen (not while typing in a field or with a dialog open). Packing → `scanOnJob`; Sklad › Stav → item detail; Inventura → unit counted / count dialog; Katalog → add to the selected job.
 - **Catalog repair**: `migration.restoreCatalog` is kept (tested) but no longer reachable from the UI — the buttons were removed before going live.
 - **Local cache maintenance** (`src/services/cacheMaintenance.js`): Firestore uses a single-tab persistent cache (`persistentSingleTabManager`; other tabs use memory). `…/?reset-cache=1` (or Settings › "Vymazat offline data") deletes the Firestore IndexedDB cache **before** Firebase starts (`main.jsx` loads the app afterwards) — the fix for a damaged cache that hangs the page / "Out of Memory". Legacy localStorage keys of the single-document version are removed at start.
-- **Brácha refill order** (`src/domain/refill.js`, `RefillOrderSheet.jsx`): missing (and optionally 50 %) consumables as text → share / copy / e-mail; logged in history.
-- **Bundle**: camera scanner (`html5-qrcode`), PDF, QR generator and the Sklad / Brácha / Historie screens load on demand; Firebase and React are separate cached chunks.
+- **Search & filter chips** (`src/domain/search.js`, `src/domain/lightGroups.js`): every search field uses `matchesSearch` (case / diacritics / extra spaces ignored, words in any order) and `SEARCH_INPUT_PROPS` (no autocorrect — iOS rewrites equipment names). While searching, the category chip is ignored. In Sklad › Stav and Katalog the `Světla` category is split into chips LED · HMI / Tungsten · Balony · Ostatní světla, derived from the item name (`FILTER_CATEGORIES`, `filterIdOf` in `categoryIcons.jsx`); the stored category stays `Lights`.
+- **iPhone status bar**: the installed app draws under the status bar (`black-translucent`), so the top bar is `h-app-bar pt-safe-top` and bars pinned below it use `top-app-bar` (Tailwind spacing in `tailwind.config.js`).
+- **Bundle**: camera scanner (`html5-qrcode`), PDF, QR generator and the Sklad / Historie screens load on demand; Firebase and React are separate cached chunks.
 - **Labels & scanning** (`src/domain/labels-qr.js`, `stockActions.scanOnJob`, `LabelPrint.jsx`):
   - Payloads: labelled unit → its code (`FLT-MOD-001`); item tracked by count → `BLP:<catalogId>`; EAN and serial numbers still work.
   - *Vytvořit štítky* labels pieces already in stock (no count change, `LABEL` movement); codes `<serialPrefix>-001…`.
@@ -132,9 +133,9 @@ Catalog items may carry an `icon` (equipment type: balloon shapes, LED panel / n
 
 ### Upozornění (alerts)
 
-- `src/domain/alerts.js` `buildAlerts(data, today)` (pure, tested) collects: vehicle STK / vignette, pieces missing after a job (critical), pieces in service, damage on active jobs, Brácha to refill (warning), Brácha running low, open stocktake (info). Each alert has a `target` that `openTarget()` (context) opens: Auta with that vehicle, Sklad › Stav with that item's detail (`navFocus`), the job, Sklad › Brácha / Inventura.
+- `src/domain/alerts.js` `buildAlerts(data, today)` (pure, tested) collects: vehicle STK / vignette, pieces missing after a job (critical), pieces in service, damage on active jobs (warning), open stocktake (info). Each alert has a `target` that `openTarget()` (context) opens: Auta with that vehicle, Sklad › Stav with that item's detail (`navFocus`), the job, Sklad › Inventura.
 - Bell in the top bar (badge = critical + warning) → `AlertsScreen` (counts by urgency, filter by area, sections Hned řešit / Brzy / Pro informaci). Dashboard shows `AlertsSummary` (top 3 urgent) only when something is urgent.
-- Brácha moved from the bottom bar to Sklad › Brácha (next to Katalog).
+- The Brácha (consumables) section was removed from the UI in 11/2026; the `consumables` collection and `updateConsumableState` action remain, unused.
 - Seed of the fleet from the whiteboard: `scripts/seed-vehicles.mjs`.
 
 ### ZapSklad import

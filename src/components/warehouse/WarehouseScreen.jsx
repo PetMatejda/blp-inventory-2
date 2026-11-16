@@ -3,18 +3,17 @@ import { useInventory } from '../../context/InventoryContext';
 import { StockOverview } from './StockOverview';
 import { StocktakeView } from './StocktakeView';
 import { EquipmentCatalog } from '../catalog/EquipmentCatalog';
-import { ConsumableKit } from '../bracha/ConsumableKit';
 import { downloadText } from '../common/CodeInput';
 import { toCsv } from '../../domain/stock';
 import { Download } from 'lucide-react';
+import { matchesSearch, SEARCH_INPUT_PROPS } from '../../domain/search';
 
 const fmt = (iso) => (iso ? new Date(iso).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
 const MovementsView = () => {
   const { movements } = useInventory();
   const [query, setQuery] = useState('');
-  const q = query.trim().toLowerCase();
-  const visible = movements.filter((m) => !q || `${m.itemName} ${m.label} ${m.jobName || ''} ${m.user}`.toLowerCase().includes(q));
+  const visible = movements.filter((m) => matchesSearch([m.itemName, m.label, m.jobName, m.user, m.unitCode], query));
 
   const exportCsv = () => downloadText(`BLP_pohyby_${new Date().toISOString().slice(0, 10)}.csv`, toCsv(movements, [
     { label: 'Čas', value: (m) => fmt(m.timestamp) },
@@ -30,7 +29,7 @@ const MovementsView = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
-        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat v pohybech…"
+        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat v pohybech…" {...SEARCH_INPUT_PROPS}
           className="flex-1 h-12 px-3 bg-card-bg border border-outline-variant rounded-xl text-base" />
         <button onClick={exportCsv} className="h-12 px-3 rounded-xl border border-outline-variant bg-card-bg text-sm font-semibold flex items-center gap-1.5">
           <Download className="w-5 h-5" /> CSV
@@ -62,30 +61,28 @@ const TABS = [
   { id: 'stocktake', label: 'Inventura' },
   { id: 'movements', label: 'Pohyby' },
   { id: 'catalog', label: 'Katalog' },
-  { id: 'bracha', label: 'Brácha' },
 ];
 
-/** Warehouse: stock levels, stocktake, movement history, the equipment catalog and Brácha (consumables). */
+/** Warehouse: stock levels, stocktake, movement history and the equipment catalog. */
 export const WarehouseScreen = () => {
-  const { stocktakes, consumables, warehouseTab: tab, setWarehouseTab: choose } = useInventory();
+  const { stocktakes, warehouseTab, setWarehouseTab: choose } = useInventory();
+  const tab = TABS.some((t) => t.id === warehouseTab) ? warehouseTab : 'stock';
   const stocktakeOpen = stocktakes.some((s) => s.status === 'OPEN');
-  const refillNeeded = consumables.some((c) => c.state === 2);
 
   return (
     <div className="max-w-4xl mx-auto pb-28">
-      <div className="sticky top-14 z-30 bg-surface-container border-b border-outline-variant px-3 py-2">
+      <div className="sticky top-app-bar z-30 bg-surface-container border-b border-outline-variant px-3 py-2">
         <div className="flex bg-card-bg p-1 rounded-xl border border-outline-variant" role="tablist">
           {TABS.map((t) => (
             <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => choose(t.id)}
               className={`flex-1 h-11 rounded-lg text-sm font-semibold relative ${tab === t.id ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant'}`}>
               {t.label}
               {t.id === 'stocktake' && stocktakeOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" aria-label="probíhá" />}
-              {t.id === 'bracha' && refillNeeded && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500" aria-label="doplnit" />}
             </button>
           ))}
         </div>
       </div>
-      {tab === 'catalog' ? <EquipmentCatalog /> : tab === 'bracha' ? <ConsumableKit /> : (
+      {tab === 'catalog' ? <EquipmentCatalog /> : (
         <div className="px-4 pt-4">
           {tab === 'stock' && <StockOverview />}
           {tab === 'stocktake' && <StocktakeView />}

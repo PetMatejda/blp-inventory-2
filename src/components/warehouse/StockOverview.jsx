@@ -4,7 +4,8 @@ import { Sheet, SheetAction, useDialogs } from '../common/Dialogs';
 import { CodeInput } from '../common/CodeInput';
 import { ScannerScreen } from '../common/ScannerScreen';
 import { ItemThumbnail } from '../common/ItemThumbnail';
-import { CATEGORIES, getCategoryMeta } from '../../utils/categoryIcons';
+import { FILTER_CATEGORIES, filterIdOf, getCategoryMeta } from '../../utils/categoryIcons';
+import { matchesSearch, SEARCH_INPUT_PROPS } from '../../domain/search';
 import { levelOf, trackingOf, unitDetails } from '../../domain/stock';
 import { plural } from '../../domain/labels';
 import { catalogLabelPayload, resolveCode } from '../../domain/labels-qr';
@@ -181,12 +182,14 @@ export const StockOverview = () => {
     .filter((c) => !c.isBundle)
     .map((c) => ({ item: c, level: levelOf(stockLevels, c.id), tracking: trackingOf(c) })), [catalog, stockLevels]);
 
+  const searching = query.trim() !== '';
   const visible = rows.filter(({ item, level }) => {
-    if (category !== 'ALL' && getCategoryMeta(item.category).id !== category) return false;
-    if (onlyProblems && !(level.missing || level.inService)) return false;
-    const q = query.trim().toLowerCase();
-    return !q || item.name.toLowerCase().includes(q);
+    // While searching, look through every category so a found item is never hidden by the chip.
+    if (searching) return matchesSearch([item.name, getCategoryMeta(item.category).label, item.brand, item.usage, item.size], query);
+    if (category !== 'ALL' && filterIdOf(item) !== category) return false;
+    return !(onlyProblems && !(level.missing || level.inService));
   });
+  const chips = FILTER_CATEGORIES.filter((c) => rows.some(({ item }) => filterIdOf(item) === c.id));
 
   if (catalog.length === 0) {
     return (
@@ -234,7 +237,7 @@ export const StockOverview = () => {
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat nebo načíst kód…" enterKeyHint="search" autoComplete="off"
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat nebo načíst kód…" {...SEARCH_INPUT_PROPS}
             className="w-full h-12 pl-10 pr-3 bg-card-bg border border-outline-variant rounded-xl text-base text-on-surface focus:border-primary focus:outline-none" />
         </div>
         <button onClick={() => setScanning(true)} aria-label="Najít položku načtením kódu"
@@ -252,13 +255,19 @@ export const StockOverview = () => {
       )}
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
-        {[{ id: 'ALL', label: 'Vše' }, ...CATEGORIES].map((c) => (
-          <button key={c.id} onClick={() => setCategory(c.id)}
-            className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap border shrink-0 ${category === c.id ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg border-outline-variant text-on-surface-variant'}`}>
+        {[{ id: 'ALL', label: 'Vše' }, ...chips].map((c) => (
+          <button key={c.id} onClick={() => { setCategory(c.id); setQuery(''); }} aria-pressed={!searching && category === c.id}
+            className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap border shrink-0 ${!searching && category === c.id ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg border-outline-variant text-on-surface-variant'}`}>
             {c.label}
           </button>
         ))}
       </div>
+
+      {visible.length === 0 && (
+        <p className="text-base text-on-surface-variant text-center p-6">
+          {searching ? `Nic neodpovídá „${query.trim()}“.` : 'V tomto výběru nic není.'}
+        </p>
+      )}
 
       <ul className="flex flex-col gap-2">
         {visible.map(({ item, level, tracking }) => (

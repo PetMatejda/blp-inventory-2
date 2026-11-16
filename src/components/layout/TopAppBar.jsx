@@ -21,7 +21,7 @@ export const TopAppBar = () => {
   const ChipIcon = chip.icon;
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-md border-b border-outline-variant h-14 flex items-center justify-between gap-2 px-3 shadow-sm">
+    <header className="app-bar sticky top-0 z-40 w-full bg-background/95 backdrop-blur-md border-b border-outline-variant h-app-bar pt-safe-top flex items-center justify-between gap-2 px-3 shadow-sm">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <button
           onClick={() => setIsSettingsModalOpen(true)}

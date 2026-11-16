@@ -19,19 +19,19 @@ describe('upozornění', () => {
     stocktakes: [{ id: 's1', status: 'OPEN', startedBy: 'Petr (ADMIN)' }],
   };
 
-  it('collects alerts from vehicles, stock, jobs, consumables and stocktakes, most urgent first', () => {
+  it('collects alerts from vehicles, stock, jobs and stocktakes, most urgent first (consumables are ignored)', () => {
     const alerts = buildAlerts(data, TODAY);
     expect(alerts.map((a) => a.id)).toEqual([
       'vehicle-a-stk', 'missing-k1',
-      'vehicle-b-vignette', 'service-k2', 'damaged-j1', 'consumables-out',
-      'stocktake-s1', 'consumables-half',
+      'vehicle-b-vignette', 'service-k2', 'damaged-j1',
+      'stocktake-s1',
     ]);
     expect(alerts[0]).toMatchObject({ severity: 'critical', detail: 'STK propadlá před 5 dny', target: { tab: 'vehicles', vehicleId: 'a' } });
     expect(alerts[1].detail).toBe('Chybí po zakázce: 1 ks (1001)');
     expect(alerts.find((a) => a.id === 'service-k2')).toMatchObject({ detail: 'V servisu: 2 ks (240)', target: { warehouseTab: 'stock', catalogId: 'k2' } });
     expect(alerts.find((a) => a.id === 'damaged-j1').detail).toBe('1 položka se závadou: Tuba 5x2');
     expect(alerts.find((a) => a.id === 'stocktake-s1').detail).toBe('Zahájil(a) Petr');
-    expect(alertCounts(alerts)).toEqual({ critical: 2, warning: 4, info: 2, urgent: 6, total: 8 });
+    expect(alertCounts(alerts)).toEqual({ critical: 2, warning: 3, info: 1, urgent: 5, total: 6 });
   });
 
   it('nothing to report', () => {

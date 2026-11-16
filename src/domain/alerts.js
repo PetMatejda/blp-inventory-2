@@ -8,11 +8,11 @@ import { vehicleAlerts } from './vehicles.js';
 import { plural } from './labels.js';
 
 const SEVERITY_RANK = { critical: 0, warning: 1, info: 2 };
-const GROUP_RANK = { vehicles: 0, stock: 1, jobs: 2, consumables: 3 };
-export const ALERT_GROUPS = { vehicles: 'Auta', stock: 'Sklad', jobs: 'Zakázky', consumables: 'Brácha' };
+const GROUP_RANK = { vehicles: 0, stock: 1, jobs: 2 };
+export const ALERT_GROUPS = { vehicles: 'Auta', stock: 'Sklad', jobs: 'Zakázky' };
 const ks = (n) => `${n} ks`;
 
-export function buildAlerts({ vehicles = [], stockLevels = [], stockUnits = [], catalog = [], jobs = [], jobItems = [], consumables = [], stocktakes = [] }, today) {
+export function buildAlerts({ vehicles = [], stockLevels = [], stockUnits = [], catalog = [], jobs = [], jobItems = [], stocktakes = [] }, today) {
   const alerts = [];
   const nameOf = (id) => catalog.find((c) => c.id === id)?.name || id;
 
@@ -68,28 +68,6 @@ export function buildAlerts({ vehicles = [], stockLevels = [], stockUnits = [], 
       detail: `${damaged.length} ${plural(damaged.length, 'položka se závadou', 'položky se závadou', 'položek se závadou')}: ${damaged.map((i) => i.name).slice(0, 3).join(', ')}${damaged.length > 3 ? '…' : ''}`,
       sortKey: -damaged.length,
       target: { tab: 'packing', jobId: job.id },
-    });
-  }
-
-  // Brácha: consumables that ran out (state 2) or are half empty (state 1).
-  const out = consumables.filter((c) => c.state === 2);
-  const half = consumables.filter((c) => c.state === 1);
-  if (out.length) {
-    alerts.push({
-      id: 'consumables-out', group: 'consumables', severity: 'warning',
-      title: 'Brácha: doplnit',
-      detail: out.map((c) => c.name).join(', '),
-      sortKey: -out.length,
-      target: { tab: 'catalog', warehouseTab: 'bracha' },
-    });
-  }
-  if (half.length) {
-    alerts.push({
-      id: 'consumables-half', group: 'consumables', severity: 'info',
-      title: 'Brácha: dochází',
-      detail: half.map((c) => c.name).join(', '),
-      sortKey: -half.length,
-      target: { tab: 'catalog', warehouseTab: 'bracha' },
     });
   }
 

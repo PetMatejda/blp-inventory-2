@@ -1,8 +1,8 @@
 import React from 'react';
-import { Truck, Warehouse, PackageCheck, ShoppingCart, ChevronRight } from 'lucide-react';
+import { Truck, Warehouse, PackageCheck, ChevronRight } from 'lucide-react';
 import { ALERT_GROUPS } from '../../domain/alerts';
 
-export const GROUP_ICON = { vehicles: Truck, stock: Warehouse, jobs: PackageCheck, consumables: ShoppingCart };
+export const GROUP_ICON = { vehicles: Truck, stock: Warehouse, jobs: PackageCheck };
 
 export const SEVERITY = {
   critical: {

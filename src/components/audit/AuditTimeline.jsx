@@ -105,16 +105,6 @@ export const AuditTimeline = () => {
           >
             Závady
           </button>
-          <button
-            onClick={() => setTypeFilter('bracha')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
-              typeFilter === 'bracha'
-                ? 'bg-tertiary-container text-on-tertiary-container border-tertiary'
-                : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-outline'
-            }`}
-          >
-            Brácha
-          </button>
         </div>
       </div>
 

@@ -26,6 +26,12 @@ export default {
       screens: {
         'xs': '400px',
       },
+      // iPhone (installed app): the page runs under the system status bar, so the
+      // top bar grows by the safe area and everything pinned below it follows.
+      spacing: {
+        'safe-top': 'env(safe-area-inset-top, 0px)',
+        'app-bar': 'calc(3.5rem + env(safe-area-inset-top, 0px))',
+      },
       colors: Object.fromEntries(TOKENS.map((name) => [name, token(name)])),
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

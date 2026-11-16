@@ -6,7 +6,7 @@ import { AlertCard, SEVERITY } from './AlertCard';
 
 /**
  * Upozornění: everything that needs attention in one list — cars (STK, vignette),
- * missing pieces and pieces in service, damage on active jobs, Brácha, open stocktake.
+ * missing pieces and pieces in service, damage on active jobs, open stocktake.
  * Grouped by urgency; a filter by area; each row opens the place to act.
  */
 export const AlertsScreen = () => {
@@ -21,7 +21,7 @@ export const AlertsScreen = () => {
       <div>
         <h1 className="text-xl font-bold text-on-surface flex items-center gap-2"><Bell className="w-6 h-6 text-primary" /> Upozornění</h1>
         <p className="text-sm text-on-surface-variant">
-          {counts.total ? 'Klepnutím otevřete místo, kde se věc řeší.' : 'Auta, sklad, zakázky i Brácha jsou v pořádku.'}
+          {counts.total ? 'Klepnutím otevřete místo, kde se věc řeší.' : 'Auta, sklad i zakázky jsou v pořádku.'}
         </p>
       </div>
 

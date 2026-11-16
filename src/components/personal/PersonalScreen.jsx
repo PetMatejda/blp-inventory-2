@@ -409,7 +409,7 @@ export const PersonalScreen = () => {
 
   return (
     <div className="max-w-4xl mx-auto pb-28">
-      <div className="sticky top-14 z-30 bg-surface-container border-b border-outline-variant px-3 py-2">
+      <div className="sticky top-app-bar z-30 bg-surface-container border-b border-outline-variant px-3 py-2">
         <div className="flex bg-card-bg p-1 rounded-xl border border-outline-variant" role="tablist">
           {TABS.map((t) => (
             <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}

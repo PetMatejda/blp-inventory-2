@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import { getCategoryMeta, getItemMeta, CATEGORIES } from '../../utils/categoryIcons';
+import { getCategoryMeta, getItemMeta, FILTER_CATEGORIES, filterIdOf } from '../../utils/categoryIcons';
+import { matchesSearch, SEARCH_INPUT_PROPS } from '../../domain/search';
 import {
   Search, Plus, Layers, Check, FolderOpen, ArrowRight, Edit3, Trash2, X,
   EyeOff, Eye, Package, MoreVertical, QrCode,
@@ -127,19 +128,16 @@ export const EquipmentCatalog = () => {
 
   const addedCatalogIds = new Set(jobItems.map(i => i.catalogId).filter(Boolean));
 
+  const searching = searchQuery.trim() !== '';
+  const nameHit = (item) => matchesSearch(item.name, searchQuery);
   const filteredCatalog = catalog.filter((item) => {
-    if (selectedCategory !== 'ALL') {
-      const meta = getCategoryMeta(item.category);
-      if (meta.id !== selectedCategory && item.category !== selectedCategory) return false;
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const text = [item.name, item.category, getCategoryMeta(item.category).label, item.brand, item.usage, item.size].filter(Boolean).join(' ').toLowerCase();
-      if (!text.includes(q)) return false;
-    }
     if (hideAlreadyAdded && addedCatalogIds.has(item.id)) return false;
-    return true;
+    // While searching, look through every category so a found item is never hidden by the chip.
+    if (searching) return matchesSearch([item.name, item.category, getCategoryMeta(item.category).label, item.brand, item.usage, item.size], searchQuery);
+    return selectedCategory === 'ALL' || filterIdOf(item) === selectedCategory;
   });
+  // Items found by their name come first; matches in brand / usage / size follow.
+  if (searching) filteredCatalog.sort((a, b) => nameHit(b) - nameHit(a));
 
   const handleAdd = (item) => {
     if (!currentJob || currentJob.status !== 'ACTIVE') {
@@ -198,6 +196,7 @@ export const EquipmentCatalog = () => {
     }
   };
 
+  const chooseCategory = (id) => { setSelectedCategory(id); setSearchQuery(''); };
   const activeJob = currentJob?.status === 'ACTIVE' ? currentJob : null;
   const chip = (active) => `h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap shrink-0 border flex items-center gap-1.5 ${
     active ? 'bg-primary text-on-primary border-primary' : 'bg-card-bg text-on-surface-variant border-outline-variant'
@@ -238,8 +237,7 @@ export const EquipmentCatalog = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Hledat nebo načíst kód…"
-            enterKeyHint="search"
-            autoComplete="off"
+            {...SEARCH_INPUT_PROPS}
             className="w-full h-12 pl-10 pr-11 bg-card-bg border border-outline-variant rounded-xl text-on-surface text-base focus:border-primary focus:outline-none placeholder:text-outline"
           />
           {searchQuery && (
@@ -275,19 +273,16 @@ export const EquipmentCatalog = () => {
 
       {/* ── Category chips ── */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-3 px-3">
-        <button onClick={() => setSelectedCategory('ALL')} aria-pressed={selectedCategory === 'ALL'} className={chip(selectedCategory === 'ALL')}>
+        <button onClick={() => chooseCategory('ALL')} aria-pressed={!searching && selectedCategory === 'ALL'} className={chip(!searching && selectedCategory === 'ALL')}>
           Vše <span className="font-mono text-xs opacity-80">{catalog.length}</span>
         </button>
-        {CATEGORIES.map((cat) => {
+        {FILTER_CATEGORIES.map((cat) => {
           const Icon = cat.icon;
-          const isSelected = selectedCategory === cat.id;
-          const count = catalog.filter(i => {
-            const m = getCategoryMeta(i.category);
-            return m.id === cat.id || i.category === cat.id;
-          }).length;
+          const isSelected = !searching && selectedCategory === cat.id;
+          const count = catalog.filter((i) => filterIdOf(i) === cat.id).length;
           if (count === 0) return null;
           return (
-            <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} aria-pressed={isSelected} className={chip(isSelected)}>
+            <button key={cat.id} onClick={() => chooseCategory(cat.id)} aria-pressed={isSelected} className={chip(isSelected)}>
               <Icon className="w-4 h-4" />
               {cat.label} <span className="font-mono text-xs opacity-80">{count}</span>
             </button>

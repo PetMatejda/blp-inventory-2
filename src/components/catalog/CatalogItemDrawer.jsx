@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 // html5-qrcode is loaded on demand (see startBarcodeScanner).
 import { useDialogs } from '../common/Dialogs';
+import { matchesSearch, SEARCH_INPUT_PROPS } from '../../domain/search';
 
 const CategoryBadge = ({ category, icon }) => {
   const meta = getItemMeta({ category, icon });
@@ -211,9 +212,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
   const availableForBundle = (catalog || []).filter(c => {
     if (c.id === currentItemId) return false;
     if (c.isBundle) return false;
-    const search = bundleSearch.toLowerCase();
-    if (search && !c.name.toLowerCase().includes(search) && !(c.category || '').toLowerCase().includes(search)) return false;
-    return true;
+    return matchesSearch([c.name, c.category], bundleSearch);
   });
 
   useEffect(() => {
@@ -439,6 +438,7 @@ export const CatalogItemDrawer = ({ item, onClose }) => {
                               value={bundleSearch}
                               onChange={(e) => setBundleSearch(e.target.value)}
                               placeholder="Hledat v katalogu..."
+                              {...SEARCH_INPUT_PROPS}
                               className="flex-1 text-xs bg-transparent text-on-surface outline-none placeholder:text-outline"
                               autoFocus
                             />

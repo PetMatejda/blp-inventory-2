@@ -8,6 +8,7 @@ import { plural } from '../../domain/labels';
 import { resolveCode } from '../../domain/labels-qr';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { ClipboardCheck, CheckCircle2, Eye, EyeOff, Download, X, Tag, ChevronRight } from 'lucide-react';
+import { matchesSearch, SEARCH_INPUT_PROPS } from '../../domain/search';
 
 const fmt = (iso) => (iso ? new Date(iso).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
@@ -174,9 +175,9 @@ export const StocktakeView = () => {
 
   // ── Counting ──
   const counted = lines.filter(isCounted).length;
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
   const visible = lines.filter((l) => {
-    if (q) return l.name.toLowerCase().includes(q);
+    if (q) return matchesSearch(l.name, q);
     if (filter === 'TODO') return !isCounted(l);
     if (filter === 'DONE') return isCounted(l);
     return true;
@@ -209,7 +210,7 @@ export const StocktakeView = () => {
       <CodeInput placeholder="Naskenujte štítek kusu (světla, balasty)" onCode={onCode} autoFocus={false} scannerTitle="Skener · inventura" />
 
       <div className="flex gap-2 items-center">
-        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat položku…"
+        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat položku…" {...SEARCH_INPUT_PROPS}
           className="flex-1 h-11 px-3 bg-card-bg border border-outline-variant rounded-xl text-base" />
         <button onClick={() => setShowExpected((v) => !v)} className="h-11 px-3 rounded-xl border border-outline-variant bg-card-bg text-sm flex items-center gap-1.5"
           aria-pressed={showExpected} title="Počítání naslepo je přesnější">
