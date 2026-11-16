@@ -5,6 +5,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { createLocalMcpServer } from '../scripts/mcp-local.mjs';
 import { createMcpHandler } from '../api/mcp.js';
 import { hashToken } from '../api/_lib/tokens.js';
+import { searchCatalogItems } from '../api/_lib/mcpServer.js';
 import { createMemoryDataSource } from './memoryDataSource.js';
 
 const WRITE = 'blp_mcp_write-token-000000000000000000000000000000000';
@@ -133,6 +134,20 @@ describe('MCP read tools', () => {
     expect(sky.data.items[0]).toMatchObject({ id: 'cat-sky', stock: { inStock: 4 } });
     const alias = await call(client, 'search_catalog', { query: 'dvacitka' });
     expect(alias.data.items[0].id).toBe('cat-hmi');
+  });
+
+  it('search finds balloons by their light group and prefers the exactly typed name', () => {
+    const catalog = [
+      { id: 'k2', name: 'Koule 2 m white', category: 'Lights' },
+      { id: 'k25', name: 'Koule 2,5 m white', category: 'Lights' },
+      { id: 'el', name: 'Elipsa 2,1x2,6 m white', category: 'Lights' },
+      { id: 'hmi', name: '2x4000 W HMI', category: 'Lights' },
+      { id: 'st', name: 'Stativ C-Stand', category: 'Grip' },
+    ];
+    expect(searchCatalogItems(catalog, 'balón').map((h) => h.item.id).sort()).toEqual(['el', 'k2', 'k25']);
+    const hits = searchCatalogItems(catalog, 'koule 2 m  white');
+    expect(hits[0]).toMatchObject({ item: { id: 'k2' }, exact: true });
+    expect(hits[1].exact).toBe(false);
   });
 
   it('check_availability counts overlapping jobs', async () => {

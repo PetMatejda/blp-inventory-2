@@ -10,6 +10,7 @@ import { planJobItems, describePlan } from '../../src/domain/jobPlan.js';
 import { availability, competingJobs } from '../../src/domain/availability.js';
 import { teamMonth, typeOf, hoursOf, daysOfMonth, ATTENDANCE_TYPES } from '../../src/domain/attendance.js';
 import { validateCalendar, buildAgenda } from '../../src/domain/productionCalendar.js';
+import { lightGroupOf } from '../../src/domain/lightGroups.js';
 
 export const SERVER_INFO = { name: 'blp-inventory', version: '0.2.0' };
 
@@ -26,6 +27,7 @@ Kalendář jobů z Tabulky prací: get_production_calendar čte, set_production_
 (data ve tvaru YYYY-MM-DD; nejdřív náhled bez confirm).`;
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+const LIGHT_GROUP_WORDS = { led: 'led', hmi: 'hmi tungsten', balloon: 'balony balloon', other: '' };
 const text = (data) => ({ content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] });
 const fail = (message) => ({ content: [{ type: 'text', text: message }], isError: true });
 const DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'datum ve tvaru YYYY-MM-DD');
@@ -43,6 +45,7 @@ const itemView = (i) => ({
 /** Catalog search: every word of the query scored against name, aliases, category, codes. */
 export function searchCatalogItems(catalog, query, { category, limit = 20 } = {}) {
   const words = norm(query).split(/[\s,;/]+/).filter(Boolean);
+  const whole = norm(query).replace(/\s+/g, ' ');
   const cat = norm(category);
   const scored = [];
   for (const c of catalog) {
@@ -50,6 +53,10 @@ export function searchCatalogItems(catalog, query, { category, limit = 20 } = {}
     const name = norm(c.name);
     const aliases = (c.aliases || []).map(norm);
     const codes = [c.barcode, c.serialPrefix, c.id].map(norm);
+    // Lights have finer groups in the app (Balony, LED, HMI / Tungsten) that are not in the name:
+    // "balon" has to find Koule, Elipsa, Cloud…
+    const group = c.category === 'Lights' ? LIGHT_GROUP_WORDS[lightGroupOf(c.name)] || '' : '';
+    const exact = !!whole && name.replace(/\s+/g, ' ') === whole;
     let score = 0;
     let matched = 0;
     for (const w of words) {
@@ -59,12 +66,12 @@ export function searchCatalogItems(catalog, query, { category, limit = 20 } = {}
       if (new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(name)) s = Math.max(s, 4);
       else if (name.includes(w)) s = Math.max(s, 2);
       if (aliases.some((a) => a.includes(w))) s = Math.max(s, 3);
-      if (norm(c.category).includes(w)) s = Math.max(s, 1);
+      if (norm(c.category).includes(w) || group.includes(w)) s = Math.max(s, 1);
       if (s) matched += 1;
       score += s;
     }
     if (!words.length) score = 1;
-    if (score > 0) scored.push({ item: c, score: score + (words.length && matched === words.length ? 5 : 0), allWords: matched === words.length });
+    if (score > 0) scored.push({ item: c, score: score + (words.length && matched === words.length ? 5 : 0) + (exact ? 20 : 0), allWords: matched === words.length, exact });
   }
   return scored.sort((a, b) => b.score - a.score || String(a.item.name).localeCompare(String(b.item.name), 'cs')).slice(0, limit);
 }
@@ -180,7 +187,7 @@ export function createBlpMcpServer({ identity, ds, now = () => new Date() }) {
 
   server.registerTool('search_catalog', {
     title: 'Hledat v katalogu',
-    description: 'Searches the equipment catalog (name, slang aliases, category, barcode). Returns catalog ids for plan_job_items, set (bundle) contents and warehouse stock.',
+    description: 'Searches the equipment catalog (name, slang aliases, category, light group "balony" / "LED" / "HMI", barcode). Names are Czech (balloons are "Koule", "Elipsa", "Cloud", "Tuba"…). Returns catalog ids for plan_job_items, set (bundle) contents and warehouse stock.',
     inputSchema: {
       query: z.string().max(100).describe('Words to search, e.g. "skypanel s60" or "kabel 32A"'),
       category: z.string().max(40).optional(),
@@ -362,7 +369,8 @@ export function createBlpMcpServer({ identity, ds, now = () => new Date() }) {
     lines.forEach((line, index) => {
       if (line.catalogId || line.jobItemId || !line.query) { resolved.push({ ...line, index }); return; }
       const hits = searchCatalogItems(catalog, line.query, { limit: 5 });
-      const clear = hits.length === 1 || (hits.length > 1 && hits[0].allWords && hits[0].score >= hits[1].score + 3);
+      // Clear = the only hit, the full name typed exactly, or a hit well ahead of the next one.
+      const clear = hits.length === 1 || (hits.length > 1 && ((hits[0].exact && !hits[1].exact) || (hits[0].allWords && hits[0].score >= hits[1].score + 3)));
       if (hits.length && clear) resolved.push({ ...line, catalogId: hits[0].item.id, index, resolvedFrom: line.query });
       else unresolved.push({ line: index + 1, query: line.query, candidates: hits.map((h) => ({ catalogId: h.item.id, name: h.item.name })) });
     });
