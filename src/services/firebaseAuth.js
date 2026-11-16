@@ -8,6 +8,7 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   sendPasswordResetEmail,
+  updateProfile,
   signOut,
   onAuthStateChanged,
   db,
@@ -15,6 +16,7 @@ import {
   setDoc,
   getDoc,
 } from './firebase';
+import { cleanDisplayName } from '../domain/displayName';
 
 
 /**
@@ -175,6 +177,9 @@ export const firebaseAuth = {
   async registerWithEmail(name, email, password, role = 'USER') {
     try {
       const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      // Keep the name typed in the form; without it the account shows the e-mail prefix.
+      const typed = cleanDisplayName(name);
+      if (typed.ok) await updateProfile(result.user, { displayName: typed.name }).catch(() => {});
       // The account can see data only after the e-mail address is verified
       // (Firestore rules), so send the verification link and sign out.
       await sendEmailVerification(result.user).catch(() => {});
@@ -225,6 +230,34 @@ export const firebaseAuth = {
       } else if (err.code === 'auth/network-request-failed') {
         message = 'Chyba sítě. Zkontrolujte internetové připojení.';
       }
+      return { success: false, error: message };
+    }
+  },
+
+  /**
+   * Changes the name the signed-in person shows under. The e-mail stays as it is.
+   * The name lives in the Firebase Auth profile (displayName), which every sign-in
+   * reads, and is mirrored to users/{uid} for the server side (MCP).
+   */
+  async updateName(rawName) {
+    const cleaned = cleanDisplayName(rawName);
+    if (!cleaned.ok) return { success: false, error: cleaned.error };
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || firebaseUser.isAnonymous) {
+      return { success: false, error: 'Přihlášení vypršelo. Přihlaste se prosím znovu.' };
+    }
+    try {
+      await updateProfile(firebaseUser, { displayName: cleaned.name });
+      const role = resolveRole(firebaseUser.email);
+      syncUserProfile(firebaseUser, role);
+      const userObj = buildUserObj(firebaseUser, role, cleaned.name, firebaseUser.photoURL);
+      localStorage.setItem('blp_auth_user_v2', JSON.stringify(userObj));
+      return { success: true, user: userObj };
+    } catch (err) {
+      console.error('[FirebaseAuth] Update Name Error:', err);
+      const message = err.code === 'auth/network-request-failed'
+        ? 'Jméno jde změnit jen s připojením k internetu.'
+        : 'Jméno se nepodařilo uložit. Zkuste to prosím znovu.';
       return { success: false, error: message };
     }
   },

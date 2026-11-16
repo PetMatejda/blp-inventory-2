@@ -287,6 +287,13 @@ export const InventoryProvider = ({ children }) => {
     if (user) setActiveTab('dashboard');
   };
 
+  /** Nastavení › Jméno: saves the new name and updates the signed-in user in place. */
+  const changeUserName = async (name) => {
+    const result = await firebaseAuth.updateName(name);
+    if (result.success) setCurrentUserState(result.user);
+    return result;
+  };
+
   const isAdmin = () => true; // All users are admins for this phase
   const canEditPacking = () => true;
   const userRole = currentUser?.role || 'USER';
@@ -484,6 +491,7 @@ export const InventoryProvider = ({ children }) => {
         userRole,
         currentUser,
         setCurrentUser,
+        changeUserName,
         isAdmin,
         canEditPacking,
         isOffline,

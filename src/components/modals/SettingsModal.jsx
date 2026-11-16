@@ -4,15 +4,27 @@ import { Moon, Sun, CloudUpload, Download, ShieldCheck, LogOut, User, History, C
 import { useDialogs, Sheet } from '../common/Dialogs';
 import { firebaseAuth } from '../../services/firebaseAuth';
 import { McpAccessSection } from '../settings/McpAccessSection';
+import { NAME_MAX } from '../../domain/displayName';
 
 export const SettingsModal = () => {
   const {
     isSettingsModalOpen, setIsSettingsModalOpen, themeMode, setThemeMode,
     forceSyncAll, hasPendingWrites, isOffline, currentUser, setCurrentUser, setIsAuthModalOpen,
-    migrationInfo, catalog, jobs, stockLevels, setActiveTab,
+    migrationInfo, catalog, jobs, stockLevels, setActiveTab, changeUserName,
   } = useInventory();
   const { confirm } = useDialogs();
   const [loading, setLoading] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameMsg, setNameMsg] = useState(null); // { ok, text }
+
+  // Start from the current name each time the settings open.
+  useEffect(() => {
+    if (isSettingsModalOpen) {
+      setNameDraft(currentUser?.name || '');
+      setNameMsg(null);
+    }
+  }, [isSettingsModalOpen, currentUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
@@ -41,6 +53,22 @@ export const SettingsModal = () => {
     setLoading(true);
     await forceSyncAll();
     setLoading(false);
+  };
+
+  const nameChanged = nameDraft.replace(/\s+/g, ' ').trim() !== (currentUser?.name || '');
+
+  const handleSaveName = async (e) => {
+    e.preventDefault();
+    setNameSaving(true);
+    setNameMsg(null);
+    const result = await changeUserName(nameDraft);
+    setNameSaving(false);
+    if (result.success) {
+      setNameDraft(result.user.name);
+      setNameMsg({ ok: true, text: 'Jméno uloženo.' });
+    } else {
+      setNameMsg({ ok: false, text: result.error });
+    }
   };
 
   const handleInstallApp = async () => {
@@ -116,6 +144,35 @@ export const SettingsModal = () => {
             <LogOut className="w-4 h-4" /> Odhlásit
           </button>
         </div>
+      )}
+
+      {/* Own name (the e-mail is the fixed identity) */}
+      {currentUser && (
+        <form onSubmit={handleSaveName}>
+          <label htmlFor="settings-name" className="block text-sm font-semibold text-on-surface-variant mb-1.5">Jméno</label>
+          <div className="flex gap-2">
+            <input
+              id="settings-name"
+              type="text"
+              value={nameDraft}
+              onChange={(e) => { setNameDraft(e.target.value); setNameMsg(null); }}
+              maxLength={NAME_MAX}
+              autoComplete="name"
+              autoCapitalize="words"
+              className="flex-1 min-w-0 h-12 px-3 rounded-xl border border-outline-variant bg-surface-container text-base text-on-surface outline-none focus:border-primary"
+            />
+            <button
+              type="submit"
+              disabled={!nameChanged || nameSaving}
+              className="h-12 px-4 rounded-xl bg-primary text-on-primary text-base font-semibold shrink-0 active:scale-[0.98] disabled:opacity-50"
+            >
+              {nameSaving ? 'Ukládám…' : 'Uložit'}
+            </button>
+          </div>
+          <p role="status" className={`mt-1.5 text-sm ${nameMsg && !nameMsg.ok ? 'text-error' : 'text-on-surface-variant'}`}>
+            {nameMsg ? nameMsg.text : 'Pod tímto jménem vás uvidí ostatní. E-mail změnit nejde.'}
+          </p>
+        </form>
       )}
 
       {/* Theme */}
