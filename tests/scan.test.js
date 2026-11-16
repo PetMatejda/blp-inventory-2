@@ -49,6 +49,20 @@ describe('kódy a rozpoznání skenu', () => {
     expect(catalogIdsByCode('cloud', { catalog: cat, units: comsys }).size).toBe(0);
   });
 
+  it('čárové kódy starých štítků Comsys (EC + interní číslo)', () => {
+    const comsys = [{ id: 'zs-241', catalogId: 'sky', code: '241', serialNumber: '241', barcode: 'EC502', status: 'IN_STOCK' }];
+    const cat = [...catalog, makeCatalogItem({ id: 'cab', name: 'Kabel', pieceBarcodes: ['EC12', 'EC13'] }), makeCatalogItem({ id: 'flat', name: 'Flatlight', pieceBarcodes: ['EC7'] })];
+    expect(codeKey('EC0502')).toBe('ec502');
+    expect(resolveCode('EC502', { jobItems, catalog: cat, units: comsys })).toMatchObject({ kind: 'UNIT', unit: comsys[0], item: jobItems[0] });
+    expect(resolveCode('ec0502', { jobItems, catalog: cat, units: comsys }).kind).toBe('UNIT');
+    // a piece tracked by count: the job line when the item is on the job, otherwise the catalog item
+    expect(resolveCode('EC13', { jobItems, catalog: cat, units: comsys })).toMatchObject({ kind: 'ITEM', item: jobItems[1] });
+    expect(resolveCode('EC007', { jobItems, catalog: cat, units: comsys })).toMatchObject({ kind: 'CATALOG', catalogItem: { id: 'flat' } });
+    expect(resolveCode('EC5020', { jobItems, catalog: cat, units: comsys }).kind).toBe('UNKNOWN');
+    expect([...catalogIdsByCode('ec502', { catalog: cat, units: comsys })]).toEqual(['sky']);
+    expect([...catalogIdsByCode('EC12', { catalog: cat, units: comsys })]).toEqual(['cab']);
+  });
+
   it('kdy kus nejde naskenovat', () => {
     const u = { id: 'u1', code: 'SKY-001', status: 'IN_STOCK' };
     expect(unitScanProblem({ ...u, status: 'IN_SERVICE' }, null, 'LOADING')).toMatch(/servisu/);

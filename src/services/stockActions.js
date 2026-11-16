@@ -5,7 +5,7 @@ import {
   MOVEMENT_TYPES, trackingOf, issuePlan, restockPlan, buildStocktakeLines, stocktakeResult, levelOf,
 } from '../domain/stock.js';
 import { enterRestock, applyQuantityDelta, markDone } from '../domain/items.js';
-import { nextUnitCodes, resolveCode, unitScanProblem, missingUnitIds, codeKey } from '../domain/labels-qr.js';
+import { nextUnitCodes, resolveCode, unitScanProblem, missingUnitIds, codeKey, unitHasCode } from '../domain/labels-qr.js';
 import { phaseOf } from '../domain/labels.js';
 
 const BATCH = 400;
@@ -328,7 +328,7 @@ export function createStockActions({ repo, getState, getActor }) {
     scanUnitCode(stocktakeId, code) {
       const clean = codeKey(code);
       const { stockUnits, stocktakeLines } = getState();
-      const unit = stockUnits.find((u) => codeKey(u.code) === clean || (u.serialNumber && codeKey(u.serialNumber) === clean));
+      const unit = stockUnits.find((u) => unitHasCode(u, clean));
       if (!unit) return { ok: false, message: `Neznámý kód ${code}` };
       const line = stocktakeLines.find((l) => l.stocktakeId === stocktakeId && l.catalogId === unit.catalogId);
       if (!line) return { ok: false, message: `${nameOf(unit.catalogId)} není v této inventuře` };

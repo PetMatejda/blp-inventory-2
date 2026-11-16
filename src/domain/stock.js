@@ -33,7 +33,7 @@ export { emptyLevel, levelOf, ownedCount, jobsOverlap, availability } from './av
 /**
  * What is known about one labelled piece, as short texts for the unit list:
  * condition A–D, LED yes/no, maker's number (only when it is not just the code)
- * and the revision date.
+ * the revision date and the barcode of the old Comsys label.
  */
 export function unitDetails(unit) {
   const parts = [];
@@ -45,6 +45,7 @@ export function unitDetails(unit) {
     const [y, m, d] = unit.revisionDate.split('-').map(Number);
     parts.push(`revize ${d}. ${m}. ${y}`);
   }
+  if (unit.barcode) parts.push(`čár. kód ${unit.barcode}`);
   return parts;
 }
 

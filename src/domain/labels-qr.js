@@ -4,6 +4,12 @@
 //   labelled unit (light, ballast) → its own code, e.g. "FL-001"
 //   item tracked by count          → "BLP:<catalogId>" (for boxes / shelves)
 // Existing EAN barcodes and serial numbers keep working when scanned.
+//
+// Old Comsys labels: the printed number is the evidence number ("000241" = unit
+// code "241"), but the barcode holds "EC" + Comsys' internal piece id ("EC502").
+// Those were imported once (scripts/comsys/barcodes.mjs):
+//   unit.barcode            "EC502"            labelled units
+//   catalog.pieceBarcodes   ["EC12", "EC13"…]  pieces of items tracked by count
 
 export const CATALOG_PREFIX = 'BLP:';
 
@@ -16,9 +22,20 @@ export const catalogLabelPayload = (catalogItem) => `${CATALOG_PREFIX}${catalogI
  */
 export const codeKey = (s) => {
   const key = String(s ?? '').trim().toLowerCase();
-  return /^\d+$/.test(key) ? key.replace(/^0+(?=\d)/, '') : key;
+  if (/^\d+$/.test(key)) return key.replace(/^0+(?=\d)/, '');
+  const comsys = /^ec0*(\d+)$/.exec(key); // "EC0502" and "EC502" are the same label
+  return comsys ? `ec${comsys[1]}` : key;
 };
 const norm = codeKey;
+
+/** Does this code (already a codeKey) belong to the labelled unit? */
+export const unitHasCode = (u, code) => norm(u.code) === code
+  || (!!u.serialNumber && norm(u.serialNumber) === code)
+  || (!!u.barcode && norm(u.barcode) === code);
+
+/** Does this code (already a codeKey) belong to the catalog item — its barcode or the old label of one of its pieces? */
+const catalogHasCode = (c, code) => (!!c.barcode && norm(c.barcode) === code)
+  || (Array.isArray(c.pieceBarcodes) && c.pieceBarcodes.some((b) => norm(b) === code));
 
 /**
  * Catalog ids a typed text points to as a code: a labelled unit (code or serial
@@ -30,9 +47,9 @@ export function catalogIdsByCode(text, { catalog = [], units = [] }) {
   const ids = new Set();
   if (!code) return ids;
   for (const u of units) {
-    if (u.status !== 'RETIRED' && (codeKey(u.code) === code || (u.serialNumber && codeKey(u.serialNumber) === code))) ids.add(u.catalogId);
+    if (u.status !== 'RETIRED' && unitHasCode(u, code)) ids.add(u.catalogId);
   }
-  for (const c of catalog) if (c.barcode && codeKey(c.barcode) === code) ids.add(c.id);
+  for (const c of catalog) if (catalogHasCode(c, code)) ids.add(c.id);
   return ids;
 }
 
@@ -63,13 +80,16 @@ export function resolveCode(rawCode, { jobItems = [], catalog = [], units = [] }
   const code = norm(rawCode);
   if (!code) return { kind: 'UNKNOWN' };
 
-  const unit = units.find((u) => norm(u.code) === code || (u.serialNumber && norm(u.serialNumber) === code));
+  const unit = units.find((u) => unitHasCode(u, code));
   if (unit) {
     const item = jobItems.find((i) => i.catalogId === unit.catalogId);
     return { kind: 'UNIT', unit, item };
   }
 
-  const catalogId = code.startsWith(norm(CATALOG_PREFIX)) ? String(rawCode).trim().slice(CATALOG_PREFIX.length) : null;
+  // Old label of a piece that is tracked by count → the catalog item it belongs to.
+  const byPiece = catalog.find((c) => Array.isArray(c.pieceBarcodes) && c.pieceBarcodes.some((b) => norm(b) === code));
+  const catalogId = byPiece?.id
+    || (code.startsWith(norm(CATALOG_PREFIX)) ? String(rawCode).trim().slice(CATALOG_PREFIX.length) : null);
   const item = jobItems.find((i) =>
     (catalogId && i.catalogId === catalogId)
     || (i.barcode && norm(i.barcode) === code)

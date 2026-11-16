@@ -80,6 +80,7 @@ Screen ──► InventoryContext (same API as before)
 - **Bundle**: camera scanner (`html5-qrcode`), PDF, QR generator and the Sklad / Historie screens load on demand; Firebase and React are separate cached chunks.
 - **Labels & scanning** (`src/domain/labels-qr.js`, `stockActions.scanOnJob`, `LabelPrint.jsx`):
   - Codes are compared through `codeKey` (trim, lower case, leading zeros of all-digit codes dropped): the old Comsys barcode labels read `000241`, the unit is stored as `241`. `catalogIdsByCode` lets the search fields in Sklad › Stav and Katalog find an item by a typed unit code / barcode.
+  - Old Comsys labels: the barcode is `EC` + Comsys' internal piece id (`EC502` for evidence number `000241`). Imported once from the Comsys export `evcisla_full.xls` by `scripts/comsys/barcodes.mjs` into `stockUnits.barcode` (labelled units) and `catalog.pieceBarcodes` (pieces of items tracked by count → the scan means the item, +1 pc).
   - Camera (`ScannerScreen.jsx`): formats limited to those on equipment; ZXing's "try harder" is switched on (`enableThoroughDecoding`) so iPhones read 1D barcodes in any rotation.
   - Payloads: labelled unit → its code (`FLT-MOD-001`); item tracked by count → `BLP:<catalogId>`; EAN and serial numbers still work.
   - *Vytvořit štítky* labels pieces already in stock (no count change, `LABEL` movement); codes `<serialPrefix>-001…`.
