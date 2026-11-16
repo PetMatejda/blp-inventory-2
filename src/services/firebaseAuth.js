@@ -33,7 +33,22 @@ const isGenuineWebview = () => {
   );
 };
 
-const buildUserObj = (firebaseUser, role, name, avatar) => ({
+// Appends the Firebase error code so a screenshot of the message tells us what failed.
+const withCode = (message, err) => (err?.code ? `${message} (kód: ${err.code})` : message);
+
+// auth/network-request-failed: the device could not reach Google's sign-in servers.
+// With a working connection the usual cause is an ad blocker or private DNS.
+const networkErrorMessage = (err) => {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return withCode('Zařízení je offline. Připojte se k internetu a zkuste to znovu.', err);
+  }
+  return withCode(
+    'Nepodařilo se spojit s přihlašovacím serverem Google. Zkuste přepnout mezi Wi‑Fi a mobilními daty, vypnout blokování reklam nebo soukromé DNS a otevřít aplikaci přímo v Chromu nebo Safari.',
+    err,
+  );
+};
+
+const buildUserObj =(firebaseUser, role, name, avatar) => ({
   id: firebaseUser.uid,
   name: name || firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Uživatel'),
   email: firebaseUser.email || '',
@@ -110,7 +125,7 @@ export const firebaseAuth = {
       return { success: true, user: userObj };
     } catch (err) {
       console.error('[FirebaseAuth] Google Sign-In Error:', err);
-      let message = err.message || 'Nepodařilo se přihlásit přes Google.';
+      let message = withCode('Nepodařilo se přihlásit přes Google.', err);
       if (err.code === 'auth/popup-blocked') {
         message = 'Prohlížeč zablokoval vyskakovací okno. Zkuste e-mail nebo povolte pop-upy.';
       } else if (err.code === 'auth/popup-closed-by-user') {
@@ -118,7 +133,7 @@ export const firebaseAuth = {
       } else if (err.code === 'auth/unauthorized-domain') {
         message = 'Tato doména není schválena ve Firebase Console (Authentication → Authorized Domains).';
       } else if (err.code === 'auth/network-request-failed') {
-        message = 'Chyba sítě. Zkontrolujte internetové připojení.';
+        message = networkErrorMessage(err);
       }
       return { success: false, error: message };
     }
@@ -159,13 +174,13 @@ export const firebaseAuth = {
       return { success: true, user: userObj };
     } catch (err) {
       console.error('[FirebaseAuth] Email Login Error:', err);
-      let message = err.message || 'Chyba při přihlašování e-mailem.';
+      let message = withCode('Chyba při přihlašování e-mailem.', err);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         message = 'Nesprávný e-mail nebo heslo. Zkontrolujte zadání nebo zaregistrujte nový účet.';
       } else if (err.code === 'auth/too-many-requests') {
         message = 'Příliš mnoho pokusů. Zkuste to znovu za chvíli.';
       } else if (err.code === 'auth/network-request-failed') {
-        message = 'Chyba sítě. Zkontrolujte internetové připojení.';
+        message = networkErrorMessage(err);
       }
       return { success: false, error: message };
     }
@@ -191,7 +206,7 @@ export const firebaseAuth = {
       };
     } catch (err) {
       console.error('[FirebaseAuth] Registration Error:', err);
-      let message = err.message || 'Chyba při vytváření účtu.';
+      let message = withCode('Chyba při vytváření účtu.', err);
       if (err.code === 'auth/email-already-in-use') {
         message = 'Tento e-mail již má registrovaný účet! Přihlaste se v záložce Přihlášení.';
       } else if (err.code === 'auth/weak-password') {
@@ -222,13 +237,13 @@ export const firebaseAuth = {
     } catch (err) {
       console.error('[FirebaseAuth] Password Reset Error:', err);
       if (err.code === 'auth/user-not-found') return sent;
-      let message = 'Odkaz se nepodařilo odeslat. Zkuste to prosím znovu.';
+      let message = withCode('Odkaz se nepodařilo odeslat. Zkuste to prosím znovu.', err);
       if (err.code === 'auth/invalid-email') {
         message = 'Neplatná e-mailová adresa.';
       } else if (err.code === 'auth/too-many-requests') {
         message = 'Příliš mnoho pokusů. Zkuste to znovu za chvíli.';
       } else if (err.code === 'auth/network-request-failed') {
-        message = 'Chyba sítě. Zkontrolujte internetové připojení.';
+        message = networkErrorMessage(err);
       }
       return { success: false, error: message };
     }
