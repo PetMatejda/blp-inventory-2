@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
   db,
@@ -192,6 +193,37 @@ export const firebaseAuth = {
         message = 'Heslo musí mít alespoň 6 znaků.';
       } else if (err.code === 'auth/invalid-email') {
         message = 'Neplatná e-mailová adresa.';
+      }
+      return { success: false, error: message };
+    }
+  },
+
+  /**
+   * Sends a password-reset link. The answer is the same whether or not the
+   * address has an account, so the form cannot be used to probe who is registered.
+   */
+  async resetPassword(email) {
+    const cleanEmail = (email || '').trim();
+    if (!cleanEmail.includes('@')) {
+      return { success: false, error: 'Nejdřív vyplňte e-mail, na který má odkaz přijít.' };
+    }
+    const sent = {
+      success: true,
+      message: `Pokud má ${cleanEmail} účet, poslali jsme na něj odkaz pro nastavení nového hesla. Podívejte se i do spamu.`,
+    };
+    try {
+      await sendPasswordResetEmail(auth, cleanEmail);
+      return sent;
+    } catch (err) {
+      console.error('[FirebaseAuth] Password Reset Error:', err);
+      if (err.code === 'auth/user-not-found') return sent;
+      let message = 'Odkaz se nepodařilo odeslat. Zkuste to prosím znovu.';
+      if (err.code === 'auth/invalid-email') {
+        message = 'Neplatná e-mailová adresa.';
+      } else if (err.code === 'auth/too-many-requests') {
+        message = 'Příliš mnoho pokusů. Zkuste to znovu za chvíli.';
+      } else if (err.code === 'auth/network-request-failed') {
+        message = 'Chyba sítě. Zkontrolujte internetové připojení.';
       }
       return { success: false, error: message };
     }

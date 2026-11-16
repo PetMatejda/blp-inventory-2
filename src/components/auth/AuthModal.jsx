@@ -123,6 +123,20 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
     }
   };
 
+  // ── Forgotten password ──
+  const handleResetPassword = async () => {
+    setError('');
+    setSuccessMsg('');
+    setLoading(true);
+    const result = await firebaseAuth.resetPassword(loginEmail);
+    setLoading(false);
+    if (result.success) {
+      setSuccessMsg(result.message);
+    } else {
+      setError(result.error);
+    }
+  };
+
   // ── Email Register ──
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
@@ -415,7 +429,14 @@ export const AuthModal = ({ isOpen, onClose, isForceAuth = false }) => {
                 >
                   {loading ? 'Přihlašuji...' : 'Přihlásit se'}
                 </button>
-
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handleResetPassword}
+                  className="min-h-[44px] text-sm text-slate-300 underline underline-offset-4 disabled:opacity-50"
+                >
+                  Zapomenuté heslo
+                </button>
               </form>
             )}
 
